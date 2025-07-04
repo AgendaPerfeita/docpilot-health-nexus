@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { User, FileText, Calendar, Upload, Download, Shield, Bell, MessageCircle, Send, Paperclip, FileImage, File, Plus, Search, Clock, MapPin, Phone, Mail, Eye } from "lucide-react"
+import { User, FileText, Calendar, Upload, Download, Shield, Bell, MessageCircle, Send, Paperclip, FileImage, File, Plus, Search, Clock, MapPin, Phone, Mail, Eye, Edit } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -233,20 +233,30 @@ const mockMessages: Message[] = [
 export default function AreaPaciente() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [newMessage, setNewMessage] = useState('')
-  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
   const [isChatDialogOpen, setIsChatDialogOpen] = useState(false)
+  const [isEditPersonalDataOpen, setIsEditPersonalDataOpen] = useState(false)
+  const [isEditMedicalDataOpen, setIsEditMedicalDataOpen] = useState(false)
   const [doctors] = useState<Doctor[]>(mockDoctors)
   const [messages, setMessages] = useState<Message[]>(mockMessages)
+  
+  // Dados pessoais editáveis
+  const [personalData, setPersonalData] = useState({
+    name: 'Ana Silva',
+    email: 'ana.silva@email.com',
+    phone: '(11) 99999-0001',
+    birthDate: '1985-05-14'
+  })
+  
+  // Informações médicas editáveis
+  const [medicalData, setMedicalData] = useState({
+    bloodType: 'O+',
+    allergies: 'Penicilina',
+    chronicConditions: 'Hipertensão',
+    continuousMedications: 'Losartana 50mg'
+  })
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return
-    
-    // Simular envio de mensagem
-    console.log('Mensagem enviada:', newMessage)
-    setNewMessage('')
-    setIsMessageDialogOpen(false)
-  }
+
 
   const handleSendMessageToDoctor = () => {
     if (!newMessage.trim() || !selectedDoctor) return
@@ -270,6 +280,32 @@ export default function AreaPaciente() {
     return messages.filter(m => m.doctorId === doctorId).sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
+  }
+
+  const handleSavePersonalData = (data: typeof personalData) => {
+    setPersonalData(data)
+    setIsEditPersonalDataOpen(false)
+    // Aqui você pode adicionar uma chamada para salvar no backend
+    console.log('Dados pessoais salvos:', data)
+  }
+
+  const handleSaveMedicalData = (data: typeof medicalData) => {
+    setMedicalData(data)
+    setIsEditMedicalDataOpen(false)
+    // Aqui você pode adicionar uma chamada para salvar no backend
+    console.log('Dados médicos salvos:', data)
+  }
+
+  // Função para calcular a última consulta automaticamente
+  const getLastConsultation = () => {
+    const completedConsultations = mockConsultations.filter(c => c.status === 'completed')
+    if (completedConsultations.length === 0) return 'Nenhuma consulta realizada'
+    
+    const lastConsultation = completedConsultations.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )[0]
+    
+    return new Date(lastConsultation.date).toLocaleDateString('pt-BR')
   }
 
   const getFileIcon = (fileName: string) => {
@@ -644,59 +680,239 @@ export default function AreaPaciente() {
         <TabsContent value="perfil" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Dados Pessoais</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setIsEditPersonalDataOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium">Nome</Label>
-                  <div className="text-sm">Ana Silva</div>
+                  <div className="text-sm">{personalData.name}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Email</Label>
-                  <div className="text-sm">ana.silva@email.com</div>
+                  <div className="text-sm">{personalData.email}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Telefone</Label>
-                  <div className="text-sm">(11) 99999-0001</div>
+                  <div className="text-sm">{personalData.phone}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Data de Nascimento</Label>
-                  <div className="text-sm">14/05/1985</div>
+                  <div className="text-sm">{new Date(personalData.birthDate).toLocaleDateString('pt-BR')}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Última Consulta</Label>
-                  <div className="text-sm">09/01/2024</div>
+                  <div className="text-sm">{getLastConsultation()}</div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Informações Médicas</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => setIsEditMedicalDataOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium">Tipo Sanguíneo</Label>
-                  <div className="text-sm">O+</div>
+                  <div className="text-sm">{medicalData.bloodType}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Alergias</Label>
-                  <div className="text-sm">Penicilina</div>
+                  <div className="text-sm">{medicalData.allergies}</div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Condições Crônicas</Label>
-                  <div className="text-sm">Hipertensão</div>
+                  <div className="text-sm">{medicalData.chronicConditions}</div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Medicamentos em Uso</Label>
-                  <div className="text-sm">Losartana 50mg</div>
+                  <Label className="text-sm font-medium">Medicamentos de Uso Contínuo</Label>
+                  <div className="text-sm">{medicalData.continuousMedications}</div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Dialog para editar dados pessoais */}
+          <Dialog open={isEditPersonalDataOpen} onOpenChange={setIsEditPersonalDataOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Dados Pessoais</DialogTitle>
+                <DialogDescription>
+                  Atualize suas informações pessoais.
+                </DialogDescription>
+              </DialogHeader>
+              <PersonalDataForm 
+                data={personalData} 
+                onSave={handleSavePersonalData}
+                onCancel={() => setIsEditPersonalDataOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog para editar informações médicas */}
+          <Dialog open={isEditMedicalDataOpen} onOpenChange={setIsEditMedicalDataOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Informações Médicas</DialogTitle>
+                <DialogDescription>
+                  Atualize suas informações médicas importantes.
+                </DialogDescription>
+              </DialogHeader>
+              <MedicalDataForm 
+                data={medicalData} 
+                onSave={handleSaveMedicalData}
+                onCancel={() => setIsEditMedicalDataOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+// Componente para editar dados pessoais
+function PersonalDataForm({ data, onSave, onCancel }: { 
+  data: { name: string; email: string; phone: string; birthDate: string }
+  onSave: (data: any) => void
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState(data)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(form)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Nome</Label>
+        <Input 
+          id="name" 
+          value={form.name} 
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input 
+          id="email" 
+          type="email" 
+          value={form.email} 
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone">Telefone</Label>
+        <Input 
+          id="phone" 
+          value={form.phone} 
+          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="birthDate">Data de Nascimento</Label>
+        <Input 
+          id="birthDate" 
+          type="date" 
+          value={form.birthDate} 
+          onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+          required
+        />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit">
+          Salvar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+// Componente para editar informações médicas
+function MedicalDataForm({ data, onSave, onCancel }: { 
+  data: { bloodType: string; allergies: string; chronicConditions: string; continuousMedications: string }
+  onSave: (data: any) => void
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState(data)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSave(form)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="bloodType">Tipo Sanguíneo</Label>
+        <Select value={form.bloodType} onValueChange={(value) => setForm({ ...form, bloodType: value })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o tipo sanguíneo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="A+">A+</SelectItem>
+            <SelectItem value="A-">A-</SelectItem>
+            <SelectItem value="B+">B+</SelectItem>
+            <SelectItem value="B-">B-</SelectItem>
+            <SelectItem value="AB+">AB+</SelectItem>
+            <SelectItem value="AB-">AB-</SelectItem>
+            <SelectItem value="O+">O+</SelectItem>
+            <SelectItem value="O-">O-</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="allergies">Alergias</Label>
+        <Textarea 
+          id="allergies" 
+          value={form.allergies} 
+          onChange={(e) => setForm({ ...form, allergies: e.target.value })}
+          placeholder="Liste suas alergias (ex: Penicilina, Amoxicilina)"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="chronicConditions">Condições Crônicas</Label>
+        <Textarea 
+          id="chronicConditions" 
+          value={form.chronicConditions} 
+          onChange={(e) => setForm({ ...form, chronicConditions: e.target.value })}
+          placeholder="Liste suas condições crônicas (ex: Hipertensão, Diabetes)"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="continuousMedications">Medicamentos de Uso Contínuo</Label>
+        <Textarea 
+          id="continuousMedications" 
+          value={form.continuousMedications} 
+          onChange={(e) => setForm({ ...form, continuousMedications: e.target.value })}
+          placeholder="Liste seus medicamentos de uso contínuo (ex: Losartana 50mg, 1x ao dia)"
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit">
+          Salvar
+        </Button>
+      </div>
+    </form>
   )
 }
