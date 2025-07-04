@@ -9,48 +9,30 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Plus, Edit, Eye, Phone, Mail, Calendar } from "lucide-react"
-
-const mockPatients = [
-  {
-    id: 1,
-    name: "Maria Silva",
-    email: "maria@email.com",
-    phone: "(11) 99999-9999",
-    birthDate: "1985-03-15",
-    lastVisit: "2024-01-15",
-    status: "Ativo",
-    plan: "Particular",
-    notes: "Diabetes tipo 2"
-  },
-  {
-    id: 2,
-    name: "João Santos",
-    email: "joao@email.com",
-    phone: "(11) 88888-8888",
-    birthDate: "1978-07-22",
-    lastVisit: "2024-01-10",
-    status: "Ativo",
-    plan: "Convênio",
-    notes: "Hipertensão"
-  },
-  {
-    id: 3,
-    name: "Ana Costa",
-    email: "ana@email.com",
-    phone: "(11) 77777-7777",
-    birthDate: "1992-11-08",
-    lastVisit: "2023-12-20",
-    status: "Inativo",
-    plan: "Particular",
-    notes: "Alergia a penicilina"
-  }
-]
+import { mockPatients } from "./mockPatients"
+import { HistoricoEvolucoes } from "./HistoricoEvolucoes"
+import { mockConvenios } from "./mockConvenios"
 
 export default function Pacientes() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [patients, setPatients] = useState(mockPatients)
+  const [formState, setFormState] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    birthDate: '',
+    tipoConsulta: '',
+    convenio: '',
+    plano: '',
+    status: 'ativo',
+    notes: ''
+  });
 
-  const filteredPatients = mockPatients.filter(patient =>
+  const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -79,25 +61,25 @@ export default function Pacientes() {
             <div className="grid grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome Completo</Label>
-                <Input id="name" placeholder="Digite o nome completo" />
+                <Input id="name" placeholder="Digite o nome completo" value={formState.name} onChange={e => setFormState(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="email@exemplo.com" />
+                <Input id="email" type="email" placeholder="email@exemplo.com" value={formState.email} onChange={e => setFormState(f => ({ ...f, email: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Telefone</Label>
-                <Input id="phone" placeholder="(11) 99999-9999" />
+                <Input id="phone" placeholder="(11) 99999-9999" value={formState.phone} onChange={e => setFormState(f => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthDate">Data de Nascimento</Label>
-                <Input id="birthDate" type="date" />
+                <Input id="birthDate" type="date" value={formState.birthDate} onChange={e => setFormState(f => ({ ...f, birthDate: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="plan">Plano</Label>
-                <Select>
+                <Label>Tipo de Consulta</Label>
+                <Select value={formState.tipoConsulta} onValueChange={tipoConsulta => setFormState(f => ({ ...f, tipoConsulta, convenio: '', plano: '' }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o plano" />
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="particular">Particular</SelectItem>
@@ -105,9 +87,39 @@ export default function Pacientes() {
                   </SelectContent>
                 </Select>
               </div>
+              {formState.tipoConsulta === 'convenio' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Convênio</Label>
+                    <Select value={formState.convenio} onValueChange={convenio => setFormState(f => ({ ...f, convenio, plano: '' }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o convênio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockConvenios.map(c => (
+                          <SelectItem key={c.operadora} value={c.operadora}>{c.operadora}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select value={formState.plano} onValueChange={plano => setFormState(f => ({ ...f, plano }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockConvenios.find(c => c.operadora === formState.convenio)?.planos.map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select>
+                <Select value={formState.status} onValueChange={status => setFormState(f => ({ ...f, status }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
@@ -119,14 +131,14 @@ export default function Pacientes() {
               </div>
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="notes">Observações</Label>
-                <Textarea id="notes" placeholder="Observações importantes sobre o paciente" />
+                <Textarea id="notes" placeholder="Observações importantes sobre o paciente" value={formState.notes} onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))} />
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => { setIsDialogOpen(false); setFormState({ name: '', email: '', phone: '', birthDate: '', tipoConsulta: '', convenio: '', plano: '', status: 'ativo', notes: '' }); }}>
                 Cancelar
               </Button>
-              <Button onClick={() => setIsDialogOpen(false)}>
+              <Button onClick={() => { setIsDialogOpen(false); setFormState({ name: '', email: '', phone: '', birthDate: '', tipoConsulta: '', convenio: '', plano: '', status: 'ativo', notes: '' }); }}>
                 Salvar Paciente
               </Button>
             </div>
@@ -244,10 +256,10 @@ export default function Pacientes() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsViewDialogOpen(true) }}>
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsEditDialogOpen(true) }}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     </div>
@@ -258,6 +270,144 @@ export default function Pacientes() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Paciente</DialogTitle>
+          </DialogHeader>
+          {selectedPatient && (
+            <>
+              <div className="space-y-2">
+                <div><strong>Nome:</strong> {selectedPatient.name}</div>
+                <div><strong>Email:</strong> {selectedPatient.email}</div>
+                <div><strong>Telefone:</strong> {selectedPatient.phone}</div>
+                <div><strong>Data de Nascimento:</strong> {new Date(selectedPatient.birthDate).toLocaleDateString('pt-BR')}</div>
+                <div><strong>Última Consulta:</strong> {new Date(selectedPatient.lastVisit).toLocaleDateString('pt-BR')}</div>
+                <div><strong>Plano:</strong> {selectedPatient.plan}</div>
+                <div><strong>Status:</strong> {selectedPatient.status}</div>
+                <div><strong>Observações:</strong> {selectedPatient.notes}</div>
+              </div>
+              <HistoricoEvolucoes evolucoes={selectedPatient.evolucoes || []} />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Paciente</DialogTitle>
+          </DialogHeader>
+          {selectedPatient && (
+            <EditPatientForm patient={selectedPatient} onSave={updated => {
+              setPatients(patients.map(p => p.id === updated.id ? updated : p))
+              setIsEditDialogOpen(false)
+            }} onCancel={() => setIsEditDialogOpen(false)} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  )
+}
+
+function EditPatientForm({ patient, onSave, onCancel }) {
+  const [form, setForm] = useState({ ...patient })
+  const [plano, setPlano] = useState(form.plan.toLowerCase())
+  return (
+    <form className="grid grid-cols-2 gap-4 py-4" onSubmit={e => { e.preventDefault(); onSave(form) }}>
+      <div className="space-y-2">
+        <Label htmlFor="name">Nome Completo</Label>
+        <Input id="name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="phone">Telefone</Label>
+        <Input id="phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="birthDate">Data de Nascimento</Label>
+        <Input id="birthDate" type="date" value={form.birthDate} onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="plan">Plano</Label>
+        <Select value={plano} onValueChange={v => {
+          setPlano(v)
+          setForm(f => ({ ...f, plan: v === 'particular' ? 'Particular' : 'Convênio', convenio: v === 'particular' ? '' : (mockConvenios[0] || '') }))
+        }}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o plano" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="particular">Particular</SelectItem>
+            <SelectItem value="convenio">Convênio</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {plano === 'convenio' && (
+        <>
+          <div className="space-y-2 col-span-2">
+            <Label htmlFor="convenio">Convênio</Label>
+            {mockConvenios.length > 0 ? (
+              <Select
+                value={typeof form.convenio === 'string' ? form.convenio : (form.convenio?.operadora || mockConvenios[0].operadora)}
+                onValueChange={v => setForm(f => ({ ...f, convenio: v, planoConvenio: '' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o convênio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockConvenios.map((c, idx) => (
+                    <SelectItem key={idx} value={c.operadora}>{c.operadora}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="text-muted-foreground">Nenhum convênio cadastrado. Cadastre em Configurações.</div>
+            )}
+          </div>
+          {form.convenio && (
+            <div className="space-y-2 col-span-2">
+              <Label htmlFor="planoConvenio">Plano do Convênio</Label>
+              <Select
+                value={form.planoConvenio || ''}
+                onValueChange={v => setForm(f => ({ ...f, planoConvenio: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(mockConvenios.find(c => c.operadora === form.convenio)?.planos || []).map((plano, idx) => (
+                    <SelectItem key={idx} value={plano}>{plano}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </>
+      )}
+      <div className="space-y-2">
+        <Label htmlFor="status">Status</Label>
+        <Select value={form.status.toLowerCase()} onValueChange={v => setForm(f => ({ ...f, status: v === 'ativo' ? 'Ativo' : 'Inativo' }))}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ativo">Ativo</SelectItem>
+            <SelectItem value="inativo">Inativo</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="col-span-2 space-y-2">
+        <Label htmlFor="notes">Observações</Label>
+        <Textarea id="notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+      </div>
+      <div className="col-span-2 flex justify-end gap-2">
+        <Button variant="outline" type="button" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit">Salvar Alterações</Button>
+      </div>
+    </form>
   )
 }

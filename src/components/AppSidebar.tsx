@@ -92,6 +92,12 @@ const menuItems = [
     url: "/configuracoes",
     icon: Settings,
     group: "sistema"
+  },
+  {
+    title: "Acompanhamento Pacientes",
+    url: "/acompanhamento-pacientes",
+    icon: MessageSquare,
+    group: "clinico"
   }
 ]
 

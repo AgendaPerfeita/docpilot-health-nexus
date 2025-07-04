@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Pacientes from "./pages/Pacientes";
-import Prontuario from "./pages/Prontuario";
+import ProntuarioIndex from "./pages/prontuario/index";
 import Agenda from "./pages/Agenda";
 import CRM from "./pages/CRM";
 import AreaPaciente from "./pages/AreaPaciente";
@@ -16,6 +16,8 @@ import Comissoes from "./pages/Comissoes";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
+import NovaEvolucao from "./pages/prontuario/nova";
+import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +31,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/pacientes" element={<Pacientes />} />
-            <Route path="/prontuario" element={<Prontuario />} />
+            <Route path="/prontuario" element={<ProntuarioIndex />} />
+            <Route path="/prontuario/nova" element={<NovaEvolucao />} />
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/area-paciente" element={<AreaPaciente />} />
@@ -38,6 +41,7 @@ const App = () => (
             <Route path="/comissoes" element={<Comissoes />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/acompanhamento-pacientes" element={<AcompanhamentoPacientes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

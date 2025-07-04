@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { mockConvenios } from "./mockConvenios"
 
 interface ClinicSettings {
   name: string
@@ -39,6 +40,11 @@ interface ClinicSettings {
     expiresAt: string
     features: string[]
   }
+}
+
+interface Convenio {
+  operadora: string;
+  planos: string[];
 }
 
 const mockSettings: ClinicSettings = {
@@ -74,6 +80,8 @@ const mockSettings: ClinicSettings = {
 export default function Configuracoes() {
   const [settings, setSettings] = useState<ClinicSettings>(mockSettings)
   const [activeTab, setActiveTab] = useState('geral')
+  const [convenios, setConvenios] = useState<Convenio[]>([...mockConvenios])
+  const [novaOperadora, setNovaOperadora] = useState("")
 
   const dayNames = {
     monday: 'Segunda-feira',
@@ -224,6 +232,75 @@ export default function Configuracoes() {
               </CardContent>
             </Card>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Convênios Aceitos
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {convenios.length === 0 && <span className="text-muted-foreground">Nenhum convênio cadastrado.</span>}
+              {convenios.map((c, idx) => (
+                <div key={idx} className="mb-4">
+                  <Badge className="flex items-center gap-2 mb-1">
+                    {c.operadora}
+                    <Button size="sm" variant="ghost" onClick={() => setConvenios(convenios.filter((_, i) => i !== idx))}>
+                      Remover Operadora
+                    </Button>
+                  </Badge>
+                  <div className="ml-4 flex flex-wrap gap-2">
+                    {c.planos.map((plano, pidx) => (
+                      <Badge key={pidx} variant="secondary" className="flex items-center gap-2">
+                        {plano}
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          setConvenios(convenios.map((op, oi) =>
+                            oi === idx
+                              ? { ...op, planos: op.planos.filter((_, pi) => pi !== pidx) }
+                              : op
+                          ))
+                        }}>
+                          Remover
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                  {/* Formulário para adicionar novo plano à operadora */}
+                  <form className="flex gap-2 mt-1" onSubmit={e => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const novoPlano = (form.novoPlano as HTMLInputElement).value.trim();
+                    if (novoPlano && !c.planos.includes(novoPlano)) {
+                      setConvenios(convenios.map((op, oi) =>
+                        oi === idx
+                          ? { ...op, planos: [...op.planos, novoPlano] }
+                          : op
+                      ));
+                      form.novoPlano.value = "";
+                    }
+                  }}>
+                    <Input name="novoPlano" placeholder={`Novo plano para ${c.operadora}`} />
+                    <Button type="submit">Adicionar Plano</Button>
+                  </form>
+                </div>
+              ))}
+              {/* Formulário para adicionar nova operadora */}
+              <form className="flex gap-2 mt-2" onSubmit={e => {
+                e.preventDefault();
+                if (novaOperadora.trim() && !convenios.some(c => c.operadora.toLowerCase() === novaOperadora.trim().toLowerCase())) {
+                  setConvenios([...convenios, { operadora: novaOperadora.trim(), planos: [] }]);
+                  setNovaOperadora("");
+                }
+              }}>
+                <Input
+                  placeholder="Nova operadora"
+                  value={novaOperadora}
+                  onChange={e => setNovaOperadora(e.target.value)}
+                />
+                <Button type="submit">Adicionar Operadora</Button>
+              </form>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="horarios" className="space-y-6">

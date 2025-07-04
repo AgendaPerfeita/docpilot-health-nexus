@@ -55,11 +55,43 @@ const mockAppointments: Appointment[] = [
   }
 ]
 
+const mockPatients = [
+  {
+    name: 'Ana Silva',
+    phone: '(11) 99999-0001',
+    history: [
+      { date: '2024-04-01', type: 'Consulta', diagnosis: 'Rinite alérgica' },
+      { date: '2024-03-10', type: 'Retorno', diagnosis: 'Rinite alérgica' }
+    ]
+  },
+  {
+    name: 'Carlos Santos',
+    phone: '(11) 99999-0002',
+    history: [
+      { date: '2024-02-15', type: 'Exame', diagnosis: 'Colesterol alto' }
+    ]
+  }
+];
+
+const mockConvenios = [
+  { nome: 'Unimed', planos: ['Uniplan', 'UniTop', 'UniGold'] },
+  { nome: 'Amil', planos: ['Amil 200', 'Amil 400', 'Amil 700'] },
+  { nome: 'Bradesco Saúde', planos: ['Top Nacional', 'Efetivo', 'Nacional Flex'] }
+];
+
 export default function Agenda() {
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddingAppointment, setIsAddingAppointment] = useState(false)
+  const [formState, setFormState] = useState({
+    patient: '',
+    phone: '',
+    tipoConsulta: '',
+    convenio: '',
+    plano: '',
+  });
+  const [patientHistory, setPatientHistory] = useState<any[]>([]);
 
   const filteredAppointments = appointments.filter(apt => 
     apt.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,6 +106,18 @@ export default function Agenda() {
       default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value;
+    setFormState(f => ({ ...f, phone }));
+    const found = mockPatients.find(p => p.phone === phone);
+    if (found) {
+      setFormState(f => ({ ...f, patient: found.name, phone }));
+      setPatientHistory(found.history);
+    } else {
+      setPatientHistory([]);
+    }
+  };
 
   const handleAddAppointment = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -93,6 +137,8 @@ export default function Agenda() {
     
     setAppointments([...appointments, newAppointment])
     setIsAddingAppointment(false)
+    setFormState({ patient: '', phone: '', tipoConsulta: '', convenio: '', plano: '' });
+    setPatientHistory([]);
   }
 
   return (
@@ -116,15 +162,74 @@ export default function Agenda() {
             <form onSubmit={handleAddAppointment} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="patient">Paciente</Label>
-                  <Input id="patient" name="patient" required />
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input id="phone" name="phone" required value={formState.phone} onChange={handlePhoneChange} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input id="phone" name="phone" required />
+                  <Label htmlFor="patient">Paciente</Label>
+                  <Input id="patient" name="patient" required value={formState.patient} onChange={e => setFormState(f => ({ ...f, patient: e.target.value }))} />
                 </div>
               </div>
-              
+              <div className="space-y-2">
+                <Label>Tipo de Consulta</Label>
+                <Select value={formState.tipoConsulta} onValueChange={tipoConsulta => setFormState(f => ({ ...f, tipoConsulta, convenio: '', plano: '' }))} name="tipoConsulta" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="particular">Particular</SelectItem>
+                    <SelectItem value="convenio">Convênio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formState.tipoConsulta === 'convenio' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Convênio</Label>
+                    <Select value={formState.convenio} onValueChange={convenio => setFormState(f => ({ ...f, convenio, plano: '' }))} name="convenio" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o convênio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockConvenios.map(c => (
+                          <SelectItem key={c.nome} value={c.nome}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select value={formState.plano} onValueChange={plano => setFormState(f => ({ ...f, plano }))} name="plano" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {mockConvenios.find(c => c.nome === formState.convenio)?.planos.map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              {patientHistory.length > 0 && (
+                <Card className="bg-muted/50 border-blue-200 mb-2">
+                  <CardHeader>
+                    <CardTitle>Histórico do Paciente</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="text-sm space-y-1">
+                      {patientHistory.map((h, i) => (
+                        <li key={i} className="flex gap-2 items-center">
+                          <span className="text-muted-foreground">{new Date(h.date).toLocaleDateString('pt-BR')}</span>
+                          <span className="font-medium">{h.type}</span>
+                          <span className="text-xs text-muted-foreground">{h.diagnosis}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="service">Serviço</Label>
