@@ -120,24 +120,40 @@ export default function NovaEvolucao() {
 
         Sintomas: ${aiSymptoms}
 
-        Responda EXATAMENTE neste formato estruturado:
+        Responda EXATAMENTE neste formato estruturado, usando texto simples sem formatação especial:
 
         HIPÓTESE DIAGNÓSTICA:
-        [Liste os possíveis diagnósticos diferenciais]
+        • [Diagnóstico 1]: [Breve descrição]
+        • [Diagnóstico 2]: [Breve descrição]
+        • [Diagnóstico 3]: [Breve descrição]
 
         CONDUTA SUGERIDA:
-        [Descreva a conduta terapêutica inicial]
+        • [Ação 1]: [Descrição detalhada]
+        • [Ação 2]: [Descrição detalhada]
+        • [Ação 3]: [Descrição detalhada]
 
         PRESCRIÇÃO SUGERIDA:
-        [Liste medicamentos e dosagens]
+        • [Medicamento 1]: [Dosagem e posologia]
+        • [Medicamento 2]: [Dosagem e posologia]
+        • [Observações importantes]
 
         EXAMES COMPLEMENTARES:
-        [Liste exames sugeridos se necessário]
+        • [Exame 1]: [Indicação]
+        • [Exame 2]: [Indicação]
+        • [Exame 3]: [Indicação]
 
         OBSERVAÇÕES:
-        [Orientações e sinais de alerta para retorno]
+        • [Orientações para o paciente]
+        • [Sinais de alerta]
+        • [Recomendações de retorno]
 
-        Responda em português brasileiro de forma clara e profissional.
+        REGRAS IMPORTANTES:
+        1. Use APENAS texto simples, sem asteriscos (*), negrito (**), ou formatação Markdown
+        2. Use APENAS • para criar listas
+        3. Não use numeração (1., 2., 3.)
+        4. Não use asteriscos para formatação
+        5. Mantenha o texto limpo e profissional
+        6. Responda em português brasileiro
       `
       
       const response = await callGeminiAPI(prompt)
@@ -150,6 +166,45 @@ export default function NovaEvolucao() {
     }
   }
 
+  // Função para limpar formatação Markdown
+  const cleanMarkdown = (text: string): string => {
+    if (!text) return text
+    
+    return text
+      // Remove asteriscos de negrito (**texto** -> texto)
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      // Remove asteriscos de itálico (*texto* -> texto)
+      .replace(/\*(.*?)\*/g, '$1')
+      // Remove underscores de negrito (__texto__ -> texto)
+      .replace(/__(.*?)__/g, '$1')
+      // Remove underscores de itálico (_texto_ -> texto)
+      .replace(/_(.*?)_/g, '$1')
+      // Remove tachado (~~texto~~ -> texto)
+      .replace(/~~(.*?)~~/g, '$1')
+      // Remove links Markdown ([texto](url) -> texto)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      // Remove listas com asteriscos (* item -> • item)
+      .replace(/^\s*\*\s+/gm, '• ')
+      // Remove listas com hífens (- item -> • item)
+      .replace(/^\s*-\s+/gm, '• ')
+      // Remove listas numeradas (1. item -> • item)
+      .replace(/^\s*\d+\.\s+/gm, '• ')
+      // Remove cabeçalhos (# Título -> Título)
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove blocos de código inline (`código` -> código)
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove blocos de código multilinha
+      .replace(/```[\s\S]*?```/g, '')
+      // Remove citações (> texto -> texto)
+      .replace(/^>\s+/gm, '')
+      // Remove espaços extras no início de linhas
+      .replace(/^\s+/gm, '')
+      // Remove linhas vazias extras
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      // Remove espaços extras no final
+      .trim()
+  }
+
   const applyAISuggestion = () => {
     if (aiSuggestion) {
       const suggestion = aiSuggestion
@@ -158,7 +213,21 @@ export default function NovaEvolucao() {
       const extractSection = (sectionName: string) => {
         const regex = new RegExp(`${sectionName}:\\s*([\\s\\S]*?)(?=\\n\\s*[A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ]+:|$)`, 'i')
         const match = suggestion.match(regex)
-        return match ? match[1].trim() : null
+        if (!match) return null
+        
+        let extracted = cleanMarkdown(match[1].trim())
+        
+        // Melhorar formatação adicional
+        extracted = extracted
+          // Remove linhas vazias no início e fim
+          .replace(/^\s*\n+/, '')
+          .replace(/\n+\s*$/, '')
+          // Garante que cada item da lista comece com •
+          .replace(/^[^•]/gm, '• $&')
+          // Remove múltiplas quebras de linha
+          .replace(/\n{3,}/g, '\n\n')
+        
+        return extracted
       }
       
       // Aplicar cada seção nos campos correspondentes
