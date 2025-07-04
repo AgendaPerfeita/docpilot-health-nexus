@@ -7,6 +7,14 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Pacientes from "./pages/Pacientes";
 import Prontuario from "./pages/Prontuario";
+import Agenda from "./pages/Agenda";
+import CRM from "./pages/CRM";
+import AreaPaciente from "./pages/AreaPaciente";
+import Financeiro from "./pages/Financeiro";
+import DRE from "./pages/DRE";
+import Comissoes from "./pages/Comissoes";
+import Relatorios from "./pages/Relatorios";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +30,14 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/pacientes" element={<Pacientes />} />
             <Route path="/prontuario" element={<Prontuario />} />
+            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/crm" element={<CRM />} />
+            <Route path="/area-paciente" element={<AreaPaciente />} />
+            <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/dre" element={<DRE />} />
+            <Route path="/comissoes" element={<Comissoes />} />
+            <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
