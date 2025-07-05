@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useConsultas, Consulta } from "@/hooks/useConsultas";
 import { usePacientes } from "@/hooks/usePacientes";
+import { useActiveClinica } from "@/hooks/useActiveClinica";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, Plus, Edit, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, Clock, Plus, Edit, CheckCircle, XCircle, Building2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 export const AgendaConsultas = () => {
   const { consultas, loading, criarConsulta, atualizarConsulta, getConsultasHoje } = useConsultas();
   const { pacientes } = usePacientes();
+  const { activeClinica } = useActiveClinica();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingConsulta, setEditingConsulta] = useState<Consulta | null>(null);
@@ -76,6 +78,7 @@ export const AgendaConsultas = () => {
         data_consulta: new Date(formData.data_consulta).toISOString(),
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
         medico_id: "current-user-id", // TODO: pegar do contexto do usuário
+        clinica_id: activeClinica?.id || null,
         status: 'agendada' as const
       };
 
@@ -137,12 +140,33 @@ export const AgendaConsultas = () => {
   };
 
   const consultasHoje = getConsultasHoje();
-  const consultasDia = consultas.filter(consulta => 
+  
+  // Filtrar consultas por clínica ativa se for médico
+  const consultasFiltradas = activeClinica 
+    ? consultas.filter(consulta => consulta.clinica_id === activeClinica.id)
+    : consultas;
+    
+  const consultasDia = consultasFiltradas.filter(consulta => 
     consulta.data_consulta.startsWith(selectedDate)
+  );
+
+  const consultasHojeFiltradas = consultasFiltradas.filter(consulta =>
+    consulta.data_consulta.startsWith(new Date().toISOString().split('T')[0])
   );
 
   return (
     <div className="space-y-6">
+      {/* Header com seletor de clínica */}
+      {activeClinica && (
+        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+          <Building2 className="h-5 w-5 text-primary" />
+          <div>
+            <p className="font-medium">Agenda da {activeClinica.nome}</p>
+            <p className="text-sm text-muted-foreground">{activeClinica.email}</p>
+          </div>
+        </div>
+      )}
+      
       {/* Resumo do dia */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card>
@@ -151,7 +175,7 @@ export const AgendaConsultas = () => {
               <Calendar className="h-4 w-4 text-primary" />
               <div>
                 <p className="text-sm text-muted-foreground">Hoje</p>
-                <p className="text-2xl font-bold">{consultasHoje.length}</p>
+                <p className="text-2xl font-bold">{consultasHojeFiltradas.length}</p>
               </div>
             </div>
           </CardContent>
@@ -164,7 +188,7 @@ export const AgendaConsultas = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Concluídas</p>
                 <p className="text-2xl font-bold">
-                  {consultasHoje.filter(c => c.status === 'concluida').length}
+                  {consultasHojeFiltradas.filter(c => c.status === 'concluida').length}
                 </p>
               </div>
             </div>
@@ -178,7 +202,7 @@ export const AgendaConsultas = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Pendentes</p>
                 <p className="text-2xl font-bold">
-                  {consultasHoje.filter(c => ['agendada', 'confirmada'].includes(c.status)).length}
+                  {consultasHojeFiltradas.filter(c => ['agendada', 'confirmada'].includes(c.status)).length}
                 </p>
               </div>
             </div>
@@ -192,7 +216,7 @@ export const AgendaConsultas = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Canceladas</p>
                 <p className="text-2xl font-bold">
-                  {consultasHoje.filter(c => c.status === 'cancelada').length}
+                  {consultasHojeFiltradas.filter(c => c.status === 'cancelada').length}
                 </p>
               </div>
             </div>
@@ -347,6 +371,11 @@ export const AgendaConsultas = () => {
                           <p className="text-sm text-muted-foreground">
                             {consulta.tipo_consulta} • {consulta.duracao_minutos}min
                             {consulta.valor && ` • R$ ${consulta.valor.toFixed(2)}`}
+                            {activeClinica && consulta.clinica_id !== activeClinica.id && (
+                              <span className="ml-2 text-xs bg-muted px-2 py-1 rounded">
+                                Outra clínica
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>

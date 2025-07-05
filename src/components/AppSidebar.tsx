@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/hooks/useAuth"
+import { ClinicaSelector } from "@/components/ui/clinica-selector"
 
 const menuItems = [
   {
@@ -226,6 +227,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={open ? "w-64" : "w-16"}>
+      <div className="p-4 border-b">
+        <div className="flex items-center gap-2 mb-2">
+          <Stethoscope className="h-6 w-6 text-primary" />
+          {open && <span className="font-bold text-lg">SmartDoc</span>}
+        </div>
+        {open && <ClinicaSelector />}
+      </div>
       <SidebarContent>
         {Object.entries(visibleGroups).map(([groupKey, items]) => {
           if (!items || items.length === 0) return null

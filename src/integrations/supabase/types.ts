@@ -148,6 +148,56 @@ export type Database = {
         }
         Relationships: []
       }
+      convites_medicos: {
+        Row: {
+          clinica_id: string
+          created_at: string
+          crm: string | null
+          email: string
+          especialidade: string | null
+          expires_at: string
+          id: string
+          nome: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          clinica_id: string
+          created_at?: string
+          crm?: string | null
+          email: string
+          especialidade?: string | null
+          expires_at?: string
+          id?: string
+          nome: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          clinica_id?: string
+          created_at?: string
+          crm?: string | null
+          email?: string
+          especialidade?: string | null
+          expires_at?: string
+          id?: string
+          nome?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_medicos_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pacientes: {
         Row: {
           cep: string | null
