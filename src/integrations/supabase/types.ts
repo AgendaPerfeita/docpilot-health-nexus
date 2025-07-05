@@ -9,7 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          ativo: boolean
+          avatar_url: string | null
+          cep: string | null
+          cidade: string | null
+          created_at: string
+          crm: string | null
+          documento: string | null
+          email: string
+          endereco: string | null
+          especialidade: string | null
+          estado: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          tipo: Database["public"]["Enums"]["user_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          avatar_url?: string | null
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          crm?: string | null
+          documento?: string | null
+          email: string
+          endereco?: string | null
+          especialidade?: string | null
+          estado?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          tipo: Database["public"]["Enums"]["user_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          avatar_url?: string | null
+          cep?: string | null
+          cidade?: string | null
+          created_at?: string
+          crm?: string | null
+          documento?: string | null
+          email?: string
+          endereco?: string | null
+          especialidade?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          tipo?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +77,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_type: "medico" | "paciente" | "clinica" | "hospital"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +192,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_type: ["medico", "paciente", "clinica", "hospital"],
+    },
   },
 } as const

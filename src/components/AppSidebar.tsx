@@ -30,6 +30,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/hooks/useAuth"
 
 const menuItems = [
   {
@@ -149,197 +150,111 @@ const groupedItems = {
 
 export function AppSidebar() {
   const { open } = useSidebar()
+  const { profile } = useAuth()
   const location = useLocation()
   const currentPath = location.pathname
 
   const isActive = (path: string) => currentPath === path
 
+  // Filter menu items based on user type
+  const getVisibleGroups = () => {
+    if (!profile) return {}
+
+    const userType = profile.tipo
+
+    const visibleGroups: { [key: string]: any[] } = {
+      principal: groupedItems.principal
+    }
+
+    switch (userType) {
+      case 'medico':
+        visibleGroups.clinico = groupedItems.clinico
+        visibleGroups.medico = groupedItems.medico
+        visibleGroups.relatorios = groupedItems.relatorios.filter(item => 
+          item.title === "Relatórios"
+        )
+        visibleGroups.sistema = groupedItems.sistema
+        break
+
+      case 'paciente':
+        visibleGroups.paciente = [
+          { title: "Área do Paciente", url: "/area-paciente", icon: Stethoscope, group: "paciente" },
+          { title: "Meus Agendamentos", url: "/agenda", icon: Calendar, group: "paciente" }
+        ]
+        visibleGroups.sistema = groupedItems.sistema
+        break
+
+      case 'clinica':
+        visibleGroups.clinico = groupedItems.clinico
+        visibleGroups.medico = groupedItems.medico
+        visibleGroups.clinica = groupedItems.clinica
+        visibleGroups.financeiro = groupedItems.financeiro
+        visibleGroups.relatorios = groupedItems.relatorios
+        visibleGroups.sistema = groupedItems.sistema
+        break
+
+      case 'hospital':
+        visibleGroups.clinico = groupedItems.clinico
+        visibleGroups.medico = groupedItems.medico
+        visibleGroups.clinica = groupedItems.clinica
+        visibleGroups.hospital = groupedItems.hospital
+        visibleGroups.financeiro = groupedItems.financeiro
+        visibleGroups.relatorios = groupedItems.relatorios
+        visibleGroups.sistema = groupedItems.sistema
+        break
+
+      default:
+        return {}
+    }
+
+    return visibleGroups
+  }
+
+  const visibleGroups = getVisibleGroups()
+
+  const groupLabels = {
+    principal: "Principal",
+    clinico: "Clínico", 
+    medico: "Médico Individual",
+    clinica: "Clínica",
+    hospital: "Hospital",
+    financeiro: "Financeiro",
+    relatorios: "Relatórios",
+    sistema: "Sistema",
+    paciente: "Paciente"
+  }
+
   return (
     <Sidebar className={open ? "w-64" : "w-16"}>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.principal.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Clínico</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.clinico.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Médico Individual</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.medico.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Clínica</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.clinica.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Hospital</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.hospital.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Financeiro</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.financeiro.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Relatórios</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.relatorios.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Sistema</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {groupedItems.sistema.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={({ isActive }) => 
-                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {Object.entries(visibleGroups).map(([groupKey, items]) => {
+          if (!items || items.length === 0) return null
+          
+          return (
+            <SidebarGroup key={groupKey}>
+              <SidebarGroupLabel>{groupLabels[groupKey as keyof typeof groupLabels]}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink 
+                          to={item.url} 
+                          className={({ isActive }) => 
+                            isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {open && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
     </Sidebar>
   )
