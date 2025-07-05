@@ -8,8 +8,8 @@ export interface UserProfile {
   email: string;
   nome: string;
   tipo: 'medico' | 'paciente' | 'clinica' | 'hospital';
+  documento: string; // Agora obrigatório
   telefone?: string;
-  documento?: string;
   especialidade?: string;
   crm?: string;
   endereco?: string;
@@ -90,12 +90,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, userData: any) => {
     const redirectUrl = `${window.location.origin}/`;
     
+    // Garantir que todos os campos obrigatórios estão presentes
+    const completeUserData = {
+      nome: userData.nome || 'Usuário',
+      tipo: userData.tipo || 'paciente',
+      documento: userData.documento || '00000000000',
+      telefone: userData.telefone || '',
+      especialidade: userData.especialidade || '',
+      crm: userData.crm || ''
+    };
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: userData
+        data: completeUserData
       }
     });
     
