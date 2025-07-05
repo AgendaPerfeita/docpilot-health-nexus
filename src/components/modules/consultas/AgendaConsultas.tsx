@@ -75,7 +75,8 @@ export const AgendaConsultas = () => {
         ...formData,
         data_consulta: new Date(formData.data_consulta).toISOString(),
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
-        medico_id: "current-user-id" // TODO: pegar do contexto do usuário
+        medico_id: "current-user-id", // TODO: pegar do contexto do usuário
+        status: 'agendada' as const
       };
 
       if (editingConsulta) {
