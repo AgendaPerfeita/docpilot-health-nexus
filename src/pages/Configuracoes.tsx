@@ -298,16 +298,35 @@ export default function Configuracoes() {
                   />
                 </div>
 
-                {profile?.tipo !== 'paciente' && (
+                {(profile?.tipo === 'medico' || profile?.tipo === 'paciente') && (
                   <div className="space-y-2">
-                    <Label htmlFor="entityDoc">
-                      {profile?.tipo === 'medico' ? 'CPF' : 'CNPJ'}
-                    </Label>
+                    <Label htmlFor="entityDoc">CPF</Label>
                     <Input
                       id="entityDoc"
                       value={profile?.documento || ''}
-                      placeholder={profile?.tipo === 'medico' ? '000.000.000-00' : '12.345.678/0001-90'}
+                      placeholder="000.000.000-00"
+                      readOnly
+                      className="bg-muted/50 cursor-not-allowed"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Para alterar este campo, entre em contato com o suporte
+                    </p>
+                  </div>
+                )}
+
+                {(profile?.tipo === 'clinica' || profile?.tipo === 'hospital') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="entityDoc">CNPJ</Label>
+                    <Input
+                      id="entityDoc"
+                      value={profile?.documento || ''}
+                      placeholder="12.345.678/0001-90"
+                      readOnly
+                      className="bg-muted/50 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Para alterar este campo, entre em contato com o suporte
+                    </p>
                   </div>
                 )}
 

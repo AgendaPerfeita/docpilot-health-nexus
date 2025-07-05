@@ -58,6 +58,17 @@ const Register = () => {
       return;
     }
 
+    // Validação obrigatória de CPF/CNPJ
+    if (!formData.documento.trim()) {
+      const docType = (formData.tipo === "medico" || formData.tipo === "paciente") ? "CPF" : "CNPJ";
+      toast({
+        title: `${docType} obrigatório`,
+        description: `O ${docType} é obrigatório para este tipo de usuário`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -178,13 +189,14 @@ const Register = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="documento">
-                    {formData.tipo === "medico" || formData.tipo === "paciente" ? "CPF" : "CNPJ"}
+                    {formData.tipo === "medico" || formData.tipo === "paciente" ? "CPF" : "CNPJ"} *
                   </Label>
                   <Input
                     id="documento"
                     placeholder={formData.tipo === "medico" || formData.tipo === "paciente" ? "000.000.000-00" : "00.000.000/0000-00"}
                     value={formData.documento}
                     onChange={(e) => handleChange("documento", e.target.value)}
+                    required={formData.tipo !== ""}
                   />
                 </div>
               </div>
