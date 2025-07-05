@@ -1,176 +1,157 @@
+
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { usePacientes } from "@/hooks/usePacientes";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 import { 
-  FileText, 
+  ArrowLeft, 
   Save, 
-  User, 
-  Stethoscope,
   Bot,
-  ArrowLeft
+  User,
+  Calendar,
+  Stethoscope,
+  FileText,
+  Loader2
 } from "lucide-react";
-import { callGeminiAPI } from "@/lib/gemini";
+import { usePacientes } from "@/hooks/usePacientes";
+import { useProntuarios } from "@/hooks/useProntuarios";
+import { analyzeMedicalData } from "@/lib/gemini";
 
 const NovaEvolucao = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const { pacientes } = usePacientes();
-  const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const pacienteId = searchParams.get('paciente');
   
-  const [loading, setLoading] = useState(false);
-  const [iaAnalyzing, setIaAnalyzing] = useState(false);
-  const [formData, setFormData] = useState({
-    paciente_id: "",
-    queixa_principal: "",
-    historia_doenca_atual: "",
-    exame_fisico: "",
-    hipotese_diagnostica: "",
-    conduta: "",
-    prescricao: "",
-    observacoes: ""
-  });
+  const { pacientes } = usePacientes();
+  const { criarProntuario } = useProntuarios();
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  // Estados do formulário
+  const [selectedPaciente, setSelectedPaciente] = useState(pacienteId || "");
+  const [dataAtendimento, setDataAtendimento] = useState(new Date().toISOString().split('T')[0]);
+  const [queixaPrincipal, setQueixaPrincipal] = useState("");
+  const [historiaDoencaAtual, setHistoriaDoencaAtual] = useState("");
+  const [exameFisico, setExameFisico] = useState("");
+  const [hipoteseDiagnostica, setHipoteseDiagnostica] = useState("");
+  const [conduta, setConduta] = useState("");
+  const [observacoes, setObservacoes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Estados da IA
+  const [iaAnalyzing, setIaAnalyzing] = useState(false);
+
+  const pacienteSelecionado = pacientes?.find(p => p.id === selectedPaciente);
 
   const handleIaAnalysis = async () => {
-    if (!formData.queixa_principal && !formData.historia_doenca_atual) {
+    if (!queixaPrincipal.trim()) {
       toast({
         title: "Dados insuficientes",
-        description: "Preencha a queixa principal ou história da doença atual para usar a IA.",
-        variant: "destructive"
+        description: "Informe pelo menos a queixa principal para usar a análise de IA.",
+        variant: "destructive",
       });
       return;
     }
 
     setIaAnalyzing(true);
+    
     try {
-      const selectedPaciente = pacientes?.find(p => p.id === formData.paciente_id);
-      const idade = selectedPaciente?.data_nascimento 
-        ? new Date().getFullYear() - new Date(selectedPaciente.data_nascimento).getFullYear()
-        : null;
+      const patientData = {
+        name: pacienteSelecionado?.nome || 'Paciente não identificado',
+        age: pacienteSelecionado?.data_nascimento ? 
+          new Date().getFullYear() - new Date(pacienteSelecionado.data_nascimento).getFullYear() : 
+          'N/A',
+        chronicConditions: 'N/A', // Pode ser expandido se houver campo no paciente
+        continuousMedications: 'N/A', // Pode ser expandido se houver campo no paciente
+        allergies: 'N/A', // Pode ser expandido se houver campo no paciente
+      };
 
-      const prompt = `
-        Como médico assistente, analise o caso clínico abaixo e forneça sugestões para:
-        
-        DADOS DO PACIENTE:
-        - Nome: ${selectedPaciente?.nome || 'Não informado'}
-        - Idade: ${idade || 'Não informada'} anos
-        - Convênio: ${selectedPaciente?.convenio || 'Não informado'}
-        
-        QUEIXA PRINCIPAL: ${formData.queixa_principal}
-        
-        HISTÓRIA DA DOENÇA ATUAL: ${formData.historia_doenca_atual}
-        
-        EXAME FÍSICO: ${formData.exame_fisico || 'Não realizado ainda'}
-        
-        Por favor, forneça sugestões para:
-        1. Hipóteses diagnósticas mais prováveis
-        2. Conduta recomendada
-        3. Exames complementares se necessários
-        4. Observações importantes
-        
-        Responda de forma profissional e estruturada, como um médico experiente.
-      `;
-
-      const analysis = await callGeminiAPI(prompt);
+      const symptoms = `${queixaPrincipal}${historiaDoencaAtual ? `\n\nHistória da doença atual: ${historiaDoencaAtual}` : ''}`;
       
-      // Parse a resposta da IA e popule os campos
-      const lines = analysis.split('\n');
-      let currentSection = '';
-      let hipotese = '';
-      let conduta = '';
-      let observacoes = '';
+      const analysis = await analyzeMedicalData(patientData, symptoms);
       
-      lines.forEach(line => {
-        if (line.toLowerCase().includes('hipótese') || line.toLowerCase().includes('diagnóstic')) {
-          currentSection = 'hipotese';
-        } else if (line.toLowerCase().includes('conduta') || line.toLowerCase().includes('tratamento')) {
-          currentSection = 'conduta';
-        } else if (line.toLowerCase().includes('observaç') || line.toLowerCase().includes('importante')) {
-          currentSection = 'observacoes';
-        } else if (line.trim() && !line.includes(':')) {
-          if (currentSection === 'hipotese') {
-            hipotese += line.trim() + '\n';
-          } else if (currentSection === 'conduta') {
-            conduta += line.trim() + '\n';
-          } else if (currentSection === 'observacoes') {
-            observacoes += line.trim() + '\n';
-          }
-        }
-      });
+      // Parse da resposta da IA para preencher os campos
+      // A IA retorna texto livre, então vamos usar regex para extrair informações
+      const diagnosticoMatch = analysis.match(/(?:diagnóstico|hipótese|suspeita)[:\s]*([^\n]+)/i);
+      const condutaMatch = analysis.match(/(?:conduta|tratamento|plano)[:\s]*([^\n]+)/i);
+      const observacoesMatch = analysis.match(/(?:observações|orientações|recomendações)[:\s]*([^\n]+)/i);
 
-      setFormData(prev => ({
-        ...prev,
-        hipotese_diagnostica: prev.hipotese_diagnostica || hipotese.trim(),
-        conduta: prev.conduta || conduta.trim(),
-        observacoes: prev.observacoes || observacoes.trim()
-      }));
+      if (diagnosticoMatch) {
+        setHipoteseDiagnostica(prev => prev || diagnosticoMatch[1].trim());
+      }
+      
+      if (condutaMatch) {
+        setConduta(prev => prev || condutaMatch[1].trim());
+      }
+      
+      if (observacoesMatch) {
+        setObservacoes(prev => prev || observacoesMatch[1].trim());
+      }
+
+      // Se não conseguiu fazer parse específico, adiciona toda a análise nas observações
+      if (!diagnosticoMatch && !condutaMatch && !observacoesMatch) {
+        setObservacoes(prev => prev ? `${prev}\n\nAnálise IA:\n${analysis}` : `Análise IA:\n${analysis}`);
+      }
 
       toast({
-        title: "Análise concluída",
-        description: "A IA preencheu os campos com sugestões. Revise e ajuste conforme necessário."
+        title: "Análise concluída!",
+        description: "A IA analisou os dados e preencheu os campos automaticamente. Revise e ajuste conforme necessário.",
       });
-
     } catch (error) {
+      console.error('Erro na análise da IA:', error);
       toast({
         title: "Erro na análise",
-        description: "Não foi possível processar a análise da IA. Tente novamente.",
-        variant: "destructive"
+        description: "Não foi possível completar a análise. Tente novamente.",
+        variant: "destructive",
       });
     } finally {
       setIaAnalyzing(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.paciente_id) {
+  const handleSave = async () => {
+    if (!selectedPaciente) {
       toast({
         title: "Erro",
-        description: "Selecione um paciente para continuar.",
-        variant: "destructive"
+        description: "Selecione um paciente",
+        variant: "destructive",
       });
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
+    
     try {
-      const { error } = await supabase
-        .from('prontuarios')
-        .insert({
-          ...formData,
-          medico_id: profile?.id,
-          data_atendimento: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Prontuário salvo",
-        description: "O prontuário foi criado com sucesso."
+      await criarProntuario({
+        paciente_id: selectedPaciente,
+        data_atendimento: dataAtendimento,
+        queixa_principal: queixaPrincipal,
+        historia_doenca_atual: historiaDoencaAtual,
+        exame_fisico: exameFisico,
+        hipotese_diagnostica: hipoteseDiagnostica,
+        conduta: conduta,
+        observacoes: observacoes,
       });
 
-      navigate('/prontuario');
-    } catch (error: any) {
       toast({
-        title: "Erro ao salvar",
-        description: error.message || "Ocorreu um erro ao salvar o prontuário.",
-        variant: "destructive"
+        title: "Sucesso!",
+        description: "Prontuário salvo com sucesso",
+      });
+
+      navigate("/prontuario");
+    } catch (error) {
+      console.error('Erro ao salvar prontuário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar prontuário",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -179,7 +160,11 @@ const NovaEvolucao = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/prontuario')}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/prontuario")}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
@@ -190,209 +175,246 @@ const NovaEvolucao = () => {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleIaAnalysis}
-          disabled={iaAnalyzing || (!formData.queixa_principal && !formData.historia_doenca_atual)}
-          variant="outline"
-        >
-          {iaAnalyzing ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-              Analisando...
-            </>
-          ) : (
-            <>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleIaAnalysis}
+            disabled={iaAnalyzing || !queixaPrincipal.trim()}
+            variant="outline"
+            className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+          >
+            {iaAnalyzing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
               <Bot className="h-4 w-4 mr-2" />
-              Análise IA
-            </>
-          )}
-        </Button>
+            )}
+            {iaAnalyzing ? "Analisando..." : "Analisar com IA"}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !selectedPaciente}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Salvar
+          </Button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Patient Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Identificação do Paciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="paciente">Selecionar Paciente *</Label>
-              <Select value={formData.paciente_id} onValueChange={(value) => handleInputChange("paciente_id", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha um paciente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {pacientes?.map((paciente) => (
-                    <SelectItem key={paciente.id} value={paciente.id}>
-                      {paciente.nome} - {paciente.telefone || 'Sem telefone'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Clinical History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Stethoscope className="h-5 w-5" />
-              História Clínica
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="queixa_principal">Queixa Principal</Label>
-              <Textarea
-                id="queixa_principal"
-                placeholder="Descreva a queixa principal do paciente..."
-                value={formData.queixa_principal}
-                onChange={(e) => handleInputChange("queixa_principal", e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="historia_doenca_atual">História da Doença Atual</Label>
-              <Textarea
-                id="historia_doenca_atual"
-                placeholder="Descreva a evolução dos sintomas..."
-                value={formData.historia_doenca_atual}
-                onChange={(e) => handleInputChange("historia_doenca_atual", e.target.value)}
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Physical Examination */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Exame Físico</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="exame_fisico">Achados do Exame Físico</Label>
-              <Textarea
-                id="exame_fisico"
-                placeholder="Descreva os achados do exame físico..."
-                value={formData.exame_fisico}
-                onChange={(e) => handleInputChange("exame_fisico", e.target.value)}
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Diagnosis and Treatment */}
-        <div className="grid gap-6 md:grid-cols-2">
+      {/* Formulário */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Coluna principal */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Identificação do Paciente */}
           <Card>
             <CardHeader>
-              <CardTitle>Hipótese Diagnóstica</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <User className="h-5 w-5" />
+                <span>Identificação do Paciente</span>
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="paciente">Paciente *</Label>
+                  <Select
+                    value={selectedPaciente}
+                    onValueChange={setSelectedPaciente}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um paciente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pacientes?.map((paciente) => (
+                        <SelectItem key={paciente.id} value={paciente.id}>
+                          {paciente.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="data">Data do Atendimento</Label>
+                  <Input
+                    id="data"
+                    type="date"
+                    value={dataAtendimento}
+                    onChange={(e) => setDataAtendimento(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {pacienteSelecionado && (
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div>
+                      <span className="text-sm font-medium">Convênio:</span>
+                      <span className="ml-2 text-sm">
+                        {pacienteSelecionado.convenio || "Particular"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Data Nascimento:</span>
+                      <span className="ml-2 text-sm">
+                        {pacienteSelecionado.data_nascimento 
+                          ? new Date(pacienteSelecionado.data_nascimento).toLocaleDateString('pt-BR')
+                          : "N/A"
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Anamnese */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Anamnese</span>
+                {(queixaPrincipal || historiaDoencaAtual) && (
+                  <Badge variant="secondary" className="ml-auto">
+                    <Bot className="h-3 w-3 mr-1" />
+                    Pronto para IA
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="hipotese_diagnostica">Diagnóstico</Label>
+                <Label htmlFor="queixa">Queixa Principal</Label>
                 <Textarea
-                  id="hipotese_diagnostica"
-                  placeholder="Hipótese diagnóstica principal..."
-                  value={formData.hipotese_diagnostica}
-                  onChange={(e) => handleInputChange("hipotese_diagnostica", e.target.value)}
+                  id="queixa"
+                  placeholder="Descreva a queixa principal do paciente..."
+                  value={queixaPrincipal}
+                  onChange={(e) => setQueixaPrincipal(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="historia">História da Doença Atual</Label>
+                <Textarea
+                  id="historia"
+                  placeholder="Descreva a história da doença atual..."
+                  value={historiaDoencaAtual}
+                  onChange={(e) => setHistoriaDoencaAtual(e.target.value)}
                   rows={4}
                 />
               </div>
             </CardContent>
           </Card>
 
+          {/* Exame Físico */}
           <Card>
             <CardHeader>
-              <CardTitle>Conduta</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Stethoscope className="h-5 w-5" />
+                <span>Exame Físico</span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="conduta">Plano Terapêutico</Label>
+                <Label htmlFor="exame">Descrição do Exame</Label>
+                <Textarea
+                  id="exame"
+                  placeholder="Descreva os achados do exame físico..."
+                  value={exameFisico}
+                  onChange={(e) => setExameFisico(e.target.value)}
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Avaliação e Plano */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Avaliação e Plano</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="diagnostico">Hipótese Diagnóstica</Label>
+                <Textarea
+                  id="diagnostico"
+                  placeholder="Informe a hipótese diagnóstica..."
+                  value={hipoteseDiagnostica}
+                  onChange={(e) => setHipoteseDiagnostica(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="conduta">Conduta/Tratamento</Label>
                 <Textarea
                   id="conduta"
-                  placeholder="Conduta médica e orientações..."
-                  value={formData.conduta}
-                  onChange={(e) => handleInputChange("conduta", e.target.value)}
-                  rows={4}
+                  placeholder="Descreva a conduta e tratamento..."
+                  value={conduta}
+                  onChange={(e) => setConduta(e.target.value)}
+                  rows={3}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Prescription and Notes */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Prescrição</CardTitle>
-            </CardHeader>
-            <CardContent>
+              
               <div className="space-y-2">
-                <Label htmlFor="prescricao">Medicamentos Prescritos</Label>
-                <Textarea
-                  id="prescricao"
-                  placeholder="Lista de medicamentos e dosagens..."
-                  value={formData.prescricao}
-                  onChange={(e) => handleInputChange("prescricao", e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Observações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações Gerais</Label>
+                <Label htmlFor="observacoes">Observações</Label>
                 <Textarea
                   id="observacoes"
                   placeholder="Observações adicionais..."
-                  value={formData.observacoes}
-                  onChange={(e) => handleInputChange("observacoes", e.target.value)}
-                  rows={4}
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  rows={3}
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Actions */}
-        <Card>
-          <CardContent className="flex justify-end space-x-4 pt-6">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => navigate('/prontuario')}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salvar Prontuário
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </form>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Informações da Consulta */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5" />
+                <span>Informações</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant="secondary">Em Andamento</Badge>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Data:</span>
+                <span>{new Date(dataAtendimento).toLocaleDateString('pt-BR')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tipo:</span>
+                <span>Consulta</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dica da IA */}
+          <Card className="bg-purple-50 border-purple-200">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-purple-700">
+                <Bot className="h-5 w-5" />
+                <span>Assistente IA</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-purple-600 mb-3">
+                Preencha a queixa principal e a história da doença atual para usar a análise inteligente.
+              </p>
+              <p className="text-xs text-purple-500">
+                A IA analisará os dados e sugerirá diagnósticos e condutas baseados nas informações fornecidas.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
