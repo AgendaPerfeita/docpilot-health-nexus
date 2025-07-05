@@ -19,7 +19,8 @@ interface Lead {
   status: 'novo' | 'contactado' | 'agendado' | 'convertido' | 'perdido'
   lastContact: string
   notes: string
-  value?: number
+  totalSpent?: number
+  averageTicket?: number
 }
 
 const mockLeads: Lead[] = [
@@ -32,7 +33,8 @@ const mockLeads: Lead[] = [
     status: 'novo',
     lastContact: '2024-01-15',
     notes: 'Interessada em consulta de rotina',
-    value: 200
+    totalSpent: 450,
+    averageTicket: 150
   },
   {
     id: '2',
@@ -43,7 +45,8 @@ const mockLeads: Lead[] = [
     status: 'contactado',
     lastContact: '2024-01-14',
     notes: 'Precisa de exames cardiológicos',
-    value: 500
+    totalSpent: 850,
+    averageTicket: 283
   },
   {
     id: '3',
@@ -54,7 +57,8 @@ const mockLeads: Lead[] = [
     status: 'convertido',
     lastContact: '2024-01-10',
     notes: 'Paciente convertido - consulta realizada',
-    value: 300
+    totalSpent: 1200,
+    averageTicket: 400
   }
 ]
 
@@ -108,8 +112,7 @@ export default function CRM() {
       source: formData.get('source') as string,
       status: 'novo',
       lastContact: new Date().toISOString().split('T')[0],
-      notes: formData.get('notes') as string,
-      value: formData.get('value') ? Number(formData.get('value')) : undefined
+      notes: formData.get('notes') as string
     }
     
     setLeads([...leads, newLead])
@@ -153,27 +156,21 @@ export default function CRM() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="source">Origem</Label>
-                  <Select name="source" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar origem" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Google">Google</SelectItem>
-                      <SelectItem value="Instagram">Instagram</SelectItem>
-                      <SelectItem value="Facebook">Facebook</SelectItem>
-                      <SelectItem value="Indicação">Indicação</SelectItem>
-                      <SelectItem value="Site">Site</SelectItem>
-                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="value">Valor Estimado (R$)</Label>
-                  <Input id="value" name="value" type="number" placeholder="0,00" />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="source">Origem</Label>
+                <Select name="source" required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Google">Google</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="Facebook">Facebook</SelectItem>
+                    <SelectItem value="Indicação">Indicação</SelectItem>
+                    <SelectItem value="Site">Site</SelectItem>
+                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -318,9 +315,14 @@ export default function CRM() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <div className="text-sm font-medium text-foreground">{lead.source}</div>
-                      {lead.value && (
-                        <div className="text-sm text-muted-foreground">
-                          R$ {lead.value.toLocaleString('pt-BR')}
+                      {(lead.totalSpent || lead.averageTicket) && (
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          {lead.totalSpent && (
+                            <div>Total Gasto: R$ {lead.totalSpent.toLocaleString('pt-BR')}</div>
+                          )}
+                          {lead.averageTicket && (
+                            <div>Ticket Médio: R$ {lead.averageTicket.toLocaleString('pt-BR')}</div>
+                          )}
                         </div>
                       )}
                     </div>

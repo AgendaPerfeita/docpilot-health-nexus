@@ -17,7 +17,7 @@ export type Database = {
           cidade: string | null
           created_at: string
           crm: string | null
-          documento: string | null
+          documento: string
           email: string
           endereco: string | null
           especialidade: string | null
@@ -36,7 +36,7 @@ export type Database = {
           cidade?: string | null
           created_at?: string
           crm?: string | null
-          documento?: string | null
+          documento: string
           email: string
           endereco?: string | null
           especialidade?: string | null
@@ -55,7 +55,7 @@ export type Database = {
           cidade?: string | null
           created_at?: string
           crm?: string | null
-          documento?: string | null
+          documento?: string
           email?: string
           endereco?: string | null
           especialidade?: string | null
