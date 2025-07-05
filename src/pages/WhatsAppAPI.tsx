@@ -309,7 +309,6 @@ export default function WhatsAppAPI() {
                   <div className="flex items-center gap-2">
                     <Switch 
                       checked={template.active} 
-                      size="sm"
                     />
                     <Button variant="ghost" size="sm">
                       Editar

@@ -482,7 +482,7 @@ export default function GestaoHospitalar() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm">Tempo Médio de Resposta</span>
-                    <span className="font-semibold text-green-600">< 5 min</span>
+                    <span className="font-semibold text-green-600">&lt; 5 min</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm">SLA de Resolução</span>
