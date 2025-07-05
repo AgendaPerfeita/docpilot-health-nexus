@@ -440,32 +440,46 @@ export const GerenciarMedicos = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {vinculo.ativo && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <UserMinus className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar desvinculação</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja desvincular o médico {vinculo.medico?.nome}? 
-                                Este médico perderá acesso aos dados da clínica.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDesvincular(vinculo.id, vinculo.medico?.nome || "")}
-                              >
-                                Desvincular
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            toast({
+                              title: "Em desenvolvimento",
+                              description: "Funcionalidade de edição em breve"
+                            });
+                          }}
+                        >
+                          Editar
+                        </Button>
+                        {vinculo.ativo && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="outline">
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Desvincular Médico</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja desvincular {vinculo.medico?.nome || "este médico"} da clínica?
+                                  Esta ação pode ser revertida posteriormente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDesvincular(vinculo.id, vinculo.medico?.nome || "médico")}
+                                >
+                                  Desvincular
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

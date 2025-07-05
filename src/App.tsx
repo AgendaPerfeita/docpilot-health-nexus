@@ -10,7 +10,6 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Pacientes from "./pages/Pacientes";
 import ProntuarioIndex from "./pages/prontuario/index";
 import Agenda from "./pages/Agenda";
 import CRM from "./pages/CRM";
@@ -79,9 +78,9 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/pacientes" element={
+      <Route path="/crm" element={
         <ProtectedRoute>
-          <Layout><Pacientes /></Layout>
+          <Layout><CRM /></Layout>
         </ProtectedRoute>
       } />
       
@@ -100,12 +99,6 @@ const AppRoutes = () => {
       <Route path="/agenda" element={
         <ProtectedRoute>
           <Layout><Agenda /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/crm" element={
-        <ProtectedRoute>
-          <Layout><CRM /></Layout>
         </ProtectedRoute>
       } />
       

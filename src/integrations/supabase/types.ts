@@ -212,8 +212,12 @@ export type Database = {
           id: string
           nome: string
           numero_convenio: string | null
+          origem: string | null
           responsavel_id: string
           telefone: string | null
+          ticket_medio: number | null
+          total_consultas: number | null
+          total_gasto: number | null
           updated_at: string
         }
         Insert: {
@@ -229,8 +233,12 @@ export type Database = {
           id?: string
           nome: string
           numero_convenio?: string | null
+          origem?: string | null
           responsavel_id: string
           telefone?: string | null
+          ticket_medio?: number | null
+          total_consultas?: number | null
+          total_gasto?: number | null
           updated_at?: string
         }
         Update: {
@@ -246,8 +254,12 @@ export type Database = {
           id?: string
           nome?: string
           numero_convenio?: string | null
+          origem?: string | null
           responsavel_id?: string
           telefone?: string | null
+          ticket_medio?: number | null
+          total_consultas?: number | null
+          total_gasto?: number | null
           updated_at?: string
         }
         Relationships: [

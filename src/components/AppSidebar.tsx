@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useMedicoPermissions } from "@/hooks/useMedicoPermissions"
 import { ClinicaSelector } from "@/components/ui/clinica-selector"
 
-const menuItems = [
+  const menuItems = [
   {
     title: "Dashboard",
     url: "/",
@@ -42,8 +42,8 @@ const menuItems = [
     group: "principal"
   },
   {
-    title: "Pacientes",
-    url: "/pacientes",
+    title: "CRM",
+    url: "/crm",
     icon: Users,
     group: "clinico"
   },
@@ -57,12 +57,6 @@ const menuItems = [
     title: "Agenda",
     url: "/agenda",
     icon: Calendar,
-    group: "clinico"
-  },
-  {
-    title: "CRM Clínico",
-    url: "/crm",
-    icon: UserCheck,
     group: "clinico"
   },
   {
@@ -174,7 +168,7 @@ export function AppSidebar() {
         // Funcionalidades básicas sempre disponíveis
         visibleGroups.clinico = groupedItems.clinico.filter(item => {
           // Médicos free só veem funcionalidades básicas
-          const basicItems = ['Pacientes', 'Prontuário', 'Agenda'];
+          const basicItems = ['CRM', 'Prontuário', 'Agenda'];
           return basicItems.includes(item.title);
         });
         
@@ -200,22 +194,22 @@ export function AppSidebar() {
         break
 
       case 'clinica':
-        visibleGroups.clinico = groupedItems.clinico
-        visibleGroups.medico = groupedItems.medico
-        visibleGroups.clinica = groupedItems.clinica
-        visibleGroups.financeiro = groupedItems.financeiro
-        visibleGroups.relatorios = groupedItems.relatorios
-        visibleGroups.sistema = groupedItems.sistema
+        visibleGroups.clinico = groupedItems.clinico;
+        visibleGroups.medico = groupedItems.medico;
+        visibleGroups.clinica = groupedItems.clinica;
+        visibleGroups.financeiro = groupedItems.financeiro;
+        visibleGroups.relatorios = groupedItems.relatorios;
+        visibleGroups.sistema = groupedItems.sistema;
         break
 
       case 'hospital':
-        visibleGroups.clinico = groupedItems.clinico
-        visibleGroups.medico = groupedItems.medico
-        visibleGroups.clinica = groupedItems.clinica
-        visibleGroups.hospital = groupedItems.hospital
-        visibleGroups.financeiro = groupedItems.financeiro
-        visibleGroups.relatorios = groupedItems.relatorios
-        visibleGroups.sistema = groupedItems.sistema
+        visibleGroups.clinico = groupedItems.clinico;
+        visibleGroups.medico = groupedItems.medico;
+        visibleGroups.clinica = groupedItems.clinica;
+        visibleGroups.hospital = groupedItems.hospital;
+        visibleGroups.financeiro = groupedItems.financeiro;
+        visibleGroups.relatorios = groupedItems.relatorios;
+        visibleGroups.sistema = groupedItems.sistema;
         break
 
       default:
