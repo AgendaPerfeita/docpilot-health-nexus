@@ -6,28 +6,45 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { ActiveClinicaProvider } from "./hooks/useActiveClinica";
 import Layout from "./components/Layout";
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import ProntuarioIndex from "./pages/prontuario/index";
-import Agenda from "./pages/Agenda";
-import CRM from "./pages/CRM";
-import AreaPaciente from "./pages/AreaPaciente";
+// Auth
+import Landing from "./pages/auth/Landing";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+
+// Dashboard
+import Dashboard from "./pages/dashboard/Dashboard";
+
+// Paciente
+import AreaPaciente from "./pages/paciente/AreaPaciente";
+
+// Clínica
+import Agenda from "./pages/clinica/Agenda";
+import CRM from "./pages/clinica/CRM";
+import ProntuarioIndex from "./pages/clinica/prontuario/ProntuarioIndex";
+import NovaEvolucao from "./pages/clinica/prontuario/NovaEvolucao";
+import GestaoMedicos from "./pages/clinica/GestaoMedicos";
+
+// Clínica Pro
+import AcompanhamentoPacientes from "./pages/clinica-pro/AcompanhamentoPacientes";
+import PrescricaoDigital from "./pages/clinica-pro/PrescricaoDigital";
+import WhatsAppAPI from "./pages/clinica-pro/WhatsAppAPI";
+
+// Hospital
+import BIAvancado from "./pages/BIAvancado";
+import GestaoHospitalar from "./pages/GestaoHospitalar";
+
+// Financeiro
 import Financeiro from "./pages/Financeiro";
 import DRE from "./pages/DRE";
 import Comissoes from "./pages/Comissoes";
 import Relatorios from "./pages/Relatorios";
+
+// Configurações
 import Configuracoes from "./pages/Configuracoes";
+import PlanosAcesso from "./pages/PlanosAcesso";
+
+// Shared
 import NotFound from "./pages/NotFound";
-import NovaEvolucao from "./pages/prontuario/nova";
-import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
-import PrescricaoDigital from "./pages/PrescricaoDigital";
-import GestaoMedicos from "./pages/GestaoMedicos";
-import WhatsAppAPI from "./pages/WhatsAppAPI";
-import BIAvancado from "./pages/BIAvancado";
-import GestaoHospitalar from "./pages/GestaoHospitalar";
-import PlanosAcesso from "@/pages/PlanosAcesso"
 
 const queryClient = new QueryClient();
 
