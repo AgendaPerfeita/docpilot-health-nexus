@@ -16,7 +16,28 @@ interface MedicalLayoutProps {
   isConsultationActive: boolean
 }
 
-const mockPatientData = {
+interface PatientData {
+  nome: string
+  idade: { anos: number; meses: number; dias: number }
+  convenio: string
+  primeiraConsulta: string
+  antecedentes: {
+    clinicos: string | null
+    cirurgicos: string | null
+    familiares: string | null
+    habitos: string | null
+    alergias: string | null
+    medicamentos: string | null
+  }
+  ultimosDiagnosticos: Array<{
+    data: string
+    medico: string
+    duracao: string
+    tipo: string
+  }>
+}
+
+const mockPatientData: PatientData = {
   nome: "Maria Silva dos Santos", 
   idade: { anos: 45, meses: 3, dias: 9 },
   convenio: "Particular",
@@ -78,7 +99,7 @@ export function MedicalLayout({ children, patientData = mockPatientData, onStart
       <div className="p-4 border-b">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-            {patientData.nome.split(' ').map(n => n[0]).join('').substring(0, 2)}
+            {patientData.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">{patientData.nome}</h3>
@@ -266,7 +287,7 @@ export function MedicalLayout({ children, patientData = mockPatientData, onStart
             </div>
           </div>
           <div className="space-y-3">
-            {patientData.ultimosDiagnosticos.map((item, index) => (
+            {patientData.ultimosDiagnosticos && patientData.ultimosDiagnosticos.map((item: any, index: number) => (
               <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                   <Calendar className="w-4 h-4" />
