@@ -1,0 +1,332 @@
+
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Brain, AlertTriangle, Pill, TestTube, FileText } from "lucide-react"
+import { callGeminiAPI } from "@/lib/gemini"
+
+interface AIAssistantCardProps {
+  patientData: any
+  vitalSigns: any
+  physicalExam: any
+  onSuggestionApplied: (field: string, value: string) => void
+}
+
+export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSuggestionApplied }: AIAssistantCardProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [aiInput, setAiInput] = useState({
+    symptoms: "",
+    age: "",
+    sex: "",
+    isPregnant: "",
+    mainComplaint: "",
+    currentMedications: ""
+  })
+  const [aiSuggestion, setAiSuggestion] = useState("")
+  const [analysisType, setAnalysisType] = useState("complete")
+
+  const calculateRiskScores = () => {
+    const scores = []
+    
+    // qSOFA Score para sepse
+    let qSOFA = 0
+    if (parseFloat(vitalSigns.fr) >= 22) qSOFA++
+    if (parseFloat(vitalSigns.pa_sistolica) <= 100) qSOFA++
+    // Glasgow seria necessário para o terceiro critério
+    
+    if (qSOFA >= 0) {
+      scores.push({
+        name: "qSOFA (Sepse)",
+        score: qSOFA,
+        risk: qSOFA >= 2 ? 'alto' : qSOFA === 1 ? 'moderado' : 'baixo',
+        recommendation: qSOFA >= 2 ? "Alto risco de sepse - considerar UTI" : "Baixo risco de sepse"
+      })
+    }
+
+    // Critérios de hipertensão
+    const paS = parseFloat(vitalSigns.pa_sistolica)
+    const paD = parseFloat(vitalSigns.pa_diastolica)
+    if (paS > 0 && paD > 0) {
+      let htRisk = 'baixo'
+      let htRec = "Pressão normal"
+      
+      if (paS >= 180 || paD >= 110) {
+        htRisk = 'alto'
+        htRec = "Crise hipertensiva - tratamento imediato"
+      } else if (paS >= 140 || paD >= 90) {
+        htRisk = 'moderado'
+        htRec = "Hipertensão arterial - seguimento"
+      }
+      
+      scores.push({
+        name: "Pressão Arterial",
+        score: `${paS}/${paD}`,
+        risk: htRisk,
+        recommendation: htRec
+      })
+    }
+
+    return scores
+  }
+
+  const assessSeverityCriteria = () => {
+    const paS = parseFloat(vitalSigns.pa_sistolica)
+    const fc = parseFloat(vitalSigns.fc)
+    const temp = parseFloat(vitalSigns.temp)
+    const fr = parseFloat(vitalSigns.fr)
+    
+    return {
+      sepsis: (temp > 38 || temp < 36) && (fc > 90) && (fr > 20),
+      hemodynamicInstability: paS < 90 || fc > 120,
+      acuteDeterioration: temp > 39 || paS < 100 || fc > 130,
+      internationRecommended: paS < 90 || temp > 39.5 || fr > 25
+    }
+  }
+
+  const generateAdvancedAISuggestion = async () => {
+    if (!aiInput.symptoms.trim()) return
+    
+    setIsLoading(true)
+    
+    try {
+      const riskScores = calculateRiskScores()
+      const severityCriteria = assessSeverityCriteria()
+      
+      const prompt = `
+        Como assistente médico especializado, analise os dados completos do paciente e forneça uma avaliação clínica abrangente:
+
+        DADOS DO PACIENTE:
+        - Idade: ${aiInput.age}
+        - Sexo: ${aiInput.sex}
+        ${aiInput.sex === "Feminino" && aiInput.isPregnant ? `- Gestante: ${aiInput.isPregnant}` : ""}
+        - Medicamentos atuais: ${aiInput.currentMedications}
+        - Alergias: ${patientData.alergias || 'Não informado'}
+        - Antecedentes: ${patientData.antecedentes || 'Não informado'}
+
+        SINAIS VITAIS:
+        - PA: ${vitalSigns.pa_sistolica}/${vitalSigns.pa_diastolica} mmHg
+        - FC: ${vitalSigns.fc} bpm
+        - Temp: ${vitalSigns.temp}°C
+        - FR: ${vitalSigns.fr} irpm
+        - Sat O2: ${vitalSigns.sat_o2}%
+        - Peso: ${vitalSigns.peso}kg, Altura: ${vitalSigns.altura}cm, IMC: ${vitalSigns.imc}
+
+        EXAME FÍSICO:
+        - Geral: ${physicalExam.geral}
+        - Cardiovascular: ${physicalExam.cardiovascular}
+        - Respiratório: ${physicalExam.respiratorio}
+        - Abdominal: ${physicalExam.abdominal}
+        - Neurológico: ${physicalExam.neurologico}
+
+        QUEIXA PRINCIPAL: ${aiInput.mainComplaint}
+        SINTOMAS: ${aiInput.symptoms}
+
+        ESCORES DE RISCO CALCULADOS:
+        ${riskScores.map(score => `- ${score.name}: ${score.score} (${score.risk})`).join('\n')}
+
+        CRITÉRIOS DE GRAVIDADE:
+        - Sepse: ${severityCriteria.sepsis ? 'SIM' : 'NÃO'}
+        - Instabilidade hemodinâmica: ${severityCriteria.hemodynamicInstability ? 'SIM' : 'NÃO'}
+        - Risco de deterioração: ${severityCriteria.acuteDeterioration ? 'SIM' : 'NÃO'}
+
+        Forneça análise estruturada EXATAMENTE neste formato:
+
+        🩺 HIPÓTESE DIAGNÓSTICA:
+        [Liste os possíveis diagnósticos diferenciais em ordem de probabilidade]
+
+        ⚡ CLASSIFICAÇÃO DE RISCO:
+        [Análise dos escores calculados e recomendações]
+
+        💊 CONDUTA TERAPÊUTICA:
+        [Tratamento inicial com doses ajustadas por peso/idade/função renal]
+
+        💊 AJUSTE DE DOSE POR PESO/IMC/RIM:
+        [Alertas específicos sobre ajustes de medicação necessários]
+
+        🧪 EXAMES COMPLEMENTARES:
+        [Exames prioritários baseados na hipótese diagnóstica]
+
+        ⚠️ CRITÉRIOS DE INTERNAÇÃO:
+        [Avaliação da necessidade de internação baseada nos critérios de gravidade]
+
+        📋 SEGUIMENTO:
+        [Orientações de retorno e sinais de alerta]
+
+        🆔 CID-10 SUGERIDO:
+        [Código(s) CID-10 mais apropriado(s)]
+
+        Seja preciso, baseado em evidências e considere as particularidades do paciente.
+      `
+      
+      const response = await callGeminiAPI(prompt)
+      setAiSuggestion(response)
+    } catch (error) {
+      console.error('Erro ao gerar sugestão com IA:', error)
+      setAiSuggestion('❌ Erro ao gerar sugestão. Verifique sua conexão e tente novamente.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const extractAndApplySuggestion = (sectionName: string, fieldName: string) => {
+    if (!aiSuggestion) return
+    
+    const regex = new RegExp(`${sectionName}:\\s*([\\s\\S]*?)(?=\\n\\s*[🩺⚡💊🧪⚠️📋🆔]+|$)`, 'i')
+    const match = aiSuggestion.match(regex)
+    
+    if (match && match[1]) {
+      const content = match[1].trim()
+      onSuggestionApplied(fieldName, content)
+    }
+  }
+
+  const riskScores = calculateRiskScores()
+  const severityCriteria = assessSeverityCriteria()
+
+  return (
+    <Card className="mb-6 border-blue-200">
+      <CardHeader className="bg-blue-50">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Brain className="w-5 h-5 text-blue-600" />
+          🤖 Assistente de IA Médica Avançado
+          <Badge variant="secondary">Powered by Gemini</Badge>
+          {(severityCriteria.sepsis || severityCriteria.hemodynamicInstability) && (
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {!isOpen ? (
+          <Button onClick={() => setIsOpen(true)} className="w-full">
+            Abrir Assistente de IA
+          </Button>
+        ) : (
+          <div className="space-y-4">
+            {/* Inputs básicos */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="ai_age">Idade</Label>
+                <Input
+                  id="ai_age"
+                  placeholder="35"
+                  value={aiInput.age}
+                  onChange={(e) => setAiInput(prev => ({...prev, age: e.target.value}))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ai_sex">Sexo</Label>
+                <Select value={aiInput.sex} onValueChange={(value) => setAiInput(prev => ({...prev, sex: value}))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {aiInput.sex === "Feminino" && (
+                <div>
+                  <Label htmlFor="ai_pregnant">Gestante?</Label>
+                  <Select value={aiInput.isPregnant} onValueChange={(value) => setAiInput(prev => ({...prev, isPregnant: value}))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Não">Não</SelectItem>
+                      <SelectItem value="Sim">Sim</SelectItem>
+                      <SelectItem value="Não sei">Não sei</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="ai_main_complaint">Queixa Principal</Label>
+              <Input
+                id="ai_main_complaint"
+                placeholder="Ex: Dor no peito há 2 horas"
+                value={aiInput.mainComplaint}
+                onChange={(e) => setAiInput(prev => ({...prev, mainComplaint: e.target.value}))}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="ai_symptoms">Sintomas Detalhados</Label>
+              <Textarea
+                id="ai_symptoms"
+                placeholder="Descreva os sintomas completos, evolução, fatores de melhora/piora, sintomas associados..."
+                value={aiInput.symptoms}
+                onChange={(e) => setAiInput(prev => ({...prev, symptoms: e.target.value}))}
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="ai_medications">Medicamentos em Uso</Label>
+              <Input
+                id="ai_medications"
+                placeholder="Ex: Losartana 50mg 1x/dia, Metformina 850mg 2x/dia"
+                value={aiInput.currentMedications}
+                onChange={(e) => setAiInput(prev => ({...prev, currentMedications: e.target.value}))}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                onClick={generateAdvancedAISuggestion} 
+                disabled={isLoading || !aiInput.symptoms.trim()}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="w-4 h-4 mr-2" />
+                    Gerar Análise Completa
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => setIsOpen(false)}>
+                Fechar
+              </Button>
+            </div>
+
+            {aiSuggestion && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-lg">📋 Análise da IA</h4>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('HIPÓTESE DIAGNÓSTICA', 'diagnostico')}>
+                      <FileText className="w-4 h-4 mr-1" />
+                      Aplicar Diagnóstico
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('CONDUTA TERAPÊUTICA', 'conduta')}>
+                      <Pill className="w-4 h-4 mr-1" />
+                      Aplicar Conduta
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('EXAMES COMPLEMENTARES', 'examesComplementares')}>
+                      <TestTube className="w-4 h-4 mr-1" />
+                      Aplicar Exames
+                    </Button>
+                  </div>
+                </div>
+                <div className="whitespace-pre-wrap text-sm">{aiSuggestion}</div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
