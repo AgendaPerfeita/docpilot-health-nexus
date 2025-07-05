@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Search, Plus, Edit, Eye, UserCheck, Calendar, Clock, DollarSign, TrendingUp } from "lucide-react"
+import { useMedicosCadastro } from "@/hooks/useMedicosCadastro"
 
 const mockMedicos = [
   {
@@ -57,6 +59,64 @@ export default function GestaoMedicos() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedMedico, setSelectedMedico] = useState(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const { cadastrarMedico, loading } = useMedicosCadastro()
+  
+  // Estados do formulário
+  const [formData, setFormData] = useState({
+    nome: '',
+    email: '',
+    telefone: '',
+    cpf: '',
+    crm: '',
+    especialidade: '',
+    valorConsulta: '',
+    comissao: '',
+    permissoes: {
+      prontuario: true,
+      agenda: true,
+      financeiro: false,
+      admin: false,
+      ia: true
+    }
+  })
+
+  const handleSubmit = async () => {
+    try {
+      await cadastrarMedico({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cpf: formData.cpf,
+        crm: formData.crm,
+        especialidade: formData.especialidade,
+        valorConsulta: formData.valorConsulta ? Number(formData.valorConsulta.replace(/[^\d,]/g, '').replace(',', '.')) : undefined,
+        comissao: formData.comissao ? Number(formData.comissao) : undefined,
+        permissoes: formData.permissoes
+      })
+      
+      // Limpar formulário e fechar dialog
+      setFormData({
+        nome: '',
+        email: '',
+        telefone: '',
+        cpf: '',
+        crm: '',
+        especialidade: '',
+        valorConsulta: '',
+        comissao: '',
+        permissoes: {
+          prontuario: true,
+          agenda: true,
+          financeiro: false,
+          admin: false,
+          ia: true
+        }
+      })
+      setIsDialogOpen(false)
+    } catch (error) {
+      // O erro já é tratado no hook
+    }
+  }
 
   const filteredMedicos = mockMedicos.filter(medico =>
     medico.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,28 +145,46 @@ export default function GestaoMedicos() {
               </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="dados" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
                 <TabsTrigger value="profissional">Profissional</TabsTrigger>
+                <TabsTrigger value="permissoes">Permissões</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dados" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nome Completo</Label>
-                    <Input placeholder="Dr. Nome Sobrenome" />
+                    <Input 
+                      placeholder="Dr. Nome Sobrenome" 
+                      value={formData.nome}
+                      onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
-                    <Input type="email" placeholder="medico@clinica.com" />
+                    <Input 
+                      type="email" 
+                      placeholder="medico@clinica.com" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Telefone</Label>
-                    <Input placeholder="(11) 99999-9999" />
+                    <Input 
+                      placeholder="(11) 99999-9999" 
+                      value={formData.telefone}
+                      onChange={(e) => setFormData({...formData, telefone: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>CPF</Label>
-                    <Input placeholder="000.000.000-00" />
+                    <Input 
+                      placeholder="000.000.000-00" 
+                      value={formData.cpf}
+                      onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                    />
                   </div>
                 </div>
               </TabsContent>
@@ -115,11 +193,15 @@ export default function GestaoMedicos() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>CRM</Label>
-                    <Input placeholder="CRM/UF 123456" />
+                    <Input 
+                      placeholder="CRM/UF 123456" 
+                      value={formData.crm}
+                      onChange={(e) => setFormData({...formData, crm: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Especialidade</Label>
-                    <Select>
+                    <Select value={formData.especialidade} onValueChange={(value) => setFormData({...formData, especialidade: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a especialidade" />
                       </SelectTrigger>
@@ -129,28 +211,114 @@ export default function GestaoMedicos() {
                         <SelectItem value="ortopedia">Ortopedia</SelectItem>
                         <SelectItem value="ginecologia">Ginecologia</SelectItem>
                         <SelectItem value="neurologia">Neurologia</SelectItem>
+                        <SelectItem value="dermatologia">Dermatologia</SelectItem>
+                        <SelectItem value="psiquiatria">Psiquiatria</SelectItem>
+                        <SelectItem value="clinica-geral">Clínica Geral</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Valor da Consulta</Label>
-                    <Input placeholder="R$ 180,00" />
+                    <Input 
+                      placeholder="R$ 180,00" 
+                      value={formData.valorConsulta}
+                      onChange={(e) => setFormData({...formData, valorConsulta: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Comissão (%)</Label>
-                    <Input placeholder="30" type="number" />
+                    <Input 
+                      placeholder="30" 
+                      type="number"
+                      value={formData.comissao}
+                      onChange={(e) => setFormData({...formData, comissao: e.target.value})}
+                    />
                   </div>
                 </div>
               </TabsContent>
 
+              <TabsContent value="permissoes" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Acesso às Funcionalidades</Label>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <Label className="font-medium">Prontuário Eletrônico</Label>
+                          <p className="text-sm text-muted-foreground">Criar e editar prontuários</p>
+                        </div>
+                        <Checkbox 
+                          checked={formData.permissoes.prontuario}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData, 
+                            permissoes: {...formData.permissoes, prontuario: !!checked}
+                          })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <Label className="font-medium">Agenda</Label>
+                          <p className="text-sm text-muted-foreground">Visualizar e gerenciar agenda</p>
+                        </div>
+                        <Checkbox 
+                          checked={formData.permissoes.agenda}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData, 
+                            permissoes: {...formData.permissoes, agenda: !!checked}
+                          })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <Label className="font-medium">Relatórios Financeiros</Label>
+                          <p className="text-sm text-muted-foreground">Acessar relatórios e DRE</p>
+                        </div>
+                        <Checkbox 
+                          checked={formData.permissoes.financeiro}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData, 
+                            permissoes: {...formData.permissoes, financeiro: !!checked}
+                          })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <Label className="font-medium">Administração</Label>
+                          <p className="text-sm text-muted-foreground">Gerenciar outros médicos e configurações</p>
+                        </div>
+                        <Checkbox 
+                          checked={formData.permissoes.admin}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData, 
+                            permissoes: {...formData.permissoes, admin: !!checked}
+                          })}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <Label className="font-medium">Inteligência Artificial</Label>
+                          <p className="text-sm text-muted-foreground">Usar IA no prontuário e prescrições</p>
+                        </div>
+                        <Checkbox 
+                          checked={formData.permissoes.ia}
+                          onCheckedChange={(checked) => setFormData({
+                            ...formData, 
+                            permissoes: {...formData.permissoes, ia: !!checked}
+                          })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button>
-                Cadastrar Médico
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? "Cadastrando..." : "Cadastrar Médico"}
               </Button>
             </div>
           </DialogContent>
