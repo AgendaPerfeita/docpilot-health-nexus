@@ -85,10 +85,9 @@ export default function GestaoMedicos() {
               </DialogDescription>
             </DialogHeader>
             <Tabs defaultValue="dados" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="dados">Dados Pessoais</TabsTrigger>
                 <TabsTrigger value="profissional">Profissional</TabsTrigger>
-                <TabsTrigger value="plano">Plano & Acesso</TabsTrigger>
               </TabsList>
               
               <TabsContent value="dados" className="space-y-4">
@@ -144,45 +143,6 @@ export default function GestaoMedicos() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="plano" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Plano de Acesso</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="doctor">DOCTOR - R$ 79/mês</SelectItem>
-                        <SelectItem value="clinic">CLINIC - R$ 199/mês</SelectItem>
-                        <SelectItem value="clinic-pro">CLINIC PRO - R$ 399/mês</SelectItem>
-                        <SelectItem value="hospital">HOSPITAL - Sob consulta</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Permissões de Acesso</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="prontuario" defaultChecked />
-                        <Label htmlFor="prontuario">Prontuário Eletrônico</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="agenda" defaultChecked />
-                        <Label htmlFor="agenda">Agenda</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="financeiro" />
-                        <Label htmlFor="financeiro">Relatórios Financeiros</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="admin" />
-                        <Label htmlFor="admin">Administração</Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-4">

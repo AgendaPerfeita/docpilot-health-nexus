@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { useActiveClinica } from './useActiveClinica';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MedicoPermissions {
@@ -11,6 +12,7 @@ export interface MedicoPermissions {
 
 export const useMedicoPermissions = () => {
   const { profile } = useAuth();
+  const { activeClinica } = useActiveClinica();
   const [permissions, setPermissions] = useState<MedicoPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,10 +32,14 @@ export const useMedicoPermissions = () => {
 
       if (error) throw error;
 
+      // Se médico está vinculado a uma clínica, usa permissões expandidas
+      const isVinculadoClinica = !!activeClinica;
+      
       setPermissions({
         plano: data.plano_medico as 'free' | 'premium',
         permiteAtendimentoIndividual: data.permite_atendimento_individual,
-        permiteIA: data.permite_ia,
+        // Médicos vinculados a clínicas sempre têm acesso à IA
+        permiteIA: data.permite_ia || isVinculadoClinica,
         permiteRelatoriosAvancados: data.permite_relatorios_avancados
       });
     } catch (error) {
@@ -78,7 +84,7 @@ export const useMedicoPermissions = () => {
 
   useEffect(() => {
     fetchPermissions();
-  }, [profile]);
+  }, [profile, activeClinica]);
 
   return {
     permissions,
