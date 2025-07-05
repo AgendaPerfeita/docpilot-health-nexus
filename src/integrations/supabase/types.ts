@@ -316,6 +316,10 @@ export type Database = {
           estado: string | null
           id: string
           nome: string
+          permite_atendimento_individual: boolean | null
+          permite_ia: boolean | null
+          permite_relatorios_avancados: boolean | null
+          plano_medico: string | null
           telefone: string | null
           tipo: Database["public"]["Enums"]["user_type"]
           updated_at: string
@@ -335,6 +339,10 @@ export type Database = {
           estado?: string | null
           id?: string
           nome: string
+          permite_atendimento_individual?: boolean | null
+          permite_ia?: boolean | null
+          permite_relatorios_avancados?: boolean | null
+          plano_medico?: string | null
           telefone?: string | null
           tipo: Database["public"]["Enums"]["user_type"]
           updated_at?: string
@@ -354,6 +362,10 @@ export type Database = {
           estado?: string | null
           id?: string
           nome?: string
+          permite_atendimento_individual?: boolean | null
+          permite_ia?: boolean | null
+          permite_relatorios_avancados?: boolean | null
+          plano_medico?: string | null
           telefone?: string | null
           tipo?: Database["public"]["Enums"]["user_type"]
           updated_at?: string
@@ -439,7 +451,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      medico_tem_permissao: {
+        Args: { medico_id: string; permissao: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_type: "medico" | "paciente" | "clinica" | "hospital"

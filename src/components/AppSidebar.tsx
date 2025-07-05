@@ -31,6 +31,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/hooks/useAuth"
+import { useMedicoPermissions } from "@/hooks/useMedicoPermissions"
 import { ClinicaSelector } from "@/components/ui/clinica-selector"
 
 const menuItems = [
@@ -152,6 +153,7 @@ const groupedItems = {
 export function AppSidebar() {
   const { open } = useSidebar()
   const { profile } = useAuth()
+  const { permissions, temPermissao } = useMedicoPermissions()
   const location = useLocation()
   const currentPath = location.pathname
 
@@ -169,12 +171,24 @@ export function AppSidebar() {
 
     switch (userType) {
       case 'medico':
-        visibleGroups.clinico = groupedItems.clinico
-        visibleGroups.medico = groupedItems.medico
-        visibleGroups.relatorios = groupedItems.relatorios.filter(item => 
-          item.title === "Relatórios"
-        )
-        visibleGroups.sistema = groupedItems.sistema
+        // Funcionalidades básicas sempre disponíveis
+        visibleGroups.clinico = groupedItems.clinico.filter(item => {
+          // Médicos free só veem funcionalidades básicas
+          const basicItems = ['Pacientes', 'Prontuário', 'Agenda'];
+          return basicItems.includes(item.title);
+        });
+        
+        // Prescrição digital sempre disponível
+        visibleGroups.medico = groupedItems.medico;
+        
+        // Relatórios apenas para premium
+        if (temPermissao('permiteRelatoriosAvancados')) {
+          visibleGroups.relatorios = groupedItems.relatorios.filter(item => 
+            item.title === "Relatórios"
+          );
+        }
+        
+        visibleGroups.sistema = groupedItems.sistema;
         break
 
       case 'paciente':

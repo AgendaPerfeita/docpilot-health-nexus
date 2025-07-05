@@ -28,6 +28,7 @@ import GestaoMedicos from "./pages/GestaoMedicos";
 import WhatsAppAPI from "./pages/WhatsAppAPI";
 import BIAvancado from "./pages/BIAvancado";
 import GestaoHospitalar from "./pages/GestaoHospitalar";
+import PlanosAcesso from "@/pages/PlanosAcesso"
 
 const queryClient = new QueryClient();
 
@@ -171,6 +172,12 @@ const AppRoutes = () => {
       <Route path="/configuracoes" element={
         <ProtectedRoute>
           <Layout><Configuracoes /></Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/planos-acesso" element={
+        <ProtectedRoute>
+          <Layout><PlanosAcesso /></Layout>
         </ProtectedRoute>
       } />
       

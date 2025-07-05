@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { PermissionGuard } from "@/components/PermissionGuard"
 
 interface ReportData {
   type: string
@@ -115,7 +116,8 @@ export default function Relatorios() {
   }
 
   return (
-    <div className="space-y-6">
+    <PermissionGuard requiredPermission="permiteRelatoriosAvancados">
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Relatórios e BI</h1>
@@ -489,6 +491,7 @@ export default function Relatorios() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PermissionGuard>
   )
 }
