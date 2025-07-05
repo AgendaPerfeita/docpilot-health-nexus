@@ -18,6 +18,11 @@ import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import NovaEvolucao from "./pages/prontuario/nova";
 import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
+import PrescricaoDigital from "./pages/PrescricaoDigital";
+import GestaoMedicos from "./pages/GestaoMedicos";
+import WhatsAppAPI from "./pages/WhatsAppAPI";
+import BIAvancado from "./pages/BIAvancado";
+import GestaoHospitalar from "./pages/GestaoHospitalar";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +41,11 @@ const App = () => (
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/crm" element={<CRM />} />
             <Route path="/area-paciente" element={<AreaPaciente />} />
+            <Route path="/prescricao-digital" element={<PrescricaoDigital />} />
+            <Route path="/gestao-medicos" element={<GestaoMedicos />} />
+            <Route path="/whatsapp-api" element={<WhatsAppAPI />} />
+            <Route path="/bi-avancado" element={<BIAvancado />} />
+            <Route path="/gestao-hospitalar" element={<GestaoHospitalar />} />
             <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/dre" element={<DRE />} />
             <Route path="/comissoes" element={<Comissoes />} />

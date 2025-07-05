@@ -11,7 +11,12 @@ import {
   TrendingUp,
   MessageSquare,
   Home,
-  Stethoscope
+  Stethoscope,
+  Pill,
+  UserPlus,
+  Send,
+  Building2,
+  Activity
 } from "lucide-react"
 
 import {
@@ -64,6 +69,36 @@ const menuItems = [
     group: "clinico"
   },
   {
+    title: "Prescrição Digital",
+    url: "/prescricao-digital",
+    icon: Pill,
+    group: "medico"
+  },
+  {
+    title: "Gestão de Médicos",
+    url: "/gestao-medicos",
+    icon: UserPlus,
+    group: "clinica"
+  },
+  {
+    title: "WhatsApp API",
+    url: "/whatsapp-api",
+    icon: Send,
+    group: "clinica"
+  },
+  {
+    title: "BI Avançado",
+    url: "/bi-avancado",
+    icon: BarChart3,
+    group: "clinica"
+  },
+  {
+    title: "Gestão Hospitalar",
+    url: "/gestao-hospitalar",
+    icon: Building2,
+    group: "hospital"
+  },
+  {
     title: "Fluxo de Caixa",
     url: "/financeiro",
     icon: DollarSign,
@@ -104,6 +139,9 @@ const menuItems = [
 const groupedItems = {
   principal: menuItems.filter(item => item.group === "principal"),
   clinico: menuItems.filter(item => item.group === "clinico"),
+  medico: menuItems.filter(item => item.group === "medico"),
+  clinica: menuItems.filter(item => item.group === "clinica"),
+  hospital: menuItems.filter(item => item.group === "hospital"),
   financeiro: menuItems.filter(item => item.group === "financeiro"),
   relatorios: menuItems.filter(item => item.group === "relatorios"),
   sistema: menuItems.filter(item => item.group === "sistema")
@@ -147,6 +185,75 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {groupedItems.clinico.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {open && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Médico Individual</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {groupedItems.medico.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {open && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Clínica</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {groupedItems.clinica.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink 
+                      to={item.url} 
+                      className={({ isActive }) => 
+                        isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {open && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Hospital</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {groupedItems.hospital.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
