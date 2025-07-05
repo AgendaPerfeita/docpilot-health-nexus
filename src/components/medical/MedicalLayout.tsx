@@ -292,9 +292,9 @@ export function MedicalLayout({ children, patientData = mockPatientData, onStart
               <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                   <Calendar className="w-4 h-4" />
-                  <span>{item.data} - Por: {item.medico} - {item.duracao}</span>
+                  <span>{String(item.data)} - Por: {String(item.medico)} - {String(item.duracao)}</span>
                 </div>
-                <div className="font-medium">{item.tipo}</div>
+                <div className="font-medium">{String(item.tipo)}</div>
               </div>
             ))}
           </div>
