@@ -51,6 +51,103 @@ export type Database = {
           },
         ]
       }
+      consultas: {
+        Row: {
+          clinica_id: string | null
+          created_at: string
+          data_consulta: string
+          duracao_minutos: number
+          id: string
+          medico_id: string
+          observacoes: string | null
+          paciente_id: string
+          status: string
+          tipo_consulta: string
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          clinica_id?: string | null
+          created_at?: string
+          data_consulta: string
+          duracao_minutos?: number
+          id?: string
+          medico_id: string
+          observacoes?: string | null
+          paciente_id: string
+          status?: string
+          tipo_consulta?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          clinica_id?: string | null
+          created_at?: string
+          data_consulta?: string
+          duracao_minutos?: number
+          id?: string
+          medico_id?: string
+          observacoes?: string | null
+          paciente_id?: string
+          status?: string
+          tipo_consulta?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultas_clinica_id_fkey"
+            columns: ["clinica_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultas_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultas_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenios: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pacientes: {
         Row: {
           cep: string | null
@@ -109,6 +206,47 @@ export type Database = {
             columns: ["responsavel_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescricoes: {
+        Row: {
+          created_at: string
+          dosagem: string
+          duracao: string
+          frequencia: string
+          id: string
+          medicamento: string
+          observacoes: string | null
+          prontuario_id: string
+        }
+        Insert: {
+          created_at?: string
+          dosagem: string
+          duracao: string
+          frequencia: string
+          id?: string
+          medicamento: string
+          observacoes?: string | null
+          prontuario_id: string
+        }
+        Update: {
+          created_at?: string
+          dosagem?: string
+          duracao?: string
+          frequencia?: string
+          id?: string
+          medicamento?: string
+          observacoes?: string | null
+          prontuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescricoes_prontuario_id_fkey"
+            columns: ["prontuario_id"]
+            isOneToOne: false
+            referencedRelation: "prontuarios"
             referencedColumns: ["id"]
           },
         ]
@@ -172,6 +310,79 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      prontuarios: {
+        Row: {
+          conduta: string | null
+          consulta_id: string | null
+          created_at: string
+          data_atendimento: string
+          exame_fisico: string | null
+          hipotese_diagnostica: string | null
+          historia_doenca_atual: string | null
+          id: string
+          medico_id: string
+          observacoes: string | null
+          paciente_id: string
+          prescricao: string | null
+          queixa_principal: string | null
+          updated_at: string
+        }
+        Insert: {
+          conduta?: string | null
+          consulta_id?: string | null
+          created_at?: string
+          data_atendimento?: string
+          exame_fisico?: string | null
+          hipotese_diagnostica?: string | null
+          historia_doenca_atual?: string | null
+          id?: string
+          medico_id: string
+          observacoes?: string | null
+          paciente_id: string
+          prescricao?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conduta?: string | null
+          consulta_id?: string | null
+          created_at?: string
+          data_atendimento?: string
+          exame_fisico?: string | null
+          hipotese_diagnostica?: string | null
+          historia_doenca_atual?: string | null
+          id?: string
+          medico_id?: string
+          observacoes?: string | null
+          paciente_id?: string
+          prescricao?: string | null
+          queixa_principal?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prontuarios_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prontuarios_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prontuarios_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
