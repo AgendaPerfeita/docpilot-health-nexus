@@ -1,7 +1,21 @@
+
 // Configuração da API do Gemini
 export const GEMINI_CONFIG = {
   apiKey: import.meta.env.VITE_GEMINI_API_KEY,
   baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+}
+
+// Tipo para medicamentos
+export interface Medicamento {
+  nome: string;
+  principioAtivo: string;
+  apresentacao: string;
+  fabricante: string;
+  tipo: string;
+  preco?: number;
+  tarja?: string;
+  posologias?: string[];
+  observacoes?: string;
 }
 
 // Função para fazer chamadas à API do Gemini
@@ -57,4 +71,72 @@ export async function analyzeMedicalData(patientData: any, symptoms: string) {
   `
 
   return callGeminiAPI(prompt)
-} 
+}
+
+// Função para buscar medicamentos
+export async function buscarMedicamentos(termo: string): Promise<Medicamento[]> {
+  const prompt = `
+    Busque medicamentos que correspondam ao termo: "${termo}"
+    
+    Retorne uma lista de até 5 medicamentos em formato JSON com as seguintes propriedades:
+    - nome: string
+    - principioAtivo: string
+    - apresentacao: string
+    - fabricante: string
+    - tipo: string (Genérico, Similar, Referência)
+    - preco: number (opcional)
+    - tarja: string (Livre, Vermelha, Preta)
+    - posologias: string[] (array de posologias comuns)
+    - observacoes: string (opcional)
+    
+    Responda APENAS com o JSON válido, sem texto adicional.
+  `
+
+  try {
+    const response = await callGeminiAPI(prompt)
+    return JSON.parse(response)
+  } catch (error) {
+    console.error('Erro ao buscar medicamentos:', error)
+    return []
+  }
+}
+
+// Função para autocomplete de medicamentos
+export async function autocompleteMedicamentos(termo: string): Promise<string[]> {
+  const prompt = `
+    Forneça uma lista de 8 nomes de medicamentos que começam ou contêm o termo: "${termo}"
+    
+    Retorne apenas os nomes dos medicamentos em formato JSON como um array de strings.
+    Exemplo: ["Amoxicilina 500mg", "Dipirona 500mg", ...]
+    
+    Responda APENAS com o JSON válido, sem texto adicional.
+  `
+
+  try {
+    const response = await callGeminiAPI(prompt)
+    return JSON.parse(response)
+  } catch (error) {
+    console.error('Erro no autocomplete de medicamentos:', error)
+    return []
+  }
+}
+
+// Função para obter posologias sugeridas
+export async function obterPosologiasSugeridas(medicamento: string): Promise<string[]> {
+  const prompt = `
+    Para o medicamento "${medicamento}", forneça 3-5 posologias comuns e seguras.
+    
+    Retorne em formato JSON como um array de strings com posologias completas.
+    Exemplo: ["1 comprimido, via oral, a cada 8 horas", "1 comprimido, via oral, duas vezes ao dia"]
+    
+    Responda APENAS com o JSON válido, sem texto adicional.
+  `
+
+  try {
+    const response = await callGeminiAPI(prompt)
+    return JSON.parse(response)
+  } catch (error) {
+    console.error('Erro ao obter posologias:', error)
+    return []
+  }
+}
