@@ -11,6 +11,7 @@ import { VitalSignsSection } from "@/components/medical/VitalSignsSection"
 import { PhysicalExamSection } from "@/components/medical/PhysicalExamSection"
 import { RiskAssessmentCard } from "@/components/medical/RiskAssessmentCard"
 import { AIAssistantCard } from "@/components/medical/AIAssistantCard"
+import { MedicalLayout } from "@/components/medical/MedicalLayout"
 
 const mockPaciente = {
   nome: "Maria Silva dos Santos",
@@ -24,6 +25,7 @@ const mockPaciente = {
 export default function NovaEvolucao() {
   const navigate = useNavigate()
   const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [isConsultationActive, setIsConsultationActive] = useState(false)
 
   const [form, setForm] = useState({
     paciente: mockPaciente.nome,
@@ -59,11 +61,9 @@ export default function NovaEvolucao() {
     outros: ""
   })
 
-  // Cálculo automático de escores de risco
   const calculateRiskScores = () => {
     const scores = []
     
-    // qSOFA Score
     let qSOFA = 0
     if (parseFloat(sinaisVitais.fr) >= 22) qSOFA++
     if (parseFloat(sinaisVitais.pa_sistolica) <= 100) qSOFA++
@@ -77,7 +77,6 @@ export default function NovaEvolucao() {
       })
     }
 
-    // Avaliação da PA
     const paS = parseFloat(sinaisVitais.pa_sistolica)
     const paD = parseFloat(sinaisVitais.pa_diastolica)
     if (paS > 0 && paD > 0) {
@@ -103,7 +102,6 @@ export default function NovaEvolucao() {
     return scores
   }
 
-  // Avaliação de critérios de gravidade
   const assessSeverityCriteria = () => {
     const paS = parseFloat(sinaisVitais.pa_sistolica)
     const fc = parseFloat(sinaisVitais.fc)
@@ -118,28 +116,13 @@ export default function NovaEvolucao() {
     }
   }
 
-  const isRequired = (field: string) => [
-    "paciente", "data", "queixa", "historia", "diagnostico", "conduta", "examesComplementares", "observacoes"
-  ].includes(field)
-
-  const validate = () => {
-    for (const field of [
-      "paciente", "data", "queixa", "historia", "diagnostico", "conduta", "examesComplementares", "observacoes"
-    ]) {
-      if (!form[field]) return false
-    }
-    return true
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setTouched({
       paciente: true, data: true, queixa: true, historia: true, 
       diagnostico: true, conduta: true, examesComplementares: true, observacoes: true
     })
-    if (!validate()) return
     alert('Evolução salva com sucesso!')
-    navigate('/prontuario')
   }
 
   const handleVitalSignsChange = (field: string, value: string) => {
@@ -154,26 +137,20 @@ export default function NovaEvolucao() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleStartConsultation = () => {
+    setIsConsultationActive(true)
+  }
+
+  const handleFinishConsultation = () => {
+    setIsConsultationActive(false)
+    navigate('/prontuario')
+  }
+
   const riskScores = calculateRiskScores()
   const severityCriteria = assessSeverityCriteria()
 
-  return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Nova Evolução</h1>
-          <p className="text-muted-foreground">Prontuário eletrônico com assistente de IA</p>
-        </div>
-        <Button onClick={handleSubmit} className="gap-2">
-          <Save className="h-4 w-4" />
-          Salvar Evolução
-        </Button>
-      </div>
-
+  const renderConsultationContent = () => (
+    <div className="container mx-auto px-6 py-6 max-w-6xl">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Dados básicos */}
         <Card>
@@ -206,14 +183,14 @@ export default function NovaEvolucao() {
           </CardContent>
         </Card>
 
-        {/* Sinais Vitais - Movido para o início */}
+        {/* Sinais Vitais */}
         <VitalSignsSection
           sinaisVitais={sinaisVitais}
           onChange={handleVitalSignsChange}
           isRequired={true}
         />
 
-        {/* Assistente de IA - Posicionado estrategicamente */}
+        {/* Assistente de IA */}
         <AIAssistantCard
           patientData={mockPaciente}
           vitalSigns={sinaisVitais}
@@ -335,11 +312,8 @@ export default function NovaEvolucao() {
           </CardContent>
         </Card>
 
-        {/* Botões de ação */}
-        <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-            Cancelar
-          </Button>
+        {/* Botão para salvar (apenas quando ativo) */}
+        <div className="flex justify-end">
           <Button type="submit" className="gap-2">
             <Save className="h-4 w-4" />
             Salvar Evolução
@@ -347,5 +321,16 @@ export default function NovaEvolucao() {
         </div>
       </form>
     </div>
+  )
+
+  return (
+    <MedicalLayout
+      patientData={mockPaciente}
+      onStartConsultation={handleStartConsultation}
+      onFinishConsultation={handleFinishConsultation}
+      isConsultationActive={isConsultationActive}
+    >
+      {isConsultationActive && renderConsultationContent()}
+    </MedicalLayout>
   )
 }
