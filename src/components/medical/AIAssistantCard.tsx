@@ -89,6 +89,25 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
     }
   }
 
+  const formatAIResponse = (response: string) => {
+    return response
+      // Substituir títulos com emojis por versões em negrito
+      .replace(/🩺\s*HIPÓTESE DIAGNÓSTICA:/g, '**🩺 HIPÓTESE DIAGNÓSTICA:**')
+      .replace(/⚡\s*CLASSIFICAÇÃO DE RISCO:/g, '**⚡ CLASSIFICAÇÃO DE RISCO:**')
+      .replace(/💊\s*CONDUTA TERAPÊUTICA:/g, '**💊 CONDUTA TERAPÊUTICA:**')
+      .replace(/💊\s*AJUSTE DE DOSE POR PESO\/IMC\/RIM:/g, '**💊 AJUSTE DE DOSE POR PESO/IMC/RIM:**')
+      .replace(/🧪\s*EXAMES COMPLEMENTARES:/g, '**🧪 EXAMES COMPLEMENTARES:**')
+      .replace(/⚠️\s*CRITÉRIOS DE INTERNAÇÃO:/g, '**⚠️ CRITÉRIOS DE INTERNAÇÃO:**')
+      .replace(/📋\s*SEGUIMENTO:/g, '**📋 SEGUIMENTO:**')
+      .replace(/🆔\s*CID-10 SUGERIDO:/g, '**🆔 CID-10 SUGERIDO:**')
+      // Substituir asteriscos por hífens no início das linhas
+      .replace(/^\s*\*\s+/gm, '- ')
+      // Remover asteriscos duplos no meio das frases (exceto os títulos já convertidos)
+      .replace(/(?<!\*)\*\*(?!\*)/g, '**')
+      // Limpar linhas vazias excessivas
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+  }
+
   const generateAdvancedAISuggestion = async () => {
     if (!aiInput.symptoms.trim()) return
     
@@ -135,37 +154,39 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
         - Instabilidade hemodinâmica: ${severityCriteria.hemodynamicInstability ? 'SIM' : 'NÃO'}
         - Risco de deterioração: ${severityCriteria.acuteDeterioration ? 'SIM' : 'NÃO'}
 
-        Forneça análise estruturada EXATAMENTE neste formato:
+        Forneça análise estruturada EXATAMENTE neste formato com formatação limpa:
 
         🩺 HIPÓTESE DIAGNÓSTICA:
-        [Liste os possíveis diagnósticos diferenciais em ordem de probabilidade]
+        [Liste os possíveis diagnósticos diferenciais em ordem de probabilidade usando hífens (-) ao invés de asteriscos]
 
         ⚡ CLASSIFICAÇÃO DE RISCO:
-        [Análise dos escores calculados e recomendações]
+        [Análise dos escores calculados e recomendações usando hífens (-)]
 
         💊 CONDUTA TERAPÊUTICA:
-        [Tratamento inicial com doses ajustadas por peso/idade/função renal]
+        [Tratamento inicial com doses ajustadas por peso/idade/função renal usando hífens (-)]
 
         💊 AJUSTE DE DOSE POR PESO/IMC/RIM:
-        [Alertas específicos sobre ajustes de medicação necessários]
+        [Alertas específicos sobre ajustes de medicação necessários usando hífens (-)]
 
         🧪 EXAMES COMPLEMENTARES:
-        [Exames prioritários baseados na hipótese diagnóstica]
+        [Exames prioritários baseados na hipótese diagnóstica usando hífens (-)]
 
         ⚠️ CRITÉRIOS DE INTERNAÇÃO:
-        [Avaliação da necessidade de internação baseada nos critérios de gravidade]
+        [Avaliação da necessidade de internação baseada nos critérios de gravidade usando hífens (-)]
 
         📋 SEGUIMENTO:
-        [Orientações de retorno e sinais de alerta]
+        [Orientações de retorno e sinais de alerta usando hífens (-)]
 
         🆔 CID-10 SUGERIDO:
-        [Código(s) CID-10 mais apropriado(s)]
+        [Código(s) CID-10 mais apropriado(s) usando hífens (-)]
 
+        IMPORTANTE: Use sempre hífens (-) ao invés de asteriscos (*) para listagens. Mantenha formatação profissional e limpa.
         Seja preciso, baseado em evidências e considere as particularidades do paciente.
       `
       
       const response = await callGeminiAPI(prompt)
-      setAiSuggestion(response)
+      const formattedResponse = formatAIResponse(response)
+      setAiSuggestion(formattedResponse)
     } catch (error) {
       console.error('Erro ao gerar sugestão com IA:', error)
       setAiSuggestion('❌ Erro ao gerar sugestão. Verifique sua conexão e tente novamente.')
@@ -177,7 +198,7 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
   const extractAndApplySuggestion = (sectionName: string, fieldName: string) => {
     if (!aiSuggestion) return
     
-    const regex = new RegExp(`${sectionName}:\\s*([\\s\\S]*?)(?=\\n\\s*[🩺⚡💊🧪⚠️📋🆔]+|$)`, 'i')
+    const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\s*\\*\\*[🩺⚡💊🧪⚠️📋🆔]+|$)`, 'i')
     const match = aiSuggestion.match(regex)
     
     if (match && match[1]) {
@@ -307,21 +328,22 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold text-lg">📋 Análise da IA</h4>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('HIPÓTESE DIAGNÓSTICA', 'diagnostico')}>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🩺 HIPÓTESE DIAGNÓSTICA', 'diagnostico')}>
                       <FileText className="w-4 h-4 mr-1" />
                       Aplicar Diagnóstico
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('CONDUTA TERAPÊUTICA', 'conduta')}>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('💊 CONDUTA TERAPÊUTICA', 'conduta')}>
                       <Pill className="w-4 h-4 mr-1" />
                       Aplicar Conduta
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('EXAMES COMPLEMENTARES', 'examesComplementares')}>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🧪 EXAMES COMPLEMENTARES', 'examesComplementares')}>
                       <TestTube className="w-4 h-4 mr-1" />
                       Aplicar Exames
                     </Button>
                   </div>
                 </div>
-                <div className="whitespace-pre-wrap text-sm">{aiSuggestion}</div>
+                <div className="whitespace-pre-wrap text-sm prose prose-sm max-w-none" 
+                     dangerouslySetInnerHTML={{ __html: aiSuggestion.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
               </div>
             )}
           </div>
