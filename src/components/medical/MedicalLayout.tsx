@@ -16,6 +16,13 @@ interface MedicalLayoutProps {
   isConsultationActive: boolean
 }
 
+interface DiagnosticItem {
+  data: string
+  medico: string
+  duracao: string
+  tipo: string
+}
+
 interface PatientData {
   nome: string
   idade: { anos: number; meses: number; dias: number }
@@ -29,12 +36,7 @@ interface PatientData {
     alergias: string | null
     medicamentos: string | null
   }
-  ultimosDiagnosticos: Array<{
-    data: string
-    medico: string
-    duracao: string
-    tipo: string
-  }>
+  ultimosDiagnosticos: DiagnosticItem[]
 }
 
 const mockPatientData: PatientData = {
@@ -287,11 +289,11 @@ export function MedicalLayout({ children, patientData = mockPatientData, onStart
             </div>
           </div>
           <div className="space-y-3">
-            {patientData.ultimosDiagnosticos && patientData.ultimosDiagnosticos.map((item: any, index: number) => (
+            {patientData.ultimosDiagnosticos && patientData.ultimosDiagnosticos.map((item: DiagnosticItem, index: number) => (
               <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                   <Calendar className="w-4 h-4" />
-                  {item.data} - Por: {item.medico} - {item.duracao}
+                  <span>{item.data} - Por: {item.medico} - {item.duracao}</span>
                 </div>
                 <div className="font-medium">{item.tipo}</div>
               </div>
