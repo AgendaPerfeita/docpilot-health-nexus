@@ -101,7 +101,7 @@ export function calculateCreatinineClearance(
 }
 
 // Ajuste de dose renal
-export function getRenal DoseAdjustment(
+export function getRenalDoseAdjustment(
   clearance: number,
   medication: string
 ): string {
