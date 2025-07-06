@@ -248,16 +248,16 @@ const NovaEvolucao = () => {
   return (
     <div>
       {!isConsultationActive ? (
-        <div className="space-y-6 p-6">
+        <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
           {/* Header */}
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm" onClick={() => navigate('/prontuario')}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <Button variant="outline" size="sm" onClick={() => navigate('/prontuario')} className="w-full sm:w-auto">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold tracking-tight">Nova Evolução</h1>
-              <p className="text-muted-foreground">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Nova Evolução</h1>
+              <p className="text-muted-foreground text-sm sm:text-base break-words">
                 Registrar nova evolução para {paciente.nome}
               </p>
             </div>
@@ -265,28 +265,28 @@ const NovaEvolucao = () => {
 
           {/* Patient Info */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
                 <User className="h-5 w-5 mr-2" />
                 Dados do Paciente
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Nome</label>
-                  <p className="font-medium">{paciente.nome}</p>
+                  <p className="font-medium text-sm sm:text-base break-words">{paciente.nome}</p>
                 </div>
                 {paciente.convenio && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Convênio</label>
-                    <p className="font-medium">{paciente.convenio}</p>
+                    <p className="font-medium text-sm sm:text-base">{paciente.convenio}</p>
                   </div>
                 )}
                 {paciente.telefone && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                    <p className="font-medium">{paciente.telefone}</p>
+                    <p className="font-medium text-sm sm:text-base break-all">{paciente.telefone}</p>
                   </div>
                 )}
               </div>
@@ -295,12 +295,12 @@ const NovaEvolucao = () => {
 
           {/* Start Consultation */}
           <Card>
-            <CardContent className="pt-6 text-center">
-              <h2 className="text-xl font-semibold mb-2">Iniciar Atendimento</h2>
-              <p className="text-muted-foreground mb-4">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <h2 className="text-lg sm:text-xl font-semibold mb-2">Iniciar Atendimento</h2>
+              <p className="text-muted-foreground mb-4 text-sm sm:text-base">
                 Clique para iniciar o atendimento e acessar a interface completa de evolução médica
               </p>
-              <Button size="lg" onClick={handleStartConsultation}>
+              <Button size="lg" onClick={handleStartConsultation} className="w-full sm:w-auto">
                 <Save className="h-4 w-4 mr-2" />
                 Iniciar Atendimento
               </Button>
