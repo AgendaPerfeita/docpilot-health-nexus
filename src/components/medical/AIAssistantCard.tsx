@@ -134,6 +134,7 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
         - Temp: ${vitalSigns.temp}°C
         - FR: ${vitalSigns.fr} irpm
         - Sat O2: ${vitalSigns.sat_o2}%
+        - HGT: ${vitalSigns.hgt} mg/dL
         - Peso: ${vitalSigns.peso}kg, Altura: ${vitalSigns.altura}cm, IMC: ${vitalSigns.imc}
 
         EXAME FÍSICO:
@@ -344,6 +345,54 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
                 </div>
                 <div className="whitespace-pre-wrap text-sm prose prose-sm max-w-none" 
                      dangerouslySetInnerHTML={{ __html: aiSuggestion.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                
+                {/* Classificação de Risco Automática */}
+                <div className="mt-6 p-4 border-t bg-blue-50 rounded-b-lg">
+                  <h5 className="font-semibold text-sm mb-3">📋 Classificação de Risco Automática</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {riskScores.map((score, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                        <span className="text-sm font-medium">{score.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{score.score}</span>
+                          <Badge variant={score.risk === 'alto' ? 'destructive' : score.risk === 'moderado' ? 'default' : 'secondary'}>
+                            {score.risk.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h6 className="font-medium text-sm mb-2">Critérios de Gravidade</h6>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={severityCriteria.sepsis ? "text-red-600" : "text-green-600"}>
+                          {severityCriteria.sepsis ? "❌" : "✅"}
+                        </span>
+                        <span>Sinais de Sepse</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={severityCriteria.hemodynamicInstability ? "text-red-600" : "text-green-600"}>
+                          {severityCriteria.hemodynamicInstability ? "❌" : "✅"}
+                        </span>
+                        <span>Instabilidade Hemodinâmica</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={severityCriteria.acuteDeterioration ? "text-red-600" : "text-green-600"}>
+                          {severityCriteria.acuteDeterioration ? "❌" : "✅"}
+                        </span>
+                        <span>Risco de Deterioração</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={severityCriteria.internationRecommended ? "text-red-600" : "text-green-600"}>
+                          {severityCriteria.internationRecommended ? "❌" : "✅"}
+                        </span>
+                        <span>Recomendação de Internação</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

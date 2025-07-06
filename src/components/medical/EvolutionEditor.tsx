@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RichTextEditor } from './RichTextEditor'
 import { VitalSignsSection } from './VitalSignsSection'
 import { PhysicalExamSection } from './PhysicalExamSection'
+import { AIAssistantCard } from './AIAssistantCard'
+import { RenalFunctionCalculator } from './RenalFunctionCalculator'
 import { Save, FileText, User, Clock, AlertCircle, Printer, History } from 'lucide-react'
 import { useProntuarios } from '@/hooks/useProntuarios'
 import { useToast } from '@/hooks/use-toast'
@@ -46,7 +48,8 @@ export function EvolutionEditor({
     fc: '',
     temp: '',
     sat_o2: '',
-    fr: ''
+    fr: '',
+    hgt: ''
   })
 
   const [exameFisico, setExameFisico] = useState({
@@ -79,6 +82,18 @@ export function EvolutionEditor({
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleSuggestionApplied = (field: string, value: string) => {
+    if (field === 'diagnostico') {
+      handleFieldChange('hipotese_diagnostica', value)
+    } else if (field === 'conduta') {
+      handleFieldChange('conduta', value)
+    } else if (field === 'examesComplementares') {
+      handleFieldChange('observacoes', value)
+    } else {
+      handleFieldChange(field, value)
+    }
   }
 
   const handleSave = async () => {
@@ -175,6 +190,14 @@ export function EvolutionEditor({
           </CardContent>
         </Card>
       )}
+
+      {/* AI Assistant Card */}
+      <AIAssistantCard
+        patientData={patientData}
+        vitalSigns={sinaisVitais}
+        physicalExam={exameFisico}
+        onSuggestionApplied={handleSuggestionApplied}
+      />
 
       {/* Editor de Evolução */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -299,6 +322,13 @@ export function EvolutionEditor({
               </div>
             </CardContent>
           </Card>
+          
+          {/* Calculadora de Função Renal */}
+          <RenalFunctionCalculator 
+            age={patientData?.idade?.anos}
+            weight={sinaisVitais.peso}
+            gender={patientData?.sexo}
+          />
           
           {/* Informações do paciente */}
           {patientData && (

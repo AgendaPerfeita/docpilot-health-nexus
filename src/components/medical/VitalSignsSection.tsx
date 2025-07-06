@@ -14,6 +14,7 @@ interface VitalSigns {
   temp: string
   sat_o2: string
   fr: string
+  hgt: string
 }
 
 interface VitalSignsSectionProps {
@@ -93,7 +94,7 @@ export function VitalSignsSection({ sinaisVitais, onChange, isRequired }: VitalS
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <Label htmlFor="pa_sistolica">PA Sistólica</Label>
             <Input
@@ -153,6 +154,16 @@ export function VitalSignsSection({ sinaisVitais, onChange, isRequired }: VitalS
               placeholder="16"
               value={sinaisVitais.fr}
               onChange={(e) => onChange('fr', e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="hgt">HGT (mg/dL)</Label>
+            <Input
+              id="hgt"
+              type="number"
+              placeholder="90"
+              value={sinaisVitais.hgt}
+              onChange={(e) => onChange('hgt', e.target.value)}
             />
           </div>
         </div>
