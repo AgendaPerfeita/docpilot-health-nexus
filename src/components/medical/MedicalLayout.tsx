@@ -11,6 +11,7 @@ import { ExamsAndProcedures } from './ExamsAndProcedures'
 import { PrescriptionsSection } from './PrescriptionsSection'
 import { DocumentsSection } from './DocumentsSection'
 import { ImagesSection } from './ImagesSection'
+import { EvolutionEditor } from './EvolutionEditor'
 import { MedicalLayoutProps, PatientData } from './types'
 
 export function MedicalLayout({ 
@@ -71,7 +72,13 @@ export function MedicalLayout({
     }
 
     if (activeSection === 'atendimento') {
-      return children
+      return (
+        <EvolutionEditor 
+          pacienteId={pacienteId}
+          prontuarioId={prontuarioId}
+          patientData={patientData}
+        />
+      )
     }
 
     if (activeSection === 'acompanhamentos') {
@@ -79,7 +86,7 @@ export function MedicalLayout({
     }
 
     if (activeSection === 'exames') {
-      return <ExamsAndProcedures />
+      return <ExamsAndProcedures pacienteId={pacienteId} />
     }
 
     if (activeSection === 'prescricoes') {

@@ -194,14 +194,7 @@ const NovaEvolucao = () => {
           isConsultationActive={isConsultationActive}
           pacienteId={paciente.id}
           prontuarioId={currentProntuarioId}
-        >
-          <div className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Evolução Médica</h2>
-            <p className="text-muted-foreground">
-              Interface de evolução médica para {paciente.nome}
-            </p>
-          </div>
-        </MedicalLayout>
+        />
       )}
     </div>
   );

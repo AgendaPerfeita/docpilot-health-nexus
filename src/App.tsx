@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,22 +12,26 @@ import Landing from "./pages/auth/Landing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Dashboard
+// Dashboard Global
 import Dashboard from "./pages/dashboard/Dashboard";
 
-// Paciente
-import AreaPaciente from "./pages/paciente/AreaPaciente";
-
-// Clínica
-import Agenda from "./pages/clinica/Agenda";
-import CRM from "./pages/clinica/CRM";
-
-// Prontuário - NOVA ESTRUTURA
+// SISTEMA GLOBAL DE PRONTUÁRIOS (acessível por todos os tipos de usuário)
 import ProntuarioList from "./pages/prontuario/index";
 import PacienteProntuario from "./pages/prontuario/PacienteProntuario";
 import NovaEvolucaoProntuario from "./pages/prontuario/NovaEvolucao";
 
-// CRM Global
+// ÁREAS ESPECÍFICAS POR TIPO DE USUÁRIO
+// Área do Paciente
+import AreaPaciente from "./pages/paciente/AreaPaciente";
+
+// Área do Médico Individual
+import AgendaMedico from "./pages/clinica/Agenda";
+import CRMMedico from "./pages/clinica/CRM";
+
+// Área da Clínica
+// (reutiliza algumas páginas de médico + funcionalidades específicas)
+
+// CRM Global (funcionalidade compartilhada)
 import CRMGlobal from "./pages/CRM";
 
 // Index
@@ -59,23 +62,30 @@ function App() {
                 {/* Protected Routes */}
                 <Route element={<PermissionGuard children={<Layout />} />}>
                   
-                  {/* Dashboard */}
+                  {/* Dashboard Global */}
                   <Route path="/dashboard" element={<Dashboard />} />
+                  
+                  {/* ===== SISTEMA GLOBAL DE PRONTUÁRIOS ===== */}
+                  {/* Acessível por TODOS os tipos de usuário */}
+                  <Route path="/prontuario" element={<ProntuarioList />} />
+                  <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
+                  <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
+                  
+                  {/* ===== ÁREAS ESPECÍFICAS POR TIPO DE USUÁRIO ===== */}
                   
                   {/* Área do Paciente */}
                   <Route path="/paciente" element={<AreaPaciente />} />
                   <Route path="/paciente/*" element={<AreaPaciente />} />
                   
-                  {/* Área da Clínica */}
-                  <Route path="/clinica/agenda" element={<Agenda />} />
-                  <Route path="/clinica/crm" element={<CRM />} />
+                  {/* Área do Médico Individual */}
+                  <Route path="/medico/agenda" element={<AgendaMedico />} />
+                  <Route path="/medico/crm" element={<CRMMedico />} />
                   
-                  {/* Sistema de Prontuários - NOVA ESTRUTURA */}
-                  <Route path="/prontuario" element={<ProntuarioList />} />
-                  <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
-                  <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
+                  {/* Área da Clínica (reutiliza componentes + específicos) */}
+                  <Route path="/clinica/agenda" element={<AgendaMedico />} />
+                  <Route path="/clinica/crm" element={<CRMMedico />} />
                   
-                  {/* CRM Global */}
+                  {/* ===== FUNCIONALIDADES COMPARTILHADAS ===== */}
                   <Route path="/crm" element={<CRMGlobal />} />
 
                 </Route>

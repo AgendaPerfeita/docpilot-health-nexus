@@ -14,7 +14,11 @@ import { useExames } from '@/hooks/useExames'
 import { cn } from '@/lib/utils'
 import type { CheckedState } from '@radix-ui/react-checkbox'
 
-export function ExamsAndProcedures() {
+interface ExamsAndProceduresProps {
+  pacienteId?: string
+}
+
+export function ExamsAndProcedures({ pacienteId }: ExamsAndProceduresProps) {
   const { catalogoExames, solicitacoes, loading, fetchCatalogoExames, criarSolicitacao } = useExames()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedExames, setSelectedExames] = useState<any[]>([])
@@ -43,11 +47,11 @@ export function ExamsAndProcedures() {
   }
 
   const handleSolicitarExames = async () => {
-    if (selectedExames.length === 0) return
+    if (selectedExames.length === 0 || !pacienteId) return
 
     try {
       await criarSolicitacao({
-        paciente_id: 'temp-patient-id', // This should come from context
+        paciente_id: pacienteId,
         exames: selectedExames,
         indicacao_clinica: indicacaoClinica,
         convenio: convenio || undefined,
