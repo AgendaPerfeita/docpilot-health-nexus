@@ -78,22 +78,40 @@ export function AgendamentoCard({
   return (
     <td
       rowSpan={visualLinhas}
-      className={`border-b border-r relative bg-white align-top p-0`}
-      style={{ minWidth: 120, zIndex: isResizing ? 10 : undefined, boxShadow: 'none' }}
+      className={`border-b border-r relative align-top p-0 transition-all duration-200`}
+      style={{ 
+        minWidth: 120, 
+        zIndex: isResizing ? 10 : undefined, 
+        opacity: isDragging ? 0.3 : 1,
+        backgroundColor: isDragging ? '#f8f9fa' : '#ffffff',
+        transform: isDragging ? 'scale(0.98)' : 'scale(1)',
+        boxShadow: isDragging ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'
+      }}
       ref={dragCard}
     >
       <div className="absolute inset-0 flex flex-col justify-between h-full select-none">
-        <div className="p-1 text-xs font-semibold">
-          {hora} - {addMinutes(hora, visualDuracao)}<br />
-          {agendamento.paciente || "Agendado"}
+        <div className={`p-2 text-xs font-semibold rounded-t transition-all duration-200 ${
+          isDragging ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800'
+        }`}>
+          <div className="flex items-center gap-1 mb-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="font-bold">{hora} - {addMinutes(hora, visualDuracao)}</span>
+          </div>
+          <div className="text-blue-600">{agendamento.paciente || "Agendado"}</div>
         </div>
-        {/* Handle de resize visual */}
+        {/* Handle de resize visual melhorado */}
         <div
-          className="w-full h-2 cursor-s-resize bg-primary/20 rounded-b"
+          className="w-full h-3 cursor-s-resize bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-200 rounded-b flex items-center justify-center group"
           style={{ position: 'absolute', bottom: 0 }}
           title="Arraste para redimensionar"
           onMouseDown={onResizeMouseDown}
-        />
+        >
+          <div className="flex space-x-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+            <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+          </div>
+        </div>
       </div>
     </td>
   );
