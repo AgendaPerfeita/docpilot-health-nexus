@@ -79,7 +79,7 @@ export function MedicalLayout({
     }
 
     if (activeSection === 'exames') {
-      return <ExamsAndProcedures pacienteId={pacienteId} />
+      return <ExamsAndProcedures />
     }
 
     if (activeSection === 'prescricoes') {

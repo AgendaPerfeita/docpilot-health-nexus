@@ -22,7 +22,6 @@ import AreaPaciente from "./pages/paciente/AreaPaciente";
 // Clínica
 import Agenda from "./pages/clinica/Agenda";
 import CRM from "./pages/clinica/CRM";
-import Dashboard as ClinicaDashboard from "./pages/clinica/Dashboard";
 
 // Prontuário - NOVA ESTRUTURA
 import ProntuarioList from "./pages/prontuario/index";
@@ -58,7 +57,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
 
                 {/* Protected Routes */}
-                <Route element={<PermissionGuard><Layout /></PermissionGuard>}>
+                <Route element={<PermissionGuard children={<Layout />} />}>
                   
                   {/* Dashboard */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -68,7 +67,6 @@ function App() {
                   <Route path="/paciente/*" element={<AreaPaciente />} />
                   
                   {/* Área da Clínica */}
-                  <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
                   <Route path="/clinica/agenda" element={<Agenda />} />
                   <Route path="/clinica/crm" element={<CRM />} />
                   

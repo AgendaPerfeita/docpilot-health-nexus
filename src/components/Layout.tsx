@@ -3,10 +3,10 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
 import { LogOut, User } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Outlet } from "react-router-dom"
 
 interface LayoutProps {
-  children: React.ReactNode
+  children?: React.ReactNode
 }
 
 export default function Layout({ children }: LayoutProps) {
@@ -45,7 +45,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </header>
           <main className="flex-1 p-6 bg-muted/20">
-            {children}
+            {children || <Outlet />}
           </main>
         </div>
       </div>

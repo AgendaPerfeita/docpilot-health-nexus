@@ -30,8 +30,7 @@ export const PacienteForm = ({ paciente, onCancel, onSuccess }: PacienteFormProp
     estado: paciente?.estado || '',
     cep: paciente?.cep || '',
     convenio: paciente?.convenio || '',
-    numero_convenio: paciente?.numero_convenio || '',
-    origem: paciente?.origem || 'Indicação'
+    numero_convenio: paciente?.numero_convenio || ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,23 +130,6 @@ export const PacienteForm = ({ paciente, onCancel, onSuccess }: PacienteFormProp
             value={formData.data_nascimento}
             onChange={(e) => handleChange('data_nascimento', e.target.value)}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="origem">Origem</Label>
-          <Select value={formData.origem} onValueChange={(value) => handleChange('origem', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Como chegou até nós?" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Google">Google</SelectItem>
-              <SelectItem value="Instagram">Instagram</SelectItem>
-              <SelectItem value="Facebook">Facebook</SelectItem>
-              <SelectItem value="Indicação">Indicação</SelectItem>
-              <SelectItem value="Marketplace">Marketplace</SelectItem>
-              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="space-y-2">

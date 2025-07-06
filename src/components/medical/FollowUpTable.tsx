@@ -62,7 +62,7 @@ export function FollowUpTable({ pacienteId }: FollowUpTableProps) {
     new Date(item.data_consulta) > new Date()
   ).length
 
-  const totalRealizados = filteredConsultas.filter(item => item.status === 'realizada').length
+  const totalRealizados = filteredConsultas.filter(item => item.status === 'concluida').length
 
   if (loading) {
     return (
