@@ -19,11 +19,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 // Paciente
 import AreaPaciente from "./pages/paciente/AreaPaciente";
 
-// Médico
-import AreaMedico from "./pages/medico/AreaMedico";
-
 // Clínica
-import AreaClinica from "./pages/clinica/AreaClinica";
 import Agenda from "./pages/clinica/Agenda";
 import CRM from "./pages/clinica/CRM";
 import Dashboard as ClinicaDashboard from "./pages/clinica/Dashboard";
@@ -40,7 +36,7 @@ import CRMGlobal from "./pages/CRM";
 import Index from "./pages/Index";
 
 // Shared components
-import ProtectedRoute from "./components/ProtectedRoute";
+import { PermissionGuard } from "./components/PermissionGuard";
 
 const queryClient = new QueryClient();
 
@@ -62,7 +58,7 @@ function App() {
                 <Route path="/register" element={<Register />} />
 
                 {/* Protected Routes */}
-                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route element={<PermissionGuard><Layout /></PermissionGuard>}>
                   
                   {/* Dashboard */}
                   <Route path="/dashboard" element={<Dashboard />} />
@@ -71,11 +67,7 @@ function App() {
                   <Route path="/paciente" element={<AreaPaciente />} />
                   <Route path="/paciente/*" element={<AreaPaciente />} />
                   
-                  {/* Área do Médico */}
-                  <Route path="/medico" element={<AreaMedico />} />
-                  
                   {/* Área da Clínica */}
-                  <Route path="/clinica" element={<AreaClinica />} />
                   <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
                   <Route path="/clinica/agenda" element={<Agenda />} />
                   <Route path="/clinica/crm" element={<CRM />} />
