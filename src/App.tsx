@@ -86,8 +86,8 @@ function App() {
                   <Route path="/clinica/agenda" element={<AgendaMedico />} />
                   <Route path="/clinica/crm" element={<CRMMedico />} />
                   
-                  {/* ===== FUNCIONALIDADES COMPARTILHADAS ===== */}
-                  <Route path="/crm" element={<CRMGlobal />} />
+                  {/* Agenda Global - acessível por todos */}
+                  <Route path="/agenda" element={<AgendaMedico />} />
                   
                   {/* Prescrição Digital - acessível por médicos */}
                   <Route path="/prescricao-digital" element={<PrescricaoDigital />} />
