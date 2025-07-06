@@ -15,6 +15,7 @@ export interface Paciente {
   cep?: string;
   convenio?: string;
   numero_convenio?: string;
+  origem?: string;
   responsavel_id: string;
   created_at: string;
   updated_at: string;

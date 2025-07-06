@@ -5,52 +5,45 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Plus, Edit, Eye, Phone, Mail, Calendar, Instagram } from "lucide-react"
-import { mockPatients } from "./mockPatients"
-import { HistoricoEvolucoes } from "./HistoricoEvolucoes"
-import { mockConvenios } from "./mockConvenios"
-
-const mockPatientsWithOrigin = mockPatients.map(patient => ({
-  ...patient,
-  origem: ['Instagram', 'Google', 'Facebook', 'Indicação', 'WhatsApp', 'Marketplace'][Math.floor(Math.random() * 6)],
-  totalGasto: Math.floor(Math.random() * 2000) + 200,
-  ticketMedio: Math.floor(Math.random() * 400) + 100,
-  totalConsultas: Math.floor(Math.random() * 10) + 1
-}));
+import { Search, Plus, Edit, Eye, Phone, Mail, Calendar, User } from "lucide-react"
+import { usePacientes } from "@/hooks/usePacientes"
+import { PacienteForm } from "@/components/modules/pacientes/PacienteForm"
+import { useToast } from "@/hooks/use-toast"
 
 export default function CRM() {
+  const { pacientes, loading } = usePacientes()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [patients, setPatients] = useState(mockPatientsWithOrigin)
-  const [formState, setFormState] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    birthDate: '',
-    tipoConsulta: '',
-    convenio: '',
-    plano: '',
-    status: 'ativo',
-    origem: 'Indicação',
-    notes: ''
-  });
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPatients = pacientes.filter(patient =>
+    patient.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (patient.cpf && patient.cpf.includes(searchTerm))
   )
 
-  const getOriginIcon = (origem: string) => {
-    switch (origem) {
-      case 'Instagram': return <Instagram className="h-4 w-4" />
-      default: return <div className="w-4 h-4 bg-primary rounded-full" />
+  const calculateAge = (birthDate?: string) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    const age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      return age - 1;
     }
+    return age;
+  }
+
+  const handlePatientSaved = () => {
+    setIsDialogOpen(false)
+    toast({
+      title: "Sucesso",
+      description: "Paciente cadastrado com sucesso!"
+    })
   }
 
   return (
@@ -67,113 +60,17 @@ export default function CRM() {
               Novo Paciente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Paciente</DialogTitle>
               <DialogDescription>
                 Cadastre um novo paciente no sistema
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo</Label>
-                <Input id="name" placeholder="Digite o nome completo" value={formState.name} onChange={e => setFormState(f => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="email@exemplo.com" value={formState.email} onChange={e => setFormState(f => ({ ...f, email: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input id="phone" placeholder="(11) 99999-9999" value={formState.phone} onChange={e => setFormState(f => ({ ...f, phone: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="birthDate">Data de Nascimento</Label>
-                <Input id="birthDate" type="date" value={formState.birthDate} onChange={e => setFormState(f => ({ ...f, birthDate: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Origem</Label>
-                <Select value={formState.origem} onValueChange={origem => setFormState(f => ({ ...f, origem }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Como chegou até nós?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Google">Google</SelectItem>
-                    <SelectItem value="Instagram">Instagram</SelectItem>
-                    <SelectItem value="Facebook">Facebook</SelectItem>
-                    <SelectItem value="Indicação">Indicação</SelectItem>
-                    <SelectItem value="Marketplace">Marketplace</SelectItem>
-                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de Consulta</Label>
-                <Select value={formState.tipoConsulta} onValueChange={tipoConsulta => setFormState(f => ({ ...f, tipoConsulta, convenio: '', plano: '' }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="particular">Particular</SelectItem>
-                    <SelectItem value="convenio">Convênio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {formState.tipoConsulta === 'convenio' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Convênio</Label>
-                    <Select value={formState.convenio} onValueChange={convenio => setFormState(f => ({ ...f, convenio, plano: '' }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o convênio" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockConvenios.map(c => (
-                          <SelectItem key={c.operadora} value={c.operadora}>{c.operadora}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Plano</Label>
-                    <Select value={formState.plano} onValueChange={plano => setFormState(f => ({ ...f, plano }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mockConvenios.find(c => c.operadora === formState.convenio)?.planos.map(p => (
-                          <SelectItem key={p} value={p}>{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formState.status} onValueChange={status => setFormState(f => ({ ...f, status }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="inativo">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea id="notes" placeholder="Observações importantes sobre o paciente" value={formState.notes} onChange={e => setFormState(f => ({ ...f, notes: e.target.value }))} />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setIsDialogOpen(false); setFormState({ name: '', email: '', phone: '', birthDate: '', tipoConsulta: '', convenio: '', plano: '', status: 'ativo', origem: 'Indicação', notes: '' }); }}>
-                Cancelar
-              </Button>
-              <Button onClick={() => { setIsDialogOpen(false); setFormState({ name: '', email: '', phone: '', birthDate: '', tipoConsulta: '', convenio: '', plano: '', status: 'ativo', origem: 'Indicação', notes: '' }); }}>
-                Salvar Paciente
-              </Button>
-            </div>
+            <PacienteForm 
+              onCancel={() => setIsDialogOpen(false)}
+              onSuccess={handlePatientSaved}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -185,7 +82,7 @@ export default function CRM() {
             <CardTitle className="text-sm font-medium">Total de Pacientes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">284</div>
+            <div className="text-2xl font-bold">{pacientes.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -193,7 +90,7 @@ export default function CRM() {
             <CardTitle className="text-sm font-medium">Pacientes Ativos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">267</div>
+            <div className="text-2xl font-bold text-green-600">{pacientes.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -201,7 +98,13 @@ export default function CRM() {
             <CardTitle className="text-sm font-medium">Novos este Mês</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">18</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {pacientes.filter(p => {
+                const created = new Date(p.created_at);
+                const now = new Date();
+                return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+              }).length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -209,7 +112,7 @@ export default function CRM() {
             <CardTitle className="text-sm font-medium">Taxa de Retorno</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">68%</div>
+            <div className="text-2xl font-bold">--</div>
           </CardContent>
         </Card>
       </div>
@@ -242,74 +145,96 @@ export default function CRM() {
                 <TableHead>Paciente</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Origem</TableHead>
-                <TableHead>Última Consulta</TableHead>
+                <TableHead>Cadastrado em</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPatients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{patient.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(patient.birthDate).toLocaleDateString('pt-BR')}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Phone className="h-3 w-3" />
-                        {patient.phone}
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Mail className="h-3 w-3" />
-                        {patient.email}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getOriginIcon(patient.origem)}
-                      <span className="text-sm">{patient.origem}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(patient.lastVisit).toLocaleDateString('pt-BR')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={patient.plan === 'Particular' ? 'default' : 'secondary'}>
-                      {patient.plan}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={patient.status === 'Ativo' ? 'default' : 'destructive'}>
-                      {patient.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsViewDialogOpen(true) }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsEditDialogOpen(true) }}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : filteredPatients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    {searchTerm ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPatients.map((patient) => (
+                  <TableRow key={patient.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{patient.nome}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {patient.data_nascimento ? 
+                            `${calculateAge(patient.data_nascimento)} anos` : 
+                            'Idade não informada'
+                          }
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {patient.telefone && (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3" />
+                            {patient.telefone}
+                          </div>
+                        )}
+                        {patient.email && (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            {patient.email}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span className="text-sm">{'Indicação'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(patient.created_at).toLocaleDateString('pt-BR')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={patient.convenio ? 'secondary' : 'default'}>
+                        {patient.convenio || 'Particular'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="default">
+                        Ativo
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsViewDialogOpen(true) }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(patient); setIsEditDialogOpen(true) }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
+      {/* Dialog para Visualizar Paciente */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -318,133 +243,67 @@ export default function CRM() {
           {selectedPatient && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><strong>Nome:</strong> {selectedPatient.name}</div>
-                <div><strong>Email:</strong> {selectedPatient.email}</div>
-                <div><strong>Telefone:</strong> {selectedPatient.phone}</div>
-                <div><strong>Data de Nascimento:</strong> {new Date(selectedPatient.birthDate).toLocaleDateString('pt-BR')}</div>
-                <div><strong>Plano:</strong> {selectedPatient.plan}</div>
-                <div><strong>Status:</strong> {selectedPatient.status}</div>
+                <div><strong>Nome:</strong> {selectedPatient.nome}</div>
+                <div><strong>Email:</strong> {selectedPatient.email || 'Não informado'}</div>
+                <div><strong>Telefone:</strong> {selectedPatient.telefone || 'Não informado'}</div>
+                <div><strong>CPF:</strong> {selectedPatient.cpf || 'Não informado'}</div>
+                <div><strong>Data de Nascimento:</strong> {selectedPatient.data_nascimento ? new Date(selectedPatient.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado'}</div>
+                <div><strong>Convênio:</strong> {selectedPatient.convenio || 'Particular'}</div>
               </div>
               
-              <div className="bg-muted/30 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-3">
-                  {getOriginIcon(selectedPatient.origem)}
-                  <strong>{selectedPatient.origem}</strong>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Total Gasto:</span>
-                    <div className="font-bold text-lg">R$ {selectedPatient.totalGasto?.toLocaleString('pt-BR') || '0'}</div>
+              {selectedPatient.endereco && (
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <strong>Endereço:</strong>
+                  <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                    <div>
+                      <span className="text-muted-foreground">Endereço:</span>
+                      <div>{selectedPatient.endereco}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Cidade:</span>
+                      <div>{selectedPatient.cidade || 'Não informado'}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Estado:</span>
+                      <div>{selectedPatient.estado || 'Não informado'}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">CEP:</span>
+                      <div>{selectedPatient.cep || 'Não informado'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">Ticket Médio:</span>
-                    <div className="font-bold text-lg">R$ {selectedPatient.ticketMedio?.toLocaleString('pt-BR') || '0'}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Total Consultas:</span>
-                    <div className="font-bold text-lg">{selectedPatient.totalConsultas || 0}</div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Última Consulta:</span>
-                    <div className="font-medium">{new Date(selectedPatient.lastVisit).toLocaleDateString('pt-BR')}</div>
-                  </div>
-                </div>
-              </div>
-
-              {selectedPatient.notes && (
-                <div>
-                  <strong>Observações:</strong> 
-                  <p className="text-sm text-muted-foreground mt-1">{selectedPatient.notes}</p>
                 </div>
               )}
-              
-              <HistoricoEvolucoes evolucoes={selectedPatient.evolucoes || []} />
+
+              <div className="text-sm text-muted-foreground">
+                <strong>Cadastrado em:</strong> {new Date(selectedPatient.created_at).toLocaleDateString('pt-BR')}
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* Dialog para Editar Paciente */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Paciente</DialogTitle>
           </DialogHeader>
           {selectedPatient && (
-            <EditPatientForm patient={selectedPatient} onSave={updated => {
-              setPatients(patients.map(p => p.id === updated.id ? updated : p))
-              setIsEditDialogOpen(false)
-            }} onCancel={() => setIsEditDialogOpen(false)} />
+            <PacienteForm 
+              paciente={selectedPatient}
+              onCancel={() => setIsEditDialogOpen(false)}
+              onSuccess={() => {
+                setIsEditDialogOpen(false)
+                toast({
+                  title: "Sucesso",
+                  description: "Paciente atualizado com sucesso!"
+                })
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
     </div>
-  )
-}
-
-function EditPatientForm({ patient, onSave, onCancel }) {
-  const [form, setForm] = useState({ ...patient })
-  const [plano, setPlano] = useState(form.plan.toLowerCase())
-  return (
-    <form className="grid grid-cols-2 gap-4 py-4" onSubmit={e => { e.preventDefault(); onSave(form) }}>
-      <div className="space-y-2">
-        <Label htmlFor="name">Nome Completo</Label>
-        <Input id="name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="phone">Telefone</Label>
-        <Input id="phone" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="birthDate">Data de Nascimento</Label>
-        <Input id="birthDate" type="date" value={form.birthDate} onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))} />
-      </div>
-      <div className="space-y-2">
-        <Label>Origem</Label>
-        <Select value={form.origem || 'Indicação'} onValueChange={origem => setForm(f => ({ ...f, origem }))}>
-          <SelectTrigger>
-            <SelectValue placeholder="Como chegou até nós?" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Google">Google</SelectItem>
-            <SelectItem value="Instagram">Instagram</SelectItem>
-            <SelectItem value="Facebook">Facebook</SelectItem>
-            <SelectItem value="Indicação">Indicação</SelectItem>
-            <SelectItem value="Marketplace">Marketplace</SelectItem>
-            <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="plan">Plano</Label>
-        <Select value={plano} onValueChange={v => {
-          setPlano(v)
-          setForm(f => ({ ...f, plan: v === 'particular' ? 'Particular' : 'Convênio', convenio: v === 'particular' ? '' : (mockConvenios[0] || '') }))
-        }}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione o plano" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="particular">Particular</SelectItem>
-            <SelectItem value="convenio">Convênio</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="col-span-2 space-y-2">
-        <Label htmlFor="notes">Observações</Label>
-        <Textarea id="notes" placeholder="Observações importantes sobre o paciente" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-      </div>
-      <div className="col-span-2 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit">
-          Salvar Alterações
-        </Button>
-      </div>
-    </form>
   )
 }
