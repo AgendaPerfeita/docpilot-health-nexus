@@ -271,7 +271,7 @@ const PacientesList = () => {
                             </Button>
                             <Button 
                               size="sm"
-                              onClick={() => handleNovaEvolucao({ id: consulta.paciente_id })}
+                              onClick={() => navigate(`/prontuario/paciente/${consulta.paciente_id}/nova`)}
                             >
                               <Plus className="h-4 w-4 mr-1" />
                               Nova Evolução
