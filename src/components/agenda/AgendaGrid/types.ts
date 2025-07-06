@@ -42,16 +42,3 @@ export interface SlotGuideProps {
   } | null;
   dragItem: any;
 }
-
-export interface VirtualDropTargetProps {
-  diaStr: string;
-  hora: string;
-  dIdx: number;
-  hIdx: number;
-  deslocamento?: number;
-  ocupacao: boolean[][];
-  onMoveAgendamento?: (id: string, novoDia: string, novoHora: string) => void;
-  agendamentosMap: Map<string, any>;
-  onHoverSlot?: (item: any, diaStr: string, hora: string, dIdx: number, hIdx: number, monitor?: any) => void;
-  clearDragSlot?: () => void;
-}

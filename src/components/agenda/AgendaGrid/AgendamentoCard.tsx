@@ -17,7 +17,13 @@ export function AgendamentoCard({
   // Drag do card
   const [{ isDragging }, dragCard, preview] = useDrag({
     type: AGENDAMENTO_TYPE,
-    item: { id: agendamento.id, duracao: agendamento.duracao || 30, hora, paciente: agendamento.paciente },
+    item: { 
+      id: agendamento.id, 
+      duracao: agendamento.duracao || 30, 
+      hora: agendamento.hora, 
+      dia: agendamento.dia,
+      paciente: agendamento.paciente 
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),

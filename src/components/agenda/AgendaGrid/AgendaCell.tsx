@@ -19,19 +19,18 @@ export function AgendaCell({
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: AGENDAMENTO_TYPE,
     drop: (item: any) => {
+      console.log('Drop event:', { itemId: item.id, targetDia: diaStr, targetHora: hora });
       if (onMoveAgendamento) onMoveAgendamento(item.id, diaStr, hora);
       if (clearDragSlot) clearDragSlot();
     },
     canDrop: (item: any) => {
-      // Permitir drop mesmo se há agendamento no slot (sobreposição parcial)
-      const agendamentoExistente = agendamentosMap.get(`${diaStr}_${hora}`);
-      
       // Não permite drop no mesmo slot do mesmo agendamento
+      const agendamentoExistente = agendamentosMap.get(`${diaStr}_${hora}`);
       if (agendamentoExistente && agendamentoExistente.id === item.id) {
         return false;
       }
       
-      // Permite sobreposição (como iClinic)
+      // Permite drop em qualquer lugar (sobreposição permitida)
       return true;
     },
     hover: (item, monitor) => {
