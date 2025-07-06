@@ -6,6 +6,11 @@ import { SidebarNavigation } from './SidebarNavigation'
 import { ConsultationActions } from './ConsultationActions'
 import { PatientSummary } from './PatientSummary'
 import { FinalizationSheet } from './FinalizationSheet'
+import { FollowUpTable } from './FollowUpTable'
+import { ExamsAndProcedures } from './ExamsAndProcedures'
+import { PrescriptionsSection } from './PrescriptionsSection'
+import { DocumentsSection } from './DocumentsSection'
+import { ImagesSection } from './ImagesSection'
 import { MedicalLayoutProps, PatientData } from './types'
 
 const mockPatientData: PatientData = {
@@ -90,7 +95,27 @@ export function MedicalLayout({
       return children
     }
 
-    // Renderizar outras seções quando necessário
+    if (activeSection === 'acompanhamentos') {
+      return <FollowUpTable />
+    }
+
+    if (activeSection === 'exames') {
+      return <ExamsAndProcedures />
+    }
+
+    if (activeSection === 'prescricoes') {
+      return <PrescriptionsSection />
+    }
+
+    if (activeSection === 'documentos') {
+      return <DocumentsSection />
+    }
+
+    if (activeSection === 'imagens') {
+      return <ImagesSection />
+    }
+
+    // Fallback para seções não implementadas
     return (
       <div className="p-6 flex items-center justify-center h-full">
         <div className="text-center">
