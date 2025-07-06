@@ -48,60 +48,58 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <QueryClient>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ActiveClinicaProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/landing" element={<Landing />} />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ActiveClinicaProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/landing" element={<Landing />} />
+                
+                {/* Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+
+                {/* Protected Routes */}
+                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                   
-                  {/* Auth Routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                  {/* Dashboard */}
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  
+                  {/* Área do Paciente */}
+                  <Route path="/paciente" element={<AreaPaciente />} />
+                  <Route path="/paciente/*" element={<AreaPaciente />} />
+                  
+                  {/* Área do Médico */}
+                  <Route path="/medico" element={<AreaMedico />} />
+                  <Route path="/medico/evolucao" element={<NovaEvolucao />} />
+                  
+                  {/* Área da Clínica */}
+                  <Route path="/clinica" element={<AreaClinica />} />
+                  <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
+                  <Route path="/clinica/agenda" element={<Agenda />} />
+                  <Route path="/clinica/crm" element={<CRM />} />
+                  <Route path="/clinica/prontuario" element={<ProntuarioIndex />} />
+                  <Route path="/clinica/prontuario/nova" element={<NovaEvolucaoClinica />} />
+                  
+                  {/* Sistema de Prontuários - NOVA ESTRUTURA */}
+                  <Route path="/prontuario" element={<ProntuarioList />} />
+                  <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
+                  <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
+                  
+                  {/* CRM Global */}
+                  <Route path="/crm" element={<CRMGlobal />} />
 
-                  {/* Protected Routes */}
-                  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                    
-                    {/* Dashboard */}
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    
-                    {/* Área do Paciente */}
-                    <Route path="/paciente" element={<AreaPaciente />} />
-                    <Route path="/paciente/*" element={<AreaPaciente />} />
-                    
-                    {/* Área do Médico */}
-                    <Route path="/medico" element={<AreaMedico />} />
-                    <Route path="/medico/evolucao" element={<NovaEvolucao />} />
-                    
-                    {/* Área da Clínica */}
-                    <Route path="/clinica" element={<AreaClinica />} />
-                    <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
-                    <Route path="/clinica/agenda" element={<Agenda />} />
-                    <Route path="/clinica/crm" element={<CRM />} />
-                    <Route path="/clinica/prontuario" element={<ProntuarioIndex />} />
-                    <Route path="/clinica/prontuario/nova" element={<NovaEvolucaoClinica />} />
-                    
-                    {/* Sistema de Prontuários - NOVA ESTRUTURA */}
-                    <Route path="/prontuario" element={<ProntuarioList />} />
-                    <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
-                    <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
-                    
-                    {/* CRM Global */}
-                    <Route path="/crm" element={<CRMGlobal />} />
-
-                  </Route>
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </ActiveClinicaProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </QueryClient>
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ActiveClinicaProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
