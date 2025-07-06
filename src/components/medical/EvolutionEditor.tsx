@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RichTextEditor } from './RichTextEditor'
-import { Save, FileText, User, Clock, AlertCircle } from 'lucide-react'
+import { VitalSignsSection } from './VitalSignsSection'
+import { PhysicalExamSection } from './PhysicalExamSection'
+import { Save, FileText, User, Clock, AlertCircle, Printer, History } from 'lucide-react'
 import { useProntuarios } from '@/hooks/useProntuarios'
 import { useToast } from '@/hooks/use-toast'
 
@@ -35,8 +37,45 @@ export function EvolutionEditor({
     observacoes: ''
   })
 
+  const [sinaisVitais, setSinaisVitais] = useState({
+    peso: '',
+    altura: '',
+    imc: '',
+    pa_sistolica: '',
+    pa_diastolica: '',
+    fc: '',
+    temp: '',
+    sat_o2: '',
+    fr: ''
+  })
+
+  const [exameFisico, setExameFisico] = useState({
+    geral: '',
+    cardiovascular: '',
+    respiratorio: '',
+    abdominal: '',
+    neurologico: '',
+    pele: '',
+    orl: '',
+    outros: ''
+  })
+
   const handleFieldChange = (field: string, value: string) => {
     setEvolutionData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleVitalSignChange = (field: string, value: string) => {
+    setSinaisVitais(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handlePhysicalExamChange = (field: string, value: string) => {
+    setExameFisico(prev => ({
       ...prev,
       [field]: value
     }))
@@ -123,6 +162,14 @@ export function EvolutionEditor({
                   <Save className="h-4 w-4" />
                   {isSaving ? 'Salvando...' : 'Salvar Evolução'}
                 </Button>
+                <Button variant="outline" className="gap-2">
+                  <Printer className="h-4 w-4" />
+                  Imprimir
+                </Button>
+                <Button variant="outline" className="gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -141,8 +188,9 @@ export function EvolutionEditor({
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
+                  <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
                   <TabsTrigger value="exame">Exame Físico</TabsTrigger>
                   <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
                   <TabsTrigger value="conduta">Conduta</TabsTrigger>
@@ -170,15 +218,19 @@ export function EvolutionEditor({
                   />
                 </TabsContent>
 
+                <TabsContent value="sinais" className="space-y-4">
+                  <VitalSignsSection
+                    sinaisVitais={sinaisVitais}
+                    onChange={handleVitalSignChange}
+                    isRequired={false}
+                  />
+                </TabsContent>
+
                 <TabsContent value="exame" className="space-y-4">
-                  <RichTextEditor
-                    title="Exame Físico"
-                    value={evolutionData.exame_fisico}
-                    onChange={(value) => handleFieldChange('exame_fisico', value)}
-                    placeholder="Descreva os achados do exame físico..."
-                    rows={6}
-                    showAIFeatures={true}
-                    patientData={patientData}
+                  <PhysicalExamSection
+                    exame={exameFisico}
+                    onChange={handlePhysicalExamChange}
+                    isRequired={false}
                   />
                 </TabsContent>
 
