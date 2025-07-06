@@ -14,7 +14,6 @@ export function AgendamentoCard({
   resizePreview, 
   setResizePreview 
 }: AgendamentoCardProps) {
-  // Drag do card
   const [{ isDragging }, dragCard, preview] = useDrag({
     type: AGENDAMENTO_TYPE,
     item: { 
@@ -34,7 +33,7 @@ export function AgendamentoCard({
   const [startY, setStartY] = useState(0);
   const [startDur, setStartDur] = useState(agendamento.duracao || 30);
 
-  // Mouse events para resize visual
+  // Mouse events para resize
   function onResizeMouseDown(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -49,10 +48,10 @@ export function AgendamentoCard({
     if (!isResizing) return;
     function onMouseMove(e: MouseEvent) {
       const deltaY = e.clientY - startY;
-      const minutos = Math.round(deltaY / 10) * 5;
+      const minutos = Math.round(deltaY / 4) * 5; // Mais sensível
       let novaDuracao = startDur + minutos;
-      if (novaDuracao < 5) novaDuracao = 5;
-      if (novaDuracao > 12 * 60) novaDuracao = 12 * 60;
+      if (novaDuracao < 15) novaDuracao = 15; // Mínimo 15 minutos
+      if (novaDuracao > 12 * 60) novaDuracao = 12 * 60; // Máximo 12 horas
       setResizePreview({ id: agendamento.id!, duracao: novaDuracao });
     }
     function onMouseUp() {
@@ -84,31 +83,26 @@ export function AgendamentoCard({
   return (
     <td
       rowSpan={visualLinhas}
-      className={`border-b border-r relative align-top p-0 transition-all duration-200`}
+      className="border-b border-r relative align-top p-0 transition-all duration-200"
       style={{ 
-        minWidth: 120, 
-        zIndex: isResizing ? 10 : undefined, 
-        opacity: isDragging ? 0.3 : 1,
-        backgroundColor: isDragging ? '#f8f9fa' : '#ffffff',
-        transform: isDragging ? 'scale(0.98)' : 'scale(1)',
-        boxShadow: isDragging ? '0 4px 12px rgba(0,0,0,0.15)' : 'none'
+        minWidth: 120,
+        opacity: isDragging ? 0.4 : 1,
+        transform: isDragging ? 'scale(0.95)' : 'scale(1)',
       }}
       ref={dragCard}
     >
-      <div className="absolute inset-0 flex flex-col justify-between h-full select-none">
-        <div className={`p-2 text-xs font-semibold rounded-t transition-all duration-200 ${
-          isDragging ? 'bg-blue-50 text-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800'
-        }`}>
+      <div className="absolute inset-0 flex flex-col h-full select-none">
+        <div className="flex-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 text-xs font-semibold rounded-t">
           <div className="flex items-center gap-1 mb-1">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
             <span className="font-bold">{hora} - {addMinutes(hora, visualDuracao)}</span>
           </div>
           <div className="text-blue-600">{agendamento.paciente || "Agendado"}</div>
         </div>
-        {/* Handle de resize visual melhorado */}
+        
+        {/* Handle de resize */}
         <div
-          className="w-full h-3 cursor-s-resize bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-200 rounded-b flex items-center justify-center group"
-          style={{ position: 'absolute', bottom: 0 }}
+          className="h-3 cursor-s-resize bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-200 rounded-b flex items-center justify-center group"
           title="Arraste para redimensionar"
           onMouseDown={onResizeMouseDown}
         >

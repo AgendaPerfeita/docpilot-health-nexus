@@ -1,40 +1,35 @@
-
 import React from "react";
 import { useDrop } from "react-dnd";
 import { AGENDAMENTO_TYPE } from "./constants";
-import { AgendaCellProps } from "./types";
+
+interface AgendaCellProps {
+  diaStr: string;
+  hora: string;
+  onCellClick: () => void;
+  onMoveAgendamento?: (id: string, novoDia: string, novoHora: string) => void;
+  dragItem?: any;
+  isDragging?: boolean;
+}
 
 export function AgendaCell({ 
   diaStr, 
   hora, 
   onCellClick, 
-  children = null, 
-  onMoveAgendamento, 
-  agendamentosMap, 
-  onHoverSlot, 
-  dIdx, 
-  hIdx, 
-  clearDragSlot 
+  onMoveAgendamento,
+  dragItem,
+  isDragging
 }: AgendaCellProps) {
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: AGENDAMENTO_TYPE,
     drop: (item: any) => {
-      console.log('Drop event:', { itemId: item.id, targetDia: diaStr, targetHora: hora });
-      if (onMoveAgendamento) onMoveAgendamento(item.id, diaStr, hora);
-      if (clearDragSlot) clearDragSlot();
+      console.log('Drop:', { from: `${item.dia}_${item.hora}`, to: `${diaStr}_${hora}` });
+      if (onMoveAgendamento && item.id) {
+        onMoveAgendamento(item.id, diaStr, hora);
+      }
     },
     canDrop: (item: any) => {
-      // Não permite drop no mesmo slot do mesmo agendamento
-      const agendamentoExistente = agendamentosMap.get(`${diaStr}_${hora}`);
-      if (agendamentoExistente && agendamentoExistente.id === item.id) {
-        return false;
-      }
-      
-      // Permite drop em qualquer lugar (sobreposição permitida)
-      return true;
-    },
-    hover: (item, monitor) => {
-      if (onHoverSlot) onHoverSlot(item, diaStr, hora, dIdx, hIdx);
+      // Não pode dropar no mesmo lugar
+      return !(item.dia === diaStr && item.hora === hora);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
@@ -44,58 +39,33 @@ export function AgendaCell({
   
   return (
     <td
-      className="border-b border-r h-8 cursor-pointer transition-all duration-300 relative agenda-cell"
+      ref={drop}
+      className="border-b border-r h-8 cursor-pointer transition-all duration-200 relative"
       style={{ 
         width: 120, 
         minWidth: 120, 
-        maxWidth: 120, 
-        boxSizing: 'border-box',
+        maxWidth: 120,
         backgroundColor: isOver && canDrop 
-          ? 'rgba(59, 130, 246, 0.12)' 
+          ? 'rgba(59, 130, 246, 0.1)' 
           : isOver && !canDrop 
-          ? 'rgba(239, 68, 68, 0.08)' 
+          ? 'rgba(239, 68, 68, 0.1)' 
           : 'transparent',
         borderColor: isOver && canDrop 
-          ? 'rgba(59, 130, 246, 0.4)' 
+          ? 'rgba(59, 130, 246, 0.5)' 
           : isOver && !canDrop 
-          ? 'rgba(239, 68, 68, 0.4)' 
+          ? 'rgba(239, 68, 68, 0.5)' 
           : 'rgb(229, 231, 235)',
-        transform: isOver ? 'scale(1.01)' : 'scale(1)',
-        boxShadow: isOver && canDrop 
-          ? 'inset 0 0 0 2px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(59, 130, 246, 0.15)' 
-          : isOver && !canDrop
-          ? 'inset 0 0 0 2px rgba(239, 68, 68, 0.3), 0 4px 12px rgba(239, 68, 68, 0.1)'
-          : 'none'
       }}
       onClick={onCellClick}
-      ref={drop}
     >
-      {children}
       {isOver && canDrop && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div 
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              animation: 'pulse 1.2s ease-in-out infinite',
-              boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)'
-            }}
-          />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
         </div>
       )}
       {isOver && !canDrop && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div 
-            style={{
-              width: '12px',
-              height: '2px',
-              borderRadius: '1px',
-              backgroundColor: '#ef4444',
-              opacity: 0.8
-            }}
-          />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-3 h-0.5 bg-red-500 rounded" />
         </div>
       )}
     </td>

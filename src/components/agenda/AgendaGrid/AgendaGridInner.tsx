@@ -1,10 +1,9 @@
-
 import React, { useState } from "react";
 import { useDragLayer } from "react-dnd";
 import { diasSemana, horarios } from "./constants";
 import { AgendamentoCard } from "./AgendamentoCard";
 import { AgendaCell } from "./AgendaCell";
-import { SlotGuide } from "./SlotGuide";
+import { DragPreview } from "./DragPreview";
 import { AgendaGridProps } from "./types";
 
 export const AgendaGridInner: React.FC<AgendaGridProps> = ({ 
@@ -15,16 +14,6 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
   onMoveAgendamento 
 }) => {
   const [resizePreview, setResizePreview] = useState<{ id: string, duracao: number } | null>(null);
-  const [dragSlot, setDragSlot] = useState<{ 
-    diaIdx: number, 
-    horaIdx: number, 
-    x: number, 
-    y: number, 
-    duracao: number, 
-    hora: string, 
-    cellLeft?: number, 
-    cellTop?: number 
-  } | null>(null);
   
   const agendamentosMap = React.useMemo(() => {
     const map = new Map();
@@ -34,32 +23,17 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
     return map;
   }, [agendamentos]);
   
-  const { item: dragItem, isDragging } = useDragLayer((monitor) => ({ 
-    item: monitor.getItem(), 
-    isDragging: monitor.isDragging() 
+  const { isDragging, item: dragItem, currentOffset } = useDragLayer((monitor) => ({
+    isDragging: monitor.isDragging(),
+    item: monitor.getItem(),
+    currentOffset: monitor.getClientOffset()
   }));
-
-  function handleCellHover(item: any, diaStr: string, hora: string, dIdx: number, hIdx: number) {
-    if (!item) return;
-    const duracao = item.duracao || 30;
-    
-    // Calcular posição baseada no grid
-    const x = 80 + dIdx * 120; // 80px para coluna de horário
-    const y = 56 + hIdx * 32;  // 56px para header
-    
-    setDragSlot({ diaIdx: dIdx, horaIdx: hIdx, x, y, duracao, hora, cellLeft: x, cellTop: y });
-  }
-  
-  function clearDragSlot() {
-    setDragSlot(null);
-  }
 
   const rendered: Record<string, boolean> = {};
 
   return (
     <>
-      {isDragging && dragSlot && dragItem && <SlotGuide dragSlot={dragSlot} dragItem={dragItem} />}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto relative">
         <table className="min-w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr>
@@ -111,7 +85,7 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                     return hIdx > startIdx && hIdx < startIdx + linhas;
                   });
                   
-                  // Se ocupada por span, não renderizar nada (coberta pelo rowspan)
+                  // Se ocupada por span, não renderizar célula
                   if (isOccupiedBySpan) {
                     return null;
                   }
@@ -124,11 +98,8 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                       hora={hora}
                       onCellClick={() => onCellClick(dia, hora)}
                       onMoveAgendamento={onMoveAgendamento}
-                      agendamentosMap={agendamentosMap}
-                      onHoverSlot={isDragging ? handleCellHover : undefined}
-                      dIdx={dIdx}
-                      hIdx={hIdx}
-                      clearDragSlot={clearDragSlot}
+                      dragItem={dragItem}
+                      isDragging={isDragging}
                     />
                   );
                 })}
@@ -137,6 +108,14 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Preview do drag */}
+      {isDragging && dragItem && currentOffset && (
+        <DragPreview 
+          item={dragItem} 
+          currentOffset={currentOffset}
+        />
+      )}
     </>
   );
 };
