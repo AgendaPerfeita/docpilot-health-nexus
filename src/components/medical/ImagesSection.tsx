@@ -1,60 +1,59 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Image, Upload, Download, Trash2, Eye, Search, Filter, Calendar, FileText } from 'lucide-react'
+import { supabase } from '@/integrations/supabase/client'
 
 interface ImageFile {
   id: string
-  nome: string
-  tipo: 'Imagem' | 'Documento' | 'Exame' | 'Raio-X' | 'Ultrassom'
-  categoria: 'Exames' | 'Documentos' | 'Fotos' | 'Outros'
-  tamanho: string
-  data: string
-  url: string
-  descricao?: string
+  nome_arquivo: string
+  tipo_arquivo: string
+  categoria: string
+  tamanho_bytes: number | null
+  data_upload: string
+  url_storage: string
+  descricao?: string | null
 }
 
-const mockImages: ImageFile[] = [
-  {
-    id: '1',
-    nome: 'Raio-X Tórax.jpg',
-    tipo: 'Raio-X',
-    categoria: 'Exames',
-    tamanho: '2.3 MB',
-    data: '04/07/2025',
-    url: '/placeholder-xray.jpg',
-    descricao: 'Raio-X de tórax PA e perfil'
-  },
-  {
-    id: '2',
-    nome: 'Hemograma_04_07_2025.pdf',
-    tipo: 'Documento',
-    categoria: 'Exames',
-    tamanho: '856 KB',
-    data: '04/07/2025',
-    url: '/placeholder-document.pdf',
-    descricao: 'Resultado de hemograma completo'
-  },
-  {
-    id: '3',
-    nome: 'Ultrassom_Abdominal.jpg',
-    tipo: 'Ultrassom',
-    categoria: 'Exames',
-    tamanho: '1.8 MB',
-    data: '28/06/2025',
-    url: '/placeholder-ultrasound.jpg',
-    descricao: 'Ultrassom de abdome total'
-  }
-]
+interface ImagesSectionProps {
+  pacienteId?: string;
+}
 
-export function ImagesSection() {
-  const [images, setImages] = useState<ImageFile[]>(mockImages)
+export function ImagesSection({ pacienteId }: ImagesSectionProps) {
+  const [images, setImages] = useState<ImageFile[]>([])
+  const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+
+  const fetchImages = async () => {
+    if (!pacienteId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('anexos_medicos')
+        .select('*')
+        .eq('paciente_id', pacienteId)
+        .order('data_upload', { ascending: false });
+
+      if (error) throw error;
+      setImages(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar anexos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pacienteId) {
+      fetchImages();
+    }
+  }, [pacienteId]);
 
   const getCategoryColor = (categoria: string) => {
     switch (categoria) {
@@ -67,24 +66,56 @@ export function ImagesSection() {
   }
 
   const getTipoColor = (tipo: string) => {
-    switch (tipo) {
-      case 'Raio-X': return 'bg-red-100 text-red-800'
-      case 'Ultrassom': return 'bg-blue-100 text-blue-800'
-      case 'Documento': return 'bg-green-100 text-green-800'
-      case 'Imagem': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+    const lowerTipo = tipo.toLowerCase();
+    if (lowerTipo.includes('image') || lowerTipo.includes('jpg') || lowerTipo.includes('png')) {
+      return 'bg-purple-100 text-purple-800'
     }
+    if (lowerTipo.includes('pdf')) {
+      return 'bg-red-100 text-red-800'
+    }
+    if (lowerTipo.includes('doc')) {
+      return 'bg-blue-100 text-blue-800'
+    }
+    return 'bg-gray-100 text-gray-800'
   }
 
   const filteredImages = images.filter(image => {
-    const matchesSearch = image.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         image.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = image.nome_arquivo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         image.descricao?.toLowerCase().includes(searchTerm.toLowerCase()) || false
     const matchesCategory = selectedCategory === 'all' || image.categoria === selectedCategory
     return matchesSearch && matchesCategory
   })
 
-  const handleRemoveImage = (id: string) => {
-    setImages(images.filter(img => img.id !== id))
+  const handleRemoveImage = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('anexos_medicos')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setImages(images.filter(img => img.id !== id));
+    } catch (error) {
+      console.error('Erro ao remover anexo:', error);
+    }
+  }
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return '0 B';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -100,7 +131,7 @@ export function ImagesSection() {
           <Tabs defaultValue="galeria" className="space-y-4">
             <TabsList>
               <TabsTrigger value="galeria">Galeria</TabsTrigger>
-              <TabsTrigger value="upload">Upload</TabsTrigger>
+              {pacienteId && <TabsTrigger value="upload">Upload</TabsTrigger>}
               <TabsTrigger value="organizacao">Organização</TabsTrigger>
             </TabsList>
 
@@ -136,19 +167,19 @@ export function ImagesSection() {
                 {filteredImages.map((image) => (
                   <Card key={image.id} className="overflow-hidden">
                     <div className="aspect-video bg-gray-100 flex items-center justify-center">
-                      {image.tipo === 'Documento' ? (
-                        <FileText className="h-16 w-16 text-gray-400" />
-                      ) : (
+                      {image.tipo_arquivo.toLowerCase().includes('image') ? (
                         <Image className="h-16 w-16 text-gray-400" />
+                      ) : (
+                        <FileText className="h-16 w-16 text-gray-400" />
                       )}
                     </div>
                     <CardContent className="p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between items-start">
-                          <h4 className="font-medium text-sm truncate">{image.nome}</h4>
+                          <h4 className="font-medium text-sm truncate">{image.nome_arquivo}</h4>
                           <div className="flex gap-1">
-                            <Badge className={getTipoColor(image.tipo)} variant="secondary">
-                              {image.tipo}
+                            <Badge className={getTipoColor(image.tipo_arquivo)} variant="secondary">
+                              {image.tipo_arquivo.split('/')[1]?.toUpperCase() || 'FILE'}
                             </Badge>
                           </div>
                         </div>
@@ -161,9 +192,9 @@ export function ImagesSection() {
                         <div className="flex items-center justify-between text-xs text-gray-500">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {image.data}
+                            {new Date(image.data_upload).toLocaleDateString('pt-BR')}
                           </div>
-                          <span>{image.tamanho}</span>
+                          <span>{formatFileSize(image.tamanho_bytes)}</span>
                         </div>
                         <div className="flex gap-1 pt-2">
                           <Button variant="outline" size="sm" className="flex-1 gap-1">
@@ -186,58 +217,61 @@ export function ImagesSection() {
                     </CardContent>
                   </Card>
                 ))}
+
+                {filteredImages.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma imagem ou documento encontrado</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="upload" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upload de Arquivos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Arraste arquivos aqui ou clique para selecionar
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Suporte para imagens (JPG, PNG, DICOM) e documentos (PDF, DOC)
-                    </p>
-                    <div className="flex gap-2 justify-center">
-                      <Button variant="outline">Selecionar Arquivos</Button>
-                      <Button variant="outline">Câmera</Button>
+            {pacienteId && (
+              <TabsContent value="upload" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upload de Arquivos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <Upload className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                        Arraste arquivos aqui ou clique para selecionar
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        Suporte para imagens (JPG, PNG, DICOM) e documentos (PDF, DOC)
+                      </p>
+                      <div className="flex gap-2 justify-center">
+                        <Button variant="outline">Selecionar Arquivos</Button>
+                        <Button variant="outline">Câmera</Button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Categoria</label>
+                        <select className="w-full px-3 py-2 border rounded-md">
+                          <option value="Exames">Exames</option>
+                          <option value="Documentos">Documentos</option>
+                          <option value="Fotos">Fotos</option>
+                          <option value="Outros">Outros</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Subcategoria</label>
+                        <Input placeholder="Ex: Raio-X, Ultrassom..." />
+                      </div>
+                    </div>
+                    
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Categoria</label>
-                      <select className="w-full px-3 py-2 border rounded-md">
-                        <option value="Exames">Exames</option>
-                        <option value="Documentos">Documentos</option>
-                        <option value="Fotos">Fotos</option>
-                        <option value="Outros">Outros</option>
-                      </select>
+                      <label className="text-sm font-medium mb-1 block">Descrição (opcional)</label>
+                      <Input placeholder="Descrição do arquivo..." />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Tipo</label>
-                      <select className="w-full px-3 py-2 border rounded-md">
-                        <option value="Imagem">Imagem</option>
-                        <option value="Documento">Documento</option>
-                        <option value="Raio-X">Raio-X</option>
-                        <option value="Ultrassom">Ultrassom</option>
-                        <option value="Exame">Exame</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Descrição (opcional)</label>
-                    <Input placeholder="Descrição do arquivo..." />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             <TabsContent value="organizacao" className="space-y-4">
               <Card>

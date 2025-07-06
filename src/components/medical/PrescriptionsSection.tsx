@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,50 +8,40 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Pill, Plus, Printer, Download, Trash2, Edit } from 'lucide-react'
+import { useProntuarios } from "@/hooks/useProntuarios"
 
-interface Prescription {
-  id: string
-  medicamento: string
-  dosagem: string
-  frequencia: string
-  duracao: string
-  observacoes: string
-  data: string
-  status: 'Ativa' | 'Finalizada' | 'Cancelada'
+interface PrescriptionsSectionProps {
+  pacienteId?: string;
+  prontuarioId?: string;
 }
 
-const mockPrescriptions: Prescription[] = [
-  {
-    id: '1',
-    medicamento: 'Losartana',
-    dosagem: '50mg',
-    frequencia: '1x ao dia',
-    duracao: '30 dias',
-    observacoes: 'Tomar pela manhã, em jejum',
-    data: '04/07/2025',
-    status: 'Ativa'
-  },
-  {
-    id: '2',
-    medicamento: 'Omeprazol',
-    dosagem: '20mg',
-    frequencia: '1x ao dia',
-    duracao: '15 dias',
-    observacoes: 'Tomar 30 minutos antes do café da manhã',
-    data: '04/07/2025',
-    status: 'Ativa'
-  }
-]
-
-export function PrescriptionsSection() {
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>(mockPrescriptions)
+export function PrescriptionsSection({ pacienteId, prontuarioId }: PrescriptionsSectionProps) {
+  const { prontuarios, loading, adicionarPrescricao, removerPrescricao } = useProntuarios();
   const [newPrescription, setNewPrescription] = useState({
     medicamento: '',
     dosagem: '',
     frequencia: '',
     duracao: '',
     observacoes: ''
-  })
+  });
+
+  // Get prescriptions from prontuarios
+  const allPrescriptions = prontuarios.flatMap(p => 
+    (p.prescricoes || []).map(prescricao => ({
+      ...prescricao,
+      prontuario_id: p.id,
+      data: new Date(prescricao.created_at).toLocaleDateString('pt-BR'),
+      status: 'Ativa' as const
+    }))
+  );
+
+  // Filter by patient if provided
+  const filteredPrescriptions = pacienteId 
+    ? allPrescriptions.filter(p => {
+        const prontuario = prontuarios.find(pr => pr.id === p.prontuario_id);
+        return prontuario?.paciente_id === pacienteId;
+      })
+    : allPrescriptions;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -62,27 +52,42 @@ export function PrescriptionsSection() {
     }
   }
 
-  const handleAddPrescription = () => {
-    if (newPrescription.medicamento && newPrescription.dosagem) {
-      const prescription: Prescription = {
-        id: Date.now().toString(),
-        ...newPrescription,
-        data: new Date().toLocaleDateString('pt-BR'),
-        status: 'Ativa'
-      }
-      setPrescriptions([...prescriptions, prescription])
+  const handleAddPrescription = async () => {
+    if (!prontuarioId || !newPrescription.medicamento || !newPrescription.dosagem) {
+      return;
+    }
+
+    try {
+      await adicionarPrescricao(prontuarioId, newPrescription);
       setNewPrescription({
         medicamento: '',
         dosagem: '',
         frequencia: '',
         duracao: '',
         observacoes: ''
-      })
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar prescrição:', error);
     }
-  }
+  };
 
-  const handleRemovePrescription = (id: string) => {
-    setPrescriptions(prescriptions.filter(p => p.id !== id))
+  const handleRemovePrescription = async (prescricaoId: string) => {
+    try {
+      await removerPrescricao(prescricaoId);
+    } catch (error) {
+      console.error('Erro ao remover prescrição:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -98,7 +103,7 @@ export function PrescriptionsSection() {
           <Tabs defaultValue="ativas" className="space-y-4">
             <TabsList>
               <TabsTrigger value="ativas">Prescrições Ativas</TabsTrigger>
-              <TabsTrigger value="nova">Nova Prescrição</TabsTrigger>
+              {prontuarioId && <TabsTrigger value="nova">Nova Prescrição</TabsTrigger>}
               <TabsTrigger value="historico">Histórico</TabsTrigger>
             </TabsList>
 
@@ -118,7 +123,7 @@ export function PrescriptionsSection() {
               </div>
 
               <div className="space-y-3">
-                {prescriptions.filter(p => p.status === 'Ativa').map((prescription) => (
+                {filteredPrescriptions.filter(p => p.status === 'Ativa').map((prescription) => (
                   <Card key={prescription.id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start">
@@ -170,79 +175,88 @@ export function PrescriptionsSection() {
                     </CardContent>
                   </Card>
                 ))}
+
+                {filteredPrescriptions.filter(p => p.status === 'Ativa').length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Pill className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma prescrição ativa encontrada</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="nova" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Adicionar Nova Prescrição</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {prontuarioId && (
+              <TabsContent value="nova" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Adicionar Nova Prescrição</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Medicamento</label>
+                        <Input
+                          placeholder="Nome do medicamento"
+                          value={newPrescription.medicamento}
+                          onChange={(e) => setNewPrescription({...newPrescription, medicamento: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Dosagem</label>
+                        <Input
+                          placeholder="Ex: 50mg, 1 comprimido"
+                          value={newPrescription.dosagem}
+                          onChange={(e) => setNewPrescription({...newPrescription, dosagem: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Frequência</label>
+                        <Select value={newPrescription.frequencia} onValueChange={(value) => setNewPrescription({...newPrescription, frequencia: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a frequência" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1x ao dia">1x ao dia</SelectItem>
+                            <SelectItem value="2x ao dia">2x ao dia</SelectItem>
+                            <SelectItem value="3x ao dia">3x ao dia</SelectItem>
+                            <SelectItem value="4x ao dia">4x ao dia</SelectItem>
+                            <SelectItem value="De 8/8 horas">De 8/8 horas</SelectItem>
+                            <SelectItem value="De 12/12 horas">De 12/12 horas</SelectItem>
+                            <SelectItem value="SOS">SOS (se necessário)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">Duração</label>
+                        <Input
+                          placeholder="Ex: 7 dias, 30 dias"
+                          value={newPrescription.duracao}
+                          onChange={(e) => setNewPrescription({...newPrescription, duracao: e.target.value})}
+                        />
+                      </div>
+                    </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Medicamento</label>
-                      <Input
-                        placeholder="Nome do medicamento"
-                        value={newPrescription.medicamento}
-                        onChange={(e) => setNewPrescription({...newPrescription, medicamento: e.target.value})}
+                      <label className="text-sm font-medium mb-1 block">Observações</label>
+                      <Textarea
+                        placeholder="Instruções especiais, horários, restrições..."
+                        value={newPrescription.observacoes}
+                        onChange={(e) => setNewPrescription({...newPrescription, observacoes: e.target.value})}
+                        rows={3}
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Dosagem</label>
-                      <Input
-                        placeholder="Ex: 50mg, 1 comprimido"
-                        value={newPrescription.dosagem}
-                        onChange={(e) => setNewPrescription({...newPrescription, dosagem: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Frequência</label>
-                      <Select value={newPrescription.frequencia} onValueChange={(value) => setNewPrescription({...newPrescription, frequencia: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a frequência" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1x ao dia">1x ao dia</SelectItem>
-                          <SelectItem value="2x ao dia">2x ao dia</SelectItem>
-                          <SelectItem value="3x ao dia">3x ao dia</SelectItem>
-                          <SelectItem value="4x ao dia">4x ao dia</SelectItem>
-                          <SelectItem value="De 8/8 horas">De 8/8 horas</SelectItem>
-                          <SelectItem value="De 12/12 horas">De 12/12 horas</SelectItem>
-                          <SelectItem value="SOS">SOS (se necessário)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Duração</label>
-                      <Input
-                        placeholder="Ex: 7 dias, 30 dias"
-                        value={newPrescription.duracao}
-                        onChange={(e) => setNewPrescription({...newPrescription, duracao: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Observações</label>
-                    <Textarea
-                      placeholder="Instruções especiais, horários, restrições..."
-                      value={newPrescription.observacoes}
-                      onChange={(e) => setNewPrescription({...newPrescription, observacoes: e.target.value})}
-                      rows={3}
-                    />
-                  </div>
-                  <Button onClick={handleAddPrescription} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Adicionar Prescrição
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    <Button onClick={handleAddPrescription} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Adicionar Prescrição
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             <TabsContent value="historico" className="space-y-4">
               <h3 className="text-lg font-semibold">Histórico de Prescrições</h3>
               <div className="space-y-3">
-                {prescriptions.map((prescription) => (
+                {filteredPrescriptions.map((prescription) => (
                   <Card key={prescription.id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-center">
@@ -258,6 +272,13 @@ export function PrescriptionsSection() {
                     </CardContent>
                   </Card>
                 ))}
+
+                {filteredPrescriptions.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Pill className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhuma prescrição encontrada</p>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

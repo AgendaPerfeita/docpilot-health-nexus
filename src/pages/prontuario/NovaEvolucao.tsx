@@ -17,6 +17,7 @@ const NovaEvolucao = () => {
   const { criarProntuario } = useProntuarios();
   
   const [isConsultationActive, setIsConsultationActive] = useState(false);
+  const [currentProntuarioId, setCurrentProntuarioId] = useState<string | undefined>();
   const [prontuarioData, setProntuarioData] = useState({
     queixa_principal: '',
     historia_doenca_atual: '',
@@ -58,7 +59,7 @@ const NovaEvolucao = () => {
     if (!paciente) return;
 
     try {
-      await criarProntuario({
+      const novoProntuario = await criarProntuario({
         paciente_id: paciente.id,
         data_atendimento: new Date().toISOString(),
         ...prontuarioData
@@ -191,6 +192,8 @@ const NovaEvolucao = () => {
           onStartConsultation={handleStartConsultation}
           onFinishConsultation={handleFinishConsultation}
           isConsultationActive={isConsultationActive}
+          pacienteId={paciente.id}
+          prontuarioId={currentProntuarioId}
         >
           <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">Evolução Médica</h2>

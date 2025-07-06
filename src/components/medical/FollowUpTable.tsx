@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,116 +11,69 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, Clock, User, Plus, Search, Filter, Bell, CalendarDays, MoreHorizontal } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { useConsultas } from "@/hooks/useConsultas"
 
-interface FollowUpEntry {
-  id: string
-  data: string
-  hora: string
-  medico: string
-  tipo: 'Consulta' | 'Retorno' | 'Emergência' | 'Exame' | 'Procedimento'
-  status: 'Agendado' | 'Realizado' | 'Cancelado' | 'Reagendado' | 'Faltou'
-  observacoes: string
-  duracao: string
-  prioridade: 'Baixa' | 'Normal' | 'Alta' | 'Urgente'
-  convenio?: string
-  valor?: number
+interface FollowUpTableProps {
+  pacienteId?: string;
 }
 
-const mockFollowUps: FollowUpEntry[] = [
-  {
-    id: '1',
-    data: '04/07/2025',
-    hora: '14:30',
-    medico: 'Dr. Thiago Anver',
-    tipo: 'Consulta',
-    status: 'Realizado',
-    observacoes: 'Consulta inicial - avaliação geral. Paciente apresentou melhora significativa.',
-    duracao: '45 min',
-    prioridade: 'Normal',
-    convenio: 'Particular',
-    valor: 280
-  },
-  {
-    id: '2',
-    data: '18/07/2025',
-    hora: '09:00',
-    medico: 'Dr. Thiago Anver',
-    tipo: 'Retorno',
-    status: 'Agendado',
-    observacoes: 'Retorno para avaliação de exames e ajuste de medicação',
-    duracao: '30 min',
-    prioridade: 'Alta',
-    convenio: 'Particular',
-    valor: 180
-  },
-  {
-    id: '3',
-    data: '25/07/2025',
-    hora: '16:00',
-    medico: 'Dr. Thiago Anver',
-    tipo: 'Exame',
-    status: 'Agendado',
-    observacoes: 'Eletrocardiograma de controle',
-    duracao: '20 min',
-    prioridade: 'Normal'
-  }
-]
-
-export function FollowUpTable() {
-  const [followUps, setFollowUps] = useState<FollowUpEntry[]>(mockFollowUps)
+export function FollowUpTable({ pacienteId }: FollowUpTableProps) {
+  const { consultas, loading } = useConsultas();
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('todos')
   const [tipoFilter, setTipoFilter] = useState<string>('todos')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedEntry, setSelectedEntry] = useState<FollowUpEntry | null>(null)
+
+  // Filter consultas by patient if pacienteId is provided
+  const filteredConsultas = consultas.filter(consulta => {
+    if (pacienteId && consulta.paciente_id !== pacienteId) return false;
+    
+    const matchesSearch = consulta.observacoes?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
+    const matchesStatus = statusFilter === 'todos' || consulta.status === statusFilter;
+    const matchesTipo = tipoFilter === 'todos' || consulta.tipo_consulta === tipoFilter;
+    
+    return matchesSearch && matchesStatus && matchesTipo;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Realizado': return 'bg-green-100 text-green-800'
-      case 'Agendado': return 'bg-blue-100 text-blue-800'
-      case 'Cancelado': return 'bg-red-100 text-red-800'
-      case 'Reagendado': return 'bg-yellow-100 text-yellow-800'
-      case 'Faltou': return 'bg-gray-100 text-gray-800'
+      case 'realizada': return 'bg-green-100 text-green-800'
+      case 'agendada': return 'bg-blue-100 text-blue-800'
+      case 'cancelada': return 'bg-red-100 text-red-800'
+      case 'reagendada': return 'bg-yellow-100 text-yellow-800'
+      case 'faltou': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getTipoColor = (tipo: string) => {
     switch (tipo) {
-      case 'Consulta': return 'bg-purple-100 text-purple-800'
-      case 'Retorno': return 'bg-blue-100 text-blue-800'
-      case 'Emergência': return 'bg-red-100 text-red-800'
-      case 'Exame': return 'bg-yellow-100 text-yellow-800'
-      case 'Procedimento': return 'bg-green-100 text-green-800'
+      case 'consulta': return 'bg-purple-100 text-purple-800'
+      case 'retorno': return 'bg-blue-100 text-blue-800'
+      case 'emergencia': return 'bg-red-100 text-red-800'
+      case 'exame': return 'bg-yellow-100 text-yellow-800'
+      case 'procedimento': return 'bg-green-100 text-green-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const getPrioridadeColor = (prioridade: string) => {
-    switch (prioridade) {
-      case 'Urgente': return 'bg-red-500 text-white'
-      case 'Alta': return 'bg-orange-100 text-orange-800'
-      case 'Normal': return 'bg-gray-100 text-gray-800'
-      case 'Baixa': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const filteredFollowUps = followUps.filter(item => {
-    const matchesSearch = item.medico.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.observacoes.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'todos' || item.status === statusFilter
-    const matchesTipo = tipoFilter === 'todos' || item.tipo === tipoFilter
-    
-    return matchesSearch && matchesStatus && matchesTipo
-  })
-
-  const proximosRetornos = followUps.filter(item => 
-    item.status === 'Agendado' && 
-    new Date(item.data.split('/').reverse().join('-')) > new Date()
+  const proximosRetornos = filteredConsultas.filter(item => 
+    item.status === 'agendada' && 
+    new Date(item.data_consulta) > new Date()
   ).length
 
-  const totalRealizados = followUps.filter(item => item.status === 'Realizado').length
+  const totalRealizados = filteredConsultas.filter(item => item.status === 'realizada').length
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -156,7 +109,11 @@ export function FollowUpTable() {
               <Bell className="h-4 w-4 text-orange-500" />
               <div>
                 <p className="text-sm text-gray-600">Hoje</p>
-                <p className="text-2xl font-bold">2</p>
+                <p className="text-2xl font-bold">
+                  {filteredConsultas.filter(c => 
+                    new Date(c.data_consulta).toDateString() === new Date().toDateString()
+                  ).length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -168,7 +125,14 @@ export function FollowUpTable() {
               <User className="h-4 w-4 text-purple-500" />
               <div>
                 <p className="text-sm text-gray-600">Esta Semana</p>
-                <p className="text-2xl font-bold">5</p>
+                <p className="text-2xl font-bold">
+                  {filteredConsultas.filter(c => {
+                    const consultaDate = new Date(c.data_consulta);
+                    const now = new Date();
+                    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+                    return consultaDate >= weekStart;
+                  }).length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -252,7 +216,7 @@ export function FollowUpTable() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Buscar por médico ou observações..."
+                placeholder="Buscar por observações..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -264,9 +228,9 @@ export function FollowUpTable() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Agendado">Agendado</SelectItem>
-                <SelectItem value="Realizado">Realizado</SelectItem>
-                <SelectItem value="Cancelado">Cancelado</SelectItem>
+                <SelectItem value="agendada">Agendado</SelectItem>
+                <SelectItem value="realizada">Realizado</SelectItem>
+                <SelectItem value="cancelada">Cancelado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={tipoFilter} onValueChange={setTipoFilter}>
@@ -275,9 +239,9 @@ export function FollowUpTable() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Consulta">Consulta</SelectItem>
-                <SelectItem value="Retorno">Retorno</SelectItem>
-                <SelectItem value="Exame">Exame</SelectItem>
+                <SelectItem value="consulta">Consulta</SelectItem>
+                <SelectItem value="retorno">Retorno</SelectItem>
+                <SelectItem value="exame">Exame</SelectItem>
               </SelectContent>
             </Select>
             <Button variant="outline" className="gap-2">
@@ -290,10 +254,8 @@ export function FollowUpTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Data/Hora</TableHead>
-                <TableHead>Médico</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Prioridade</TableHead>
                 <TableHead>Duração</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Observações</TableHead>
@@ -301,41 +263,39 @@ export function FollowUpTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFollowUps.map((item) => (
-                <TableRow key={item.id}>
+              {filteredConsultas.map((consulta) => (
+                <TableRow key={consulta.id}>
                   <TableCell>
-                    <div className="font-medium">{item.data}</div>
-                    <div className="text-sm text-gray-500">{item.hora}</div>
-                  </TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {item.medico}
+                    <div className="font-medium">
+                      {new Date(consulta.data_consulta).toLocaleDateString('pt-BR')}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(consulta.data_consulta).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getTipoColor(item.tipo)}>
-                      {item.tipo}
+                    <Badge className={getTipoColor(consulta.tipo_consulta)}>
+                      {consulta.tipo_consulta}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(item.status)}>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getPrioridadeColor(item.prioridade)} variant="secondary">
-                      {item.prioridade}
+                    <Badge className={getStatusColor(consulta.status)}>
+                      {consulta.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {item.duracao}
+                    {consulta.duracao_minutos} min
                   </TableCell>
                   <TableCell>
-                    {item.valor ? `R$ ${item.valor.toFixed(2)}` : '-'}
+                    {consulta.valor ? `R$ ${consulta.valor.toFixed(2)}` : '-'}
                   </TableCell>
                   <TableCell className="max-w-xs">
-                    <div className="truncate" title={item.observacoes}>
-                      {item.observacoes}
+                    <div className="truncate" title={consulta.observacoes || ''}>
+                      {consulta.observacoes || '-'}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -359,7 +319,7 @@ export function FollowUpTable() {
             </TableBody>
           </Table>
 
-          {filteredFollowUps.length === 0 && (
+          {filteredConsultas.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum agendamento encontrado</p>

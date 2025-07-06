@@ -18,8 +18,10 @@ export function MedicalLayout({
   patientData, 
   onStartConsultation, 
   onFinishConsultation, 
-  isConsultationActive 
-}: MedicalLayoutProps) {
+  isConsultationActive,
+  pacienteId,
+  prontuarioId
+}: MedicalLayoutProps & { pacienteId?: string; prontuarioId?: string }) {
   const timer = useTimer()
   const [activeSection, setActiveSection] = useState('resumo')
   const [finalizationOpen, setFinalizationOpen] = useState(false)
@@ -73,23 +75,23 @@ export function MedicalLayout({
     }
 
     if (activeSection === 'acompanhamentos') {
-      return <FollowUpTable />
+      return <FollowUpTable pacienteId={pacienteId} />
     }
 
     if (activeSection === 'exames') {
-      return <ExamsAndProcedures />
+      return <ExamsAndProcedures pacienteId={pacienteId} />
     }
 
     if (activeSection === 'prescricoes') {
-      return <PrescriptionsSection />
+      return <PrescriptionsSection pacienteId={pacienteId} prontuarioId={prontuarioId} />
     }
 
     if (activeSection === 'documentos') {
-      return <DocumentsSection />
+      return <DocumentsSection pacienteId={pacienteId} />
     }
 
     if (activeSection === 'imagens') {
-      return <ImagesSection />
+      return <ImagesSection pacienteId={pacienteId} />
     }
 
     return null
