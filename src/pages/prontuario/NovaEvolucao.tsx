@@ -19,6 +19,8 @@ const NovaEvolucao = () => {
   
   const [isConsultationActive, setIsConsultationActive] = useState(false);
   const [currentProntuarioId, setCurrentProntuarioId] = useState<string | undefined>();
+  const [pacienteFromDB, setPacienteFromDB] = useState<any>(null);
+  const [fetchingPatient, setFetchingPatient] = useState(false);
   const [prontuarioData, setProntuarioData] = useState({
     queixa_principal: '',
     historia_doenca_atual: '',
@@ -32,22 +34,33 @@ const NovaEvolucao = () => {
   console.log('NovaEvolucao - ID from params:', id);
   console.log('NovaEvolucao - All pacientes:', pacientes);
   console.log('NovaEvolucao - Loading pacientes:', loadingPacientes);
+  console.log('NovaEvolucao - Current URL:', window.location.href);
 
-  const paciente = pacientes.find(p => p.id === id);
+  const paciente = pacientes.find(p => p.id === id) || pacienteFromDB;
   console.log('NovaEvolucao - Found paciente:', paciente);
-  console.log('NovaEvolucao - Comparing IDs:');
-  pacientes.forEach(p => {
-    console.log(`  - Patient ID: "${p.id}" vs URL ID: "${id}" - Match: ${p.id === id}`);
-  });
+  
+  if (pacientes.length > 0) {
+    console.log('NovaEvolucao - Comparing IDs:');
+    pacientes.forEach(p => {
+      console.log(`  - Patient ID: "${p.id}" vs URL ID: "${id}" - Match: ${p.id === id}`);
+    });
+  }
 
   useEffect(() => {
-    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id });
+    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id, fetchingPatient });
     
-    if (!loadingPacientes && !paciente && id) {
+    // Only attempt direct fetch if:
+    // 1. Not currently loading patients from usePacientes
+    // 2. No patient found in the list
+    // 3. We have an ID
+    // 4. Not already fetching patient directly
+    if (!loadingPacientes && !paciente && id && !fetchingPatient) {
       console.log('NovaEvolucao - Patient not found in list, attempting direct fetch');
-      // Try to fetch patient directly from database as fallback
+      setFetchingPatient(true);
+      
       const fetchPatientDirectly = async () => {
         try {
+          console.log('NovaEvolucao - Fetching patient directly with ID:', id);
           const { data, error } = await supabase
             .from('pacientes')
             .select('*')
@@ -61,11 +74,16 @@ const NovaEvolucao = () => {
           
           if (data) {
             console.log('NovaEvolucao - Found patient directly:', data);
-            // Patient exists, continue without showing error
+            setPacienteFromDB(data);
+            setFetchingPatient(false);
             return;
           }
+          
+          // If we get here, no patient was found
+          throw new Error('Patient not found');
         } catch (error) {
           console.error('NovaEvolucao - Failed to fetch patient directly:', error);
+          setFetchingPatient(false);
           toast({
             title: "Paciente não encontrado",
             description: "O paciente selecionado não foi encontrado.",
@@ -77,7 +95,7 @@ const NovaEvolucao = () => {
       
       fetchPatientDirectly();
     }
-  }, [paciente, loadingPacientes, navigate, toast, id]);
+  }, [paciente, loadingPacientes, navigate, toast, id, fetchingPatient]);
 
   useEffect(() => {
     if (!id) {
@@ -134,15 +152,20 @@ const NovaEvolucao = () => {
     return { anos: age, meses: 0, dias: 0 };
   };
 
-  if (loadingPacientes) {
+  // Show loading spinner while either loading from usePacientes or fetching directly
+  if (loadingPacientes || fetchingPatient) {
+    console.log('NovaEvolucao - Showing loading state:', { loadingPacientes, fetchingPatient });
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Carregando dados do paciente...</span>
       </div>
     );
   }
 
+  // Only return null if we're not loading and still don't have a patient
   if (!paciente) {
+    console.log('NovaEvolucao - No patient found after all attempts');
     return null;
   }
 
