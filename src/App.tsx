@@ -28,7 +28,6 @@ import Agenda from "./pages/clinica/Agenda";
 import CRM from "./pages/clinica/CRM";
 import Dashboard as ClinicaDashboard from "./pages/clinica/Dashboard";
 import ProntuarioIndex from "./pages/clinica/prontuario/ProntuarioIndex";
-import NovaEvolucaoClinica from "./pages/clinica/prontuario/NovaEvolucao";
 
 // Prontuário - NOVA ESTRUTURA
 import ProntuarioList from "./pages/prontuario/index";
@@ -83,7 +82,6 @@ function App() {
                   <Route path="/clinica/agenda" element={<Agenda />} />
                   <Route path="/clinica/crm" element={<CRM />} />
                   <Route path="/clinica/prontuario" element={<ProntuarioIndex />} />
-                  <Route path="/clinica/prontuario/nova" element={<NovaEvolucaoClinica />} />
                   
                   {/* Sistema de Prontuários - NOVA ESTRUTURA */}
                   <Route path="/prontuario" element={<ProntuarioList />} />

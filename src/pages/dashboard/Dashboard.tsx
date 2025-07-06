@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardCards } from "@/components/modules/dashboard/DashboardCards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,51 +51,6 @@ const Dashboard = () => {
       icon: <Stethoscope className="h-5 w-5" />,
       color: "bg-orange-500",
       type: "link"
-    }
-  ];
-
-  const recentActivities = [
-    {
-      id: 1,
-      type: "consulta",
-      title: "Consulta com Maria Silva",
-      time: "10:30",
-      status: "concluida"
-    },
-    {
-      id: 2,
-      type: "prontuario",
-      title: "Prontuário - João Santos",
-      time: "14:15",
-      status: "pendente"
-    },
-    {
-      id: 3,
-      type: "paciente",
-      title: "Novo paciente cadastrado",
-      time: "16:20",
-      status: "novo"
-    }
-  ];
-
-  const upcomingAppointments = [
-    {
-      id: 1,
-      patient: "Ana Costa",
-      time: "09:00",
-      type: "Consulta de rotina"
-    },
-    {
-      id: 2,
-      patient: "Carlos Lima",
-      time: "10:30",
-      type: "Retorno"
-    },
-    {
-      id: 3,
-      patient: "Beatriz Santos",
-      time: "14:00",
-      type: "Primeira consulta"
     }
   ];
 
@@ -212,22 +168,10 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${
-                    activity.status === 'concluida' ? 'bg-green-500' :
-                    activity.status === 'pendente' ? 'bg-yellow-500' :
-                    'bg-blue-500'
-                  }`} />
-                  <div>
-                    <div className="font-medium text-sm">{activity.title}</div>
-                    <div className="text-xs text-muted-foreground capitalize">{activity.type}</div>
-                  </div>
-                </div>
-                <span className="text-sm text-muted-foreground">{activity.time}</span>
-              </div>
-            ))}
+            <div className="text-center py-8 text-muted-foreground">
+              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Nenhuma atividade recente</p>
+            </div>
           </CardContent>
         </Card>
 
@@ -242,19 +186,19 @@ const Dashboard = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Consultas realizadas</span>
-              <span className="font-medium">45</span>
+              <span className="font-medium">0</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Novos pacientes</span>
-              <span className="font-medium">12</span>
+              <span className="font-medium">0</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Receita gerada</span>
-              <span className="font-medium">R$ 8.750</span>
+              <span className="font-medium">R$ 0,00</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Taxa de ocupação</span>
-              <span className="font-medium">85%</span>
+              <span className="font-medium">0%</span>
             </div>
           </CardContent>
         </Card>
