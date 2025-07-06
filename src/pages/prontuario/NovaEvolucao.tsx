@@ -8,6 +8,7 @@ import { useProntuarios } from "@/hooks/useProntuarios";
 import { ArrowLeft, User, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MedicalLayout } from "@/components/medical/MedicalLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 const NovaEvolucao = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,15 +37,43 @@ const NovaEvolucao = () => {
   console.log('NovaEvolucao - Found paciente:', paciente);
 
   useEffect(() => {
-    if (!loadingPacientes && !paciente) {
-      toast({
-        title: "Paciente não encontrado",
-        description: "O paciente selecionado não foi encontrado.",
-        variant: "destructive"
-      });
-      navigate('/prontuario');
+    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id });
+    
+    if (!loadingPacientes && !paciente && id) {
+      console.log('NovaEvolucao - Patient not found in list, attempting direct fetch');
+      // Try to fetch patient directly from database as fallback
+      const fetchPatientDirectly = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('pacientes')
+            .select('*')
+            .eq('id', id)
+            .single();
+          
+          if (error) {
+            console.error('NovaEvolucao - Direct fetch error:', error);
+            throw error;
+          }
+          
+          if (data) {
+            console.log('NovaEvolucao - Found patient directly:', data);
+            // Patient exists, continue without showing error
+            return;
+          }
+        } catch (error) {
+          console.error('NovaEvolucao - Failed to fetch patient directly:', error);
+          toast({
+            title: "Paciente não encontrado",
+            description: "O paciente selecionado não foi encontrado.",
+            variant: "destructive"
+          });
+          navigate('/prontuario');
+        }
+      };
+      
+      fetchPatientDirectly();
     }
-  }, [paciente, loadingPacientes, navigate, toast]);
+  }, [paciente, loadingPacientes, navigate, toast, id]);
 
   useEffect(() => {
     if (!id) {

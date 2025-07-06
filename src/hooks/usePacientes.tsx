@@ -27,8 +27,12 @@ export const usePacientes = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchPacientes = async () => {
-    if (!profile) return;
+    if (!profile) {
+      console.log('usePacientes - No profile, returning');
+      return;
+    }
     
+    console.log('usePacientes - Fetching pacientes for profile:', profile.id);
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -36,10 +40,16 @@ export const usePacientes = () => {
         .select('*')
         .order('nome');
 
-      if (error) throw error;
+      if (error) {
+        console.error('usePacientes - Database error:', error);
+        throw error;
+      }
+      
+      console.log('usePacientes - Fetched data:', data);
       setPacientes(data || []);
     } catch (error) {
-      console.error('Erro ao buscar pacientes:', error);
+      console.error('usePacientes - Error fetching pacientes:', error);
+      setPacientes([]);
     } finally {
       setLoading(false);
     }
