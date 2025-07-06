@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useProntuarios } from "@/hooks/useProntuarios";
+import { PacienteSelectorModal } from "@/components/prontuario/PacienteSelectorModal";
 
 const ProntuarioIndex = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,12 +75,7 @@ const ProntuarioIndex = () => {
             Gerencie e acompanhe os prontuários médicos
           </p>
         </div>
-        <Link to="/prontuario/nova">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Prontuário
-          </Button>
-        </Link>
+        <PacienteSelectorModal />
       </div>
 
       {/* Stats */}
@@ -163,12 +160,14 @@ const ProntuarioIndex = () => {
               <p className="text-muted-foreground mb-4">
                 {searchTerm ? "Nenhum prontuário encontrado" : "Nenhum prontuário cadastrado"}
               </p>
-              <Link to="/prontuario/nova">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeiro Prontuário
-                </Button>
-              </Link>
+              <PacienteSelectorModal 
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeiro Prontuário
+                  </Button>
+                }
+              />
             </div>
           ) : (
             <div className="space-y-4">

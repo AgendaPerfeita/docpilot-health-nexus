@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PacienteSelectorModal } from "@/components/prontuario/PacienteSelectorModal";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -24,28 +25,31 @@ const Dashboard = () => {
       description: "Agendar nova consulta",
       href: "/agenda",
       icon: <Calendar className="h-5 w-5" />,
-      color: "bg-blue-500"
+      color: "bg-blue-500",
+      type: "link"
     },
     {
       title: "Novo Prontuário",
       description: "Criar prontuário médico",
-      href: "/prontuario/nova",
       icon: <FileText className="h-5 w-5" />,
-      color: "bg-green-500"
+      color: "bg-green-500",
+      type: "modal"
     },
     {
       title: "Pacientes",
       description: "Gerenciar pacientes",
       href: "/crm",
       icon: <Users className="h-5 w-5" />,
-      color: "bg-purple-500"
+      color: "bg-purple-500",
+      type: "link"
     },
     {
       title: "Prescrição",
       description: "Prescrição digital",
       href: "/prescricao-digital",
       icon: <Stethoscope className="h-5 w-5" />,
-      color: "bg-orange-500"
+      color: "bg-orange-500",
+      type: "link"
     }
   ];
 
@@ -132,22 +136,46 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {quickActions.map((action, index) => (
-                <Link key={index} to={action.href}>
-                  <Button
-                    variant="outline"
-                    className="h-20 w-full flex-col gap-2 hover:bg-muted"
-                  >
-                    <div className={`p-2 rounded-md ${action.color} text-white`}>
-                      {action.icon}
-                    </div>
-                    <div className="text-center">
-                      <div className="font-medium text-sm">{action.title}</div>
-                      <div className="text-xs text-muted-foreground">{action.description}</div>
-                    </div>
-                  </Button>
-                </Link>
-              ))}
+              {quickActions.map((action, index) => {
+                if (action.type === "modal") {
+                  return (
+                    <PacienteSelectorModal
+                      key={index}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          className="h-20 w-full flex-col gap-2 hover:bg-muted"
+                        >
+                          <div className={`p-2 rounded-md ${action.color} text-white`}>
+                            {action.icon}
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium text-sm">{action.title}</div>
+                            <div className="text-xs text-muted-foreground">{action.description}</div>
+                          </div>
+                        </Button>
+                      }
+                    />
+                  );
+                }
+                
+                return (
+                  <Link key={index} to={action.href!}>
+                    <Button
+                      variant="outline"
+                      className="h-20 w-full flex-col gap-2 hover:bg-muted"
+                    >
+                      <div className={`p-2 rounded-md ${action.color} text-white`}>
+                        {action.icon}
+                      </div>
+                      <div className="text-center">
+                        <div className="font-medium text-sm">{action.title}</div>
+                        <div className="text-xs text-muted-foreground">{action.description}</div>
+                      </div>
+                    </Button>
+                  </Link>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -161,27 +189,15 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => (
-                <div key={appointment.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <div>
-                    <div className="font-medium">{appointment.patient}</div>
-                    <div className="text-sm text-muted-foreground">{appointment.type}</div>
-                  </div>
-                  <Badge variant="outline">{appointment.time}</Badge>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma consulta agendada</p>
-                <Link to="/agenda">
-                  <Button variant="outline" size="sm" className="mt-2">
-                    Agendar consulta
-                  </Button>
-                </Link>
-              </div>
-            )}
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Nenhuma consulta agendada</p>
+              <Link to="/agenda">
+                <Button variant="outline" size="sm" className="mt-2">
+                  Agendar consulta
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
