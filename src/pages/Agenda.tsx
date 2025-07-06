@@ -142,25 +142,25 @@ export default function Agenda() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Agenda</h1>
-          <p className="text-muted-foreground">Gerencie consultas e agendamentos</p>
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Agenda</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Gerencie consultas e agendamentos</p>
         </div>
         <Dialog open={isAddingAppointment} onOpenChange={setIsAddingAppointment}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Novo Agendamento
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Novo Agendamento</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAddAppointment} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
                   <Input id="phone" name="phone" required value={formState.phone} onChange={handlePhoneChange} />
@@ -183,7 +183,7 @@ export default function Agenda() {
                 </Select>
               </div>
               {formState.tipoConsulta === 'convenio' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Convênio</Label>
                     <Select value={formState.convenio} onValueChange={convenio => setFormState(f => ({ ...f, convenio, plano: '' }))} name="convenio" required>
@@ -230,7 +230,7 @@ export default function Agenda() {
                   </CardContent>
                 </Card>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="service">Serviço</Label>
                   <Select name="service" required>
@@ -260,7 +260,7 @@ export default function Agenda() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="time">Horário</Label>
                   <Input id="time" name="time" type="time" required />
@@ -286,94 +286,94 @@ export default function Agenda() {
                 <Textarea id="notes" name="notes" placeholder="Observações adicionais..." />
               </div>
 
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setIsAddingAppointment(false)}>
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                <Button type="button" variant="outline" onClick={() => setIsAddingAppointment(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit">Agendar</Button>
+                <Button type="submit" className="w-full sm:w-auto">Agendar</Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-blue-600" />
-              <span className="text-2xl font-bold text-foreground">12</span>
+              <span className="text-xl sm:text-2xl font-bold text-foreground">12</span>
             </div>
-            <p className="text-sm text-muted-foreground">Agendamentos Hoje</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Agendamentos Hoje</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-green-600" />
-              <span className="text-2xl font-bold text-foreground">8</span>
+              <span className="text-xl sm:text-2xl font-bold text-foreground">8</span>
             </div>
-            <p className="text-sm text-muted-foreground">Confirmados</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Confirmados</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-yellow-600" />
-              <span className="text-2xl font-bold text-foreground">3</span>
+              <span className="text-xl sm:text-2xl font-bold text-foreground">3</span>
             </div>
-            <p className="text-sm text-muted-foreground">Pendentes</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Pendentes</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-red-600" />
-              <span className="text-2xl font-bold text-foreground">1</span>
+              <span className="text-xl sm:text-2xl font-bold text-foreground">1</span>
             </div>
-            <p className="text-sm text-muted-foreground">Cancelados</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Cancelados</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Agenda do Dia</CardTitle>
-            <div className="flex gap-2">
+        <CardHeader className="px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg sm:text-xl">Agenda do Dia</CardTitle>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar paciente ou serviço..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full sm:w-64"
                 />
               </div>
               <Input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-40"
+                className="w-full sm:w-40"
               />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="px-4 sm:px-6">
+          <div className="space-y-3 sm:space-y-4">
             {filteredAppointments.map((appointment) => (
-              <div key={appointment.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+              <div key={appointment.id} className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
                     <div className="font-medium text-lg text-foreground">
                       {appointment.time}
                     </div>
-                    <div className="border-l pl-4">
+                    <div className="sm:border-l sm:pl-4 w-full sm:w-auto">
                       <div className="font-medium text-foreground">{appointment.patient}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-4">
+                      <div className="text-sm text-muted-foreground space-y-1 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
                         <span className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
                           {appointment.phone}
@@ -389,7 +389,7 @@ export default function Agenda() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
                     <Badge className={`${getStatusColor(appointment.status)} capitalize`}>
                       {appointment.status}
                     </Badge>

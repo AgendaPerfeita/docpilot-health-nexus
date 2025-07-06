@@ -136,21 +136,21 @@ const PacientesList = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Prontuários</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">Prontuários</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gerencie consultas e prontuários médicos
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowSelector(true)}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setShowSelector(true)} className="w-full sm:w-auto">
             <Search className="h-4 w-4 mr-2" />
             Buscar Paciente
           </Button>
-          <Button onClick={() => setShowSelector(true)}>
+          <Button onClick={() => setShowSelector(true)} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nova Evolução
           </Button>
@@ -160,13 +160,13 @@ const PacientesList = () => {
       {/* Quick Selector */}
       {showSelector && (
         <Card>
-          <CardHeader>
-            <CardTitle>Selecionar Paciente</CardTitle>
-            <CardDescription>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg">Selecionar Paciente</CardTitle>
+            <CardDescription className="text-sm">
               Selecione um paciente para criar nova evolução ou acessar prontuário
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             <PacienteSelector 
               onSelect={handleSelectPaciente}
               placeholder="Digite para buscar ou selecionar paciente..."
@@ -176,6 +176,7 @@ const PacientesList = () => {
               <Button 
                 variant="outline" 
                 onClick={() => setShowSelector(false)}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
@@ -186,20 +187,22 @@ const PacientesList = () => {
 
       {/* Tabs for different views */}
       <Tabs defaultValue="hoje" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="hoje">Pacientes do Dia</TabsTrigger>
-          <TabsTrigger value="todos">Todos os Pacientes</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-2 min-w-[300px]">
+            <TabsTrigger value="hoje" className="text-sm">Pacientes do Dia</TabsTrigger>
+            <TabsTrigger value="todos" className="text-sm">Todos os Pacientes</TabsTrigger>
+          </TabsList>
+        </div>
         
         {/* Today's Patients Tab */}
         <TabsContent value="hoje" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Calendar className="h-5 w-5" />
                 Consultas de Hoje ({consultasHoje.length})
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Pacientes agendados para {new Intl.DateTimeFormat('pt-BR', { 
                   weekday: 'long', 
                   day: 'numeric', 
@@ -207,7 +210,7 @@ const PacientesList = () => {
                 }).format(new Date())}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 sm:px-6">
               {consultasHoje.length === 0 ? (
                 <div className="text-center py-8">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -219,29 +222,31 @@ const PacientesList = () => {
                 <div className="space-y-4">
                   {consultasHoje.map((consulta) => (
                     <Card key={consulta.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4 flex-1">
-                            <div className="bg-primary/10 p-3 rounded-full">
-                              <User className="h-5 w-5 text-primary" />
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                          <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                            <div className="bg-primary/10 p-2 sm:p-3 rounded-full flex-shrink-0">
+                              <User className="h-4 sm:h-5 w-4 sm:w-5 text-primary" />
                             </div>
                             
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <h3 className="font-semibold">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-1">
+                                <h3 className="font-semibold text-sm sm:text-base truncate">
                                   {consulta.paciente?.nome || 'Paciente não encontrado'}
                                 </h3>
-                                <Badge className={getStatusColor(consulta.status)}>
-                                  {getStatusLabel(consulta.status)}
-                                </Badge>
-                                {consulta.paciente?.convenio && (
-                                  <Badge variant="outline">
-                                    {consulta.paciente.convenio}
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge className={`${getStatusColor(consulta.status)} text-xs`}>
+                                    {getStatusLabel(consulta.status)}
                                   </Badge>
-                                )}
+                                  {consulta.paciente?.convenio && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {consulta.paciente.convenio}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                               
-                              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm text-muted-foreground">
                                 <div className="flex items-center">
                                   <Clock className="h-3 w-3 mr-1" />
                                   {formatTime(consulta.data_consulta)}
@@ -253,27 +258,29 @@ const PacientesList = () => {
                                 {consulta.paciente?.telefone && (
                                   <div className="flex items-center">
                                     <Phone className="h-3 w-3 mr-1" />
-                                    {consulta.paciente.telefone}
+                                    <span className="truncate">{consulta.paciente.telefone}</span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center space-x-2">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                             <Button 
                               variant="outline"
                               size="sm"
                               onClick={() => navigate(`/prontuario/paciente/${consulta.paciente_id}`)}
+                              className="w-full sm:w-auto text-xs"
                             >
-                              <FileText className="h-4 w-4 mr-1" />
+                              <FileText className="h-3 w-3 mr-1" />
                               Prontuário
                             </Button>
                             <Button 
                               size="sm"
                               onClick={() => navigate(`/prontuario/paciente/${consulta.paciente_id}/nova`)}
+                              className="w-full sm:w-auto text-xs"
                             >
-                              <Plus className="h-4 w-4 mr-1" />
+                              <Plus className="h-3 w-3 mr-1" />
                               Nova Evolução
                             </Button>
                           </div>
@@ -291,7 +298,7 @@ const PacientesList = () => {
         <TabsContent value="todos" className="space-y-4">
           {/* Search */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -308,7 +315,7 @@ const PacientesList = () => {
           <div className="grid gap-4">
             {filteredPacientes.length === 0 ? (
               <Card>
-                <CardContent className="text-center py-8">
+                <CardContent className="text-center py-8 px-4 sm:px-6">
                   <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground mb-4">
                     {searchTerm ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
@@ -323,49 +330,51 @@ const PacientesList = () => {
                 const stats = getPacienteStats(paciente.id);
                 return (
                   <Card key={paciente.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 flex-1">
-                          <div className="bg-primary/10 p-3 rounded-full">
-                            <User className="h-6 w-6 text-primary" />
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                          <div className="bg-primary/10 p-2 sm:p-3 rounded-full flex-shrink-0">
+                            <User className="h-5 sm:h-6 w-5 sm:w-6 text-primary" />
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-semibold text-lg">{paciente.nome}</h3>
-                              {calculateAge(paciente.data_nascimento) && (
-                                <Badge variant="secondary">
-                                  {calculateAge(paciente.data_nascimento)}
-                                </Badge>
-                              )}
-                              {paciente.convenio && (
-                                <Badge variant="outline">{paciente.convenio}</Badge>
-                              )}
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mb-2">
+                              <h3 className="font-semibold text-base sm:text-lg truncate">{paciente.nome}</h3>
+                              <div className="flex flex-wrap gap-1">
+                                {calculateAge(paciente.data_nascimento) && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {calculateAge(paciente.data_nascimento)}
+                                  </Badge>
+                                )}
+                                {paciente.convenio && (
+                                  <Badge variant="outline" className="text-xs">{paciente.convenio}</Badge>
+                                )}
+                              </div>
                             </div>
                             
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm text-muted-foreground mb-2">
                               {paciente.telefone && (
                                 <div className="flex items-center">
                                   <Phone className="h-3 w-3 mr-1" />
-                                  {paciente.telefone}
+                                  <span className="truncate">{paciente.telefone}</span>
                                 </div>
                               )}
                               {paciente.email && (
                                 <div className="flex items-center">
                                   <Mail className="h-3 w-3 mr-1" />
-                                  {paciente.email}
+                                  <span className="truncate">{paciente.email}</span>
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex items-center space-x-4 text-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs sm:text-sm">
                               <div className="flex items-center text-blue-600">
-                                <FileText className="h-4 w-4 mr-1" />
+                                <FileText className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
                                 {stats.totalEvolucoes} evolução(ões)
                               </div>
                               {stats.ultimoAtendimento && (
                                 <div className="flex items-center text-green-600">
-                                  <Clock className="h-4 w-4 mr-1" />
+                                  <Clock className="h-3 sm:h-4 w-3 sm:w-4 mr-1" />
                                   Último: {formatDate(stats.ultimoAtendimento)}
                                 </div>
                               )}
@@ -373,18 +382,22 @@ const PacientesList = () => {
                           </div>
                         </div>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                           <Button 
                             variant="outline"
                             onClick={() => navigate(`/prontuario/paciente/${paciente.id}`)}
+                            className="w-full sm:w-auto text-xs sm:text-sm"
+                            size="sm"
                           >
-                            <FileText className="h-4 w-4 mr-2" />
+                            <FileText className="h-3 sm:h-4 w-3 sm:w-4 mr-1 sm:mr-2" />
                             Ver Prontuário
                           </Button>
                           <Button 
                             onClick={() => handleNovaEvolucao(paciente)}
+                            className="w-full sm:w-auto text-xs sm:text-sm"
+                            size="sm"
                           >
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-3 sm:h-4 w-3 sm:w-4 mr-1 sm:mr-2" />
                             Nova Evolução
                           </Button>
                         </div>
