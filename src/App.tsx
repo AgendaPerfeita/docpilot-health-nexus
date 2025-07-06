@@ -89,6 +89,9 @@ function App() {
                   {/* Agenda Global - acessível por todos */}
                   <Route path="/agenda" element={<AgendaMedico />} />
                   
+                  {/* CRM Global - acessível por todos */}
+                  <Route path="/crm" element={<CRMGlobal />} />
+                  
                   {/* Prescrição Digital - acessível por médicos */}
                   <Route path="/prescricao-digital" element={<PrescricaoDigital />} />
 
