@@ -40,7 +40,6 @@ export function MedicalLayout({
 }: MedicalLayoutProps) {
   const timer = useTimer()
   const [activeSection, setActiveSection] = useState('resumo')
-  const [showWelcomeBanner, setShowWelcomeBanner] = useState(true)
   const [finalizationOpen, setFinalizationOpen] = useState(false)
   const [signatureType, setSignatureType] = useState<'none' | 'installed' | 'cloud'>('none')
 
@@ -76,20 +75,44 @@ export function MedicalLayout({
     </div>
   )
 
+  const renderContent = () => {
+    if (activeSection === 'resumo' && !isConsultationActive) {
+      return (
+        <PatientSummary 
+          patientData={patientData}
+          showWelcomeBanner={false}
+          setShowWelcomeBanner={() => {}}
+        />
+      )
+    }
+
+    if (activeSection === 'atendimento' && isConsultationActive) {
+      return children
+    }
+
+    // Renderizar outras seções quando necessário
+    return (
+      <div className="p-6 flex items-center justify-center h-full">
+        <div className="text-center">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {activeSection === 'acompanhamentos' && 'Tabela de acompanhamentos'}
+            {activeSection === 'exames' && 'Exames e procedimentos'}
+            {activeSection === 'prescricoes' && 'Prescrições'}
+            {activeSection === 'documentos' && 'Documentos e atestados'}
+            {activeSection === 'imagens' && 'Imagens e anexos'}
+          </h3>
+          <p className="text-gray-600">Esta seção está em desenvolvimento</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {renderSidebar()}
       
       <div className="flex-1 overflow-auto">
-        {activeSection === 'resumo' && !isConsultationActive ? (
-          <PatientSummary 
-            patientData={patientData}
-            showWelcomeBanner={showWelcomeBanner}
-            setShowWelcomeBanner={setShowWelcomeBanner}
-          />
-        ) : (
-          children
-        )}
+        {renderContent()}
       </div>
 
       <FinalizationSheet
