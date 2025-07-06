@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ActiveClinicaProvider } from "./hooks/useActiveClinica";
 import Layout from "./components/Layout";
+
 // Auth
 import Landing from "./pages/auth/Landing";
 import Login from "./pages/auth/Login";
@@ -19,7 +20,6 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import AreaPaciente from "./pages/paciente/AreaPaciente";
 
 // Médico
-import NovaEvolucao from "./pages/medico/NovaEvolucao";
 import AreaMedico from "./pages/medico/AreaMedico";
 
 // Clínica
@@ -27,7 +27,6 @@ import AreaClinica from "./pages/clinica/AreaClinica";
 import Agenda from "./pages/clinica/Agenda";
 import CRM from "./pages/clinica/CRM";
 import Dashboard as ClinicaDashboard from "./pages/clinica/Dashboard";
-import ProntuarioIndex from "./pages/clinica/prontuario/ProntuarioIndex";
 
 // Prontuário - NOVA ESTRUTURA
 import ProntuarioList from "./pages/prontuario/index";
@@ -74,14 +73,12 @@ function App() {
                   
                   {/* Área do Médico */}
                   <Route path="/medico" element={<AreaMedico />} />
-                  <Route path="/medico/evolucao" element={<NovaEvolucao />} />
                   
                   {/* Área da Clínica */}
                   <Route path="/clinica" element={<AreaClinica />} />
                   <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
                   <Route path="/clinica/agenda" element={<Agenda />} />
                   <Route path="/clinica/crm" element={<CRM />} />
-                  <Route path="/clinica/prontuario" element={<ProntuarioIndex />} />
                   
                   {/* Sistema de Prontuários - NOVA ESTRUTURA */}
                   <Route path="/prontuario" element={<ProntuarioList />} />

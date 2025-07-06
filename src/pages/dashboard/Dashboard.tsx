@@ -24,7 +24,7 @@ const Dashboard = () => {
     {
       title: "Nova Consulta",
       description: "Agendar nova consulta",
-      href: "/agenda",
+      href: "/clinica/agenda",
       icon: <Calendar className="h-5 w-5" />,
       color: "bg-blue-500",
       type: "link"
@@ -148,7 +148,7 @@ const Dashboard = () => {
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Nenhuma consulta agendada</p>
-              <Link to="/agenda">
+              <Link to="/clinica/agenda">
                 <Button variant="outline" size="sm" className="mt-2">
                   Agendar consulta
                 </Button>
