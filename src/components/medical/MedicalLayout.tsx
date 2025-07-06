@@ -115,21 +115,7 @@ export function MedicalLayout({
       return <ImagesSection />
     }
 
-    // Fallback para seções não implementadas
-    return (
-      <div className="p-6 flex items-center justify-center h-full">
-        <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {activeSection === 'acompanhamentos' && 'Tabela de acompanhamentos'}
-            {activeSection === 'exames' && 'Exames e procedimentos'}
-            {activeSection === 'prescricoes' && 'Prescrições'}
-            {activeSection === 'documentos' && 'Documentos e atestados'}
-            {activeSection === 'imagens' && 'Imagens e anexos'}
-          </h3>
-          <p className="text-gray-600">Esta seção está em desenvolvimento</p>
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (

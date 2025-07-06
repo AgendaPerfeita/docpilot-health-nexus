@@ -9,6 +9,118 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      anexos_medicos: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_upload: string
+          descricao: string | null
+          id: string
+          medico_id: string
+          nome_arquivo: string
+          paciente_id: string
+          prontuario_id: string | null
+          subcategoria: string | null
+          tamanho_bytes: number | null
+          tipo_arquivo: string
+          url_storage: string
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          data_upload?: string
+          descricao?: string | null
+          id?: string
+          medico_id: string
+          nome_arquivo: string
+          paciente_id: string
+          prontuario_id?: string | null
+          subcategoria?: string | null
+          tamanho_bytes?: number | null
+          tipo_arquivo: string
+          url_storage: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_upload?: string
+          descricao?: string | null
+          id?: string
+          medico_id?: string
+          nome_arquivo?: string
+          paciente_id?: string
+          prontuario_id?: string | null
+          subcategoria?: string | null
+          tamanho_bytes?: number | null
+          tipo_arquivo?: string
+          url_storage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_medicos_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_medicos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_medicos_prontuario_id_fkey"
+            columns: ["prontuario_id"]
+            isOneToOne: false
+            referencedRelation: "prontuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      catalogo_exames: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          codigo_amb: string | null
+          codigo_tuss: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          subcategoria: string | null
+          updated_at: string
+          valor_referencia: number | null
+        }
+        Insert: {
+          ativo?: boolean
+          categoria: string
+          codigo_amb?: string | null
+          codigo_tuss?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          subcategoria?: string | null
+          updated_at?: string
+          valor_referencia?: number | null
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          codigo_amb?: string | null
+          codigo_tuss?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          subcategoria?: string | null
+          updated_at?: string
+          valor_referencia?: number | null
+        }
+        Relationships: []
+      }
       clinica_medicos: {
         Row: {
           ativo: boolean
@@ -197,6 +309,121 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      documentos_medicos: {
+        Row: {
+          assinado: boolean | null
+          conteudo: string
+          created_at: string
+          hash_assinatura: string | null
+          id: string
+          medico_id: string
+          numero_documento: string | null
+          paciente_id: string
+          prontuario_id: string | null
+          status: string | null
+          template_usado: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          validade_ate: string | null
+        }
+        Insert: {
+          assinado?: boolean | null
+          conteudo: string
+          created_at?: string
+          hash_assinatura?: string | null
+          id?: string
+          medico_id: string
+          numero_documento?: string | null
+          paciente_id: string
+          prontuario_id?: string | null
+          status?: string | null
+          template_usado?: string | null
+          tipo: string
+          titulo: string
+          updated_at?: string
+          validade_ate?: string | null
+        }
+        Update: {
+          assinado?: boolean | null
+          conteudo?: string
+          created_at?: string
+          hash_assinatura?: string | null
+          id?: string
+          medico_id?: string
+          numero_documento?: string | null
+          paciente_id?: string
+          prontuario_id?: string | null
+          status?: string | null
+          template_usado?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          validade_ate?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_medicos_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_medicos_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_medicos_prontuario_id_fkey"
+            columns: ["prontuario_id"]
+            isOneToOne: false
+            referencedRelation: "prontuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicamentos: {
+        Row: {
+          ativo: boolean | null
+          categoria: string | null
+          created_at: string
+          dosagens_comuns: string[] | null
+          frequencias_comuns: string[] | null
+          id: string
+          interacoes: string[] | null
+          nome: string
+          observacoes: string | null
+          principio_ativo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
+          created_at?: string
+          dosagens_comuns?: string[] | null
+          frequencias_comuns?: string[] | null
+          id?: string
+          interacoes?: string[] | null
+          nome: string
+          observacoes?: string | null
+          principio_ativo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string | null
+          created_at?: string
+          dosagens_comuns?: string[] | null
+          frequencias_comuns?: string[] | null
+          id?: string
+          interacoes?: string[] | null
+          nome?: string
+          observacoes?: string | null
+          principio_ativo?: string | null
+        }
+        Relationships: []
       }
       pacientes: {
         Row: {
@@ -457,6 +684,112 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      solicitacoes_exames: {
+        Row: {
+          convenio: string | null
+          created_at: string
+          data_resultado: string | null
+          data_solicitacao: string
+          exames: Json
+          id: string
+          indicacao_clinica: string | null
+          medico_id: string
+          observacoes: string | null
+          paciente_id: string
+          prontuario_id: string | null
+          status: string | null
+          updated_at: string
+          urgente: boolean | null
+        }
+        Insert: {
+          convenio?: string | null
+          created_at?: string
+          data_resultado?: string | null
+          data_solicitacao?: string
+          exames: Json
+          id?: string
+          indicacao_clinica?: string | null
+          medico_id: string
+          observacoes?: string | null
+          paciente_id: string
+          prontuario_id?: string | null
+          status?: string | null
+          updated_at?: string
+          urgente?: boolean | null
+        }
+        Update: {
+          convenio?: string | null
+          created_at?: string
+          data_resultado?: string | null
+          data_solicitacao?: string
+          exames?: Json
+          id?: string
+          indicacao_clinica?: string | null
+          medico_id?: string
+          observacoes?: string | null
+          paciente_id?: string
+          prontuario_id?: string | null
+          status?: string | null
+          updated_at?: string
+          urgente?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_exames_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_exames_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_exames_prontuario_id_fkey"
+            columns: ["prontuario_id"]
+            isOneToOne: false
+            referencedRelation: "prontuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates_documentos: {
+        Row: {
+          ativo: boolean | null
+          conteudo_template: string
+          created_at: string
+          especialidade: string | null
+          id: string
+          nome: string
+          tipo: string
+          variaveis: Json | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          conteudo_template: string
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          variaveis?: Json | null
+        }
+        Update: {
+          ativo?: boolean | null
+          conteudo_template?: string
+          created_at?: string
+          especialidade?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          variaveis?: Json | null
+        }
+        Relationships: []
       }
     }
     Views: {
