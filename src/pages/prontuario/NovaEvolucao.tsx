@@ -35,6 +35,10 @@ const NovaEvolucao = () => {
 
   const paciente = pacientes.find(p => p.id === id);
   console.log('NovaEvolucao - Found paciente:', paciente);
+  console.log('NovaEvolucao - Comparing IDs:');
+  pacientes.forEach(p => {
+    console.log(`  - Patient ID: "${p.id}" vs URL ID: "${id}" - Match: ${p.id === id}`);
+  });
 
   useEffect(() => {
     console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id });
