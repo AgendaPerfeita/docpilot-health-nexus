@@ -55,7 +55,8 @@ export const useDocumentos = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      setDocumentos(data || []);
+      // Type assertion para garantir compatibilidade
+      setDocumentos((data || []) as DocumentoMedico[]);
     } catch (error) {
       console.error('Erro ao buscar documentos:', error);
     } finally {
@@ -72,7 +73,7 @@ export const useDocumentos = () => {
         .order('nome');
 
       if (error) throw error;
-      setTemplates(data || []);
+      setTemplates((data || []) as TemplateDocumento[]);
     } catch (error) {
       console.error('Erro ao buscar templates:', error);
     }

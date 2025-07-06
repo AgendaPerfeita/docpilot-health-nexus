@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { TestTube, Calendar, Download, Plus, Search, ChevronDown, X, Clock, FileText } from 'lucide-react'
 import { useExames } from '@/hooks/useExames'
 import { cn } from '@/lib/utils'
+import type { CheckedState } from '@radix-ui/react-checkbox'
 
 export function ExamsAndProcedures() {
   const { catalogoExames, solicitacoes, loading, fetchCatalogoExames, criarSolicitacao } = useExames()
@@ -49,10 +50,10 @@ export function ExamsAndProcedures() {
         paciente_id: 'temp-patient-id', // This should come from context
         exames: selectedExames,
         indicacao_clinica: indicacaoClinica,
-        convenio: convenio || null,
+        convenio: convenio || undefined,
         urgente,
         status: 'solicitado',
-        observacoes: observacoes || null
+        observacoes: observacoes || undefined
       })
 
       // Reset form
@@ -64,6 +65,11 @@ export function ExamsAndProcedures() {
     } catch (error) {
       console.error('Erro ao solicitar exames:', error)
     }
+  }
+
+  // Função para lidar com mudanças no checkbox
+  const handleUrgenteChange = (checked: CheckedState) => {
+    setUrgente(checked === true)
   }
 
   const getStatusColor = (status: string) => {
@@ -244,7 +250,7 @@ export function ExamsAndProcedures() {
                       <Checkbox
                         id="urgente"
                         checked={urgente}
-                        onCheckedChange={setUrgente}
+                        onCheckedChange={handleUrgenteChange}
                       />
                       <label htmlFor="urgente" className="text-sm font-medium">
                         Exame Urgente

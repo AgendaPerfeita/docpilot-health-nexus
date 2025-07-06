@@ -52,7 +52,8 @@ export const useExames = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      setCatalogoExames(data || []);
+      // Type assertion para garantir compatibilidade
+      setCatalogoExames((data || []) as CatalogoExame[]);
     } catch (error) {
       console.error('Erro ao buscar catálogo de exames:', error);
     } finally {
@@ -78,7 +79,14 @@ export const useExames = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      setSolicitacoes(data || []);
+      // Transformar os dados para garantir compatibilidade de tipos
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        exames: Array.isArray(item.exames) ? item.exames : [],
+        urgente: Boolean(item.urgente)
+      })) as SolicitacaoExame[];
+      
+      setSolicitacoes(transformedData);
     } catch (error) {
       console.error('Erro ao buscar solicitações:', error);
     } finally {
