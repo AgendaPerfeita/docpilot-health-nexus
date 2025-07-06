@@ -36,6 +36,7 @@ import CRMGlobal from "./pages/CRM";
 
 // Index
 import Index from "./pages/Index";
+import PrescricaoDigital from "./pages/PrescricaoDigital";
 
 // Shared components
 import { PermissionGuard } from "./components/PermissionGuard";
@@ -87,6 +88,9 @@ function App() {
                   
                   {/* ===== FUNCIONALIDADES COMPARTILHADAS ===== */}
                   <Route path="/crm" element={<CRMGlobal />} />
+                  
+                  {/* Prescrição Digital - acessível por médicos */}
+                  <Route path="/prescricao-digital" element={<PrescricaoDigital />} />
 
                 </Route>
               </Routes>

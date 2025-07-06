@@ -1,4 +1,7 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { usePacientes } from "@/hooks/usePacientes"
+import { useMedicamentos } from "@/hooks/useMedicamentos"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,33 +14,18 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar } from "lucide-react"
 
-const mockPrescriptions = [
-  {
-    id: 1,
-    patient: "Maria Silva",
-    date: "2024-01-05",
-    status: "enviada",
-    medications: [
-      { name: "Dipirona 500mg", dosage: "1 comprimido de 6/6h", duration: "7 dias" },
-      { name: "Amoxicilina 500mg", dosage: "1 cápsula de 8/8h", duration: "10 dias" }
-    ]
-  },
-  {
-    id: 2,
-    patient: "João Santos",
-    date: "2024-01-04",
-    status: "assinada",
-    medications: [
-      { name: "Ibuprofeno 600mg", dosage: "1 comprimido de 12/12h", duration: "5 dias" }
-    ]
-  }
-]
 
 export default function PrescricaoDigital() {
+  const { pacientes } = usePacientes()
+  const { medicamentos } = useMedicamentos()
+  const { toast } = useToast()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState("")
   const [medications, setMedications] = useState([{ name: "", dosage: "", duration: "" }])
+  const [prescricoes, setPrescricoes] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
 
   const addMedication = () => {
     setMedications([...medications, { name: "", dosage: "", duration: "" }])
@@ -89,11 +77,13 @@ export default function PrescricaoDigital() {
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o paciente" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="maria">Maria Silva</SelectItem>
-                        <SelectItem value="joao">João Santos</SelectItem>
-                        <SelectItem value="ana">Ana Costa</SelectItem>
-                      </SelectContent>
+                        <SelectContent>
+                          {pacientes.map((paciente) => (
+                            <SelectItem key={paciente.id} value={paciente.id}>
+                              {paciente.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
@@ -123,11 +113,9 @@ export default function PrescricaoDigital() {
                             list="medications-list"
                           />
                           <datalist id="medications-list">
-                            <option value="Dipirona 500mg" />
-                            <option value="Paracetamol 750mg" />
-                            <option value="Ibuprofeno 600mg" />
-                            <option value="Amoxicilina 500mg" />
-                            <option value="Azitromicina 500mg" />
+                            {medicamentos.map((med) => (
+                              <option key={med.id} value={med.nome} />
+                            ))}
                           </datalist>
                         </div>
                         <div className="space-y-2">
@@ -274,7 +262,7 @@ export default function PrescricaoDigital() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockPrescriptions.map((prescription) => (
+              {prescricoes.map((prescription) => (
                 <TableRow key={prescription.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">

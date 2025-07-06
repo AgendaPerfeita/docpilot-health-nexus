@@ -108,7 +108,7 @@ export function MedicalLayout({
     <div className="flex h-screen bg-gray-50">
       {renderSidebar()}
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" id="medical-content">
         {renderContent()}
       </div>
 

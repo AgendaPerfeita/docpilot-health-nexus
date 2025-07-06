@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,36 +8,45 @@ export interface Medicamento {
   categoria?: string;
   dosagens_comuns?: string[];
   frequencias_comuns?: string[];
-  interacoes?: string[];
   observacoes?: string;
+  interacoes?: string[];
+  ativo: boolean;
+  created_at: string;
 }
 
 export const useMedicamentos = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchMedicamentos = async (searchTerm: string = '') => {
+  const fetchMedicamentos = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('medicamentos')
         .select('*')
         .eq('ativo', true)
         .order('nome');
 
-      if (searchTerm) {
-        query = query.or(`nome.ilike.%${searchTerm}%,principio_ativo.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
-      
       setMedicamentos(data || []);
     } catch (error) {
       console.error('Erro ao buscar medicamentos:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const buscarMedicamentos = async (termo: string) => {
+    const { data, error } = await supabase
+      .from('medicamentos')
+      .select('*')
+      .ilike('nome', `%${termo}%`)
+      .eq('ativo', true)
+      .order('nome')
+      .limit(10);
+
+    if (error) throw error;
+    return data || [];
   };
 
   useEffect(() => {
@@ -48,6 +56,7 @@ export const useMedicamentos = () => {
   return {
     medicamentos,
     loading,
-    fetchMedicamentos
+    buscarMedicamentos,
+    refetch: fetchMedicamentos
   };
 };
