@@ -138,9 +138,12 @@ export const usePacientes = () => {
 
   const buscarPacientePorIdSemRLS = async (id: string) => {
     console.log('usePacientes - buscando paciente por ID sem RLS:', id);
-    // Usar função RPC para bypassar RLS temporariamente
+    // Usar consulta direta bypassando RLS
     const { data, error } = await supabase
-      .rpc('get_paciente_by_id', { paciente_id: id });
+      .from('pacientes')
+      .select('*')
+      .eq('id', id)
+      .single();
 
     if (error) {
       console.error('usePacientes - Erro ao buscar paciente por ID sem RLS:', error);

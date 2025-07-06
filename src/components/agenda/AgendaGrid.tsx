@@ -199,9 +199,18 @@ function VirtualDropTarget({ diaStr, hora, dIdx, hIdx, deslocamento = 0, ocupaca
       if (onMoveAgendamento) onMoveAgendamento(agItem.id, diaStr, hora);
       if (clearDragSlot) clearDragSlot();
     },
-    canDrop: (item) => {
-      // Só bloqueia se ocupacao[hIdx][dIdx] for true
-      return !ocupacao[hIdx][dIdx];
+    canDrop: (item: any) => {
+      // Verifica se há conflito temporal considerando a duração do item sendo arrastado
+      const itemDuracao = (item as any).duracao || 30;
+      const itemLinhas = Math.max(1, Math.round(itemDuracao / 15));
+      
+      // Verifica se todas as linhas necessárias estão livres
+      for (let i = 0; i < itemLinhas; i++) {
+        if (hIdx + i >= ocupacao.length || ocupacao[hIdx + i][dIdx]) {
+          return false;
+        }
+      }
+      return true;
     },
     hover: (item, monitor) => {
       if (onHoverSlot) onHoverSlot(item, diaStr, hora, dIdx, hIdx, monitor);
@@ -211,18 +220,23 @@ function VirtualDropTarget({ diaStr, hora, dIdx, hIdx, deslocamento = 0, ocupaca
       canDrop: monitor.canDrop(),
     }),
   });
+  
   return (
     <div
       ref={drop}
       style={{
         position: 'absolute',
-        left: 120 * (dIdx - deslocamento),
+        left: 120 * dIdx, // Posição absoluta sem deslocamento
         top: 32 * hIdx,
         width: 120,
         height: 32,
         zIndex: 1000,
         pointerEvents: 'auto',
-        background: isOver ? 'rgba(52,152,219,0.08)' : 'transparent',
+        background: isOver && canDrop ? 'rgba(52,152,219,0.12)' : 
+                   isOver && !canDrop ? 'rgba(231,76,60,0.08)' : 'transparent',
+        border: isOver && canDrop ? '1px dashed #3498db' : 
+                isOver && !canDrop ? '1px dashed #e74c3c' : 'none',
+        borderRadius: '4px',
       }}
     />
   );
@@ -238,15 +252,10 @@ const AgendaGridInner: React.FC<AgendaGridProps> = ({ semana, onCellClick, agend
     });
     return map;
   }, [agendamentos]);
-  const { item: dragItem, isDragging } = useDragLayer((monitor) => ({ item: monitor.getItem(), isDragging: monitor.isDragging() }));
-
-  // DEBUG: log dragSlot and dragItem
-  React.useEffect(() => {
-    if (isDragging) {
-      console.log("dragSlot:", dragSlot);
-      console.log("dragItem:", dragItem);
-    }
-  }, [dragSlot, dragItem, isDragging]);
+  const { item: dragItem, isDragging } = useDragLayer((monitor) => ({ 
+    item: monitor.getItem(), 
+    isDragging: monitor.isDragging() 
+  }));
 
   function handleCellHover(item, diaStr, hora, dIdx, hIdx) {
     if (!item) return;
@@ -351,14 +360,9 @@ const AgendaGridInner: React.FC<AgendaGridProps> = ({ semana, onCellClick, agend
       }
     }
   });
-  // Função para contar quantos rowspans estão ativos à esquerda de uma célula na linha atual
-  function deslocamentoRowspan(linha, coluna) {
-    let count = 0;
-    for (let c = 0; c < coluna; c++) {
-      if (ocupacao[linha][c]) count++;
-    }
-    return count;
-  }
+  
+  // Função removida - não usaremos mais deslocamento baseado em rowspan
+  // O alinhamento será baseado apenas na posição absoluta da coluna
 
   const rendered = {};
 
@@ -412,7 +416,6 @@ const AgendaGridInner: React.FC<AgendaGridProps> = ({ semana, onCellClick, agend
                     })
                   ) {
                     if (isDragging) {
-                      const desloc = deslocamentoRowspan(hIdx, dIdx);
                       return (
                         <VirtualDropTarget
                           key={diaStr + hora}
@@ -420,7 +423,7 @@ const AgendaGridInner: React.FC<AgendaGridProps> = ({ semana, onCellClick, agend
                           hora={hora}
                           dIdx={dIdx}
                           hIdx={hIdx}
-                          deslocamento={desloc}
+                          deslocamento={0}
                           ocupacao={ocupacao}
                           onMoveAgendamento={onMoveAgendamento}
                           agendamentosMap={agendamentosMap}

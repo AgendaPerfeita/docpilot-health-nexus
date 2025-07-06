@@ -26,11 +26,10 @@ export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
   const { consultas } = useConsultas();
   const [buscaPaciente, setBuscaPaciente] = useState("");
 
-  // Filtrar pacientes conforme clínica selecionada
-  // (Assumindo que paciente tem clinica_id, ajuste se necessário)
-  const pacientesFiltrados = clinicaSelecionada && clinicaSelecionada !== "todas"
-    ? pacientes.filter(p => p.clinica_id === clinicaSelecionada)
-    : pacientes;
+  // Filtrar pacientes conforme busca de texto
+  const pacientesFiltrados = pacientes.filter(p => 
+    p.nome.toLowerCase().includes(buscaPaciente.toLowerCase())
+  );
 
   // Agendamentos do dia, filtrados por clínica
   const hoje = new Date().toISOString().split('T')[0];
