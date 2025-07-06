@@ -76,7 +76,7 @@ export function MedicalLayout({
   )
 
   const renderContent = () => {
-    if (activeSection === 'resumo' && !isConsultationActive) {
+    if (activeSection === 'resumo') {
       return (
         <PatientSummary 
           patientData={patientData}
@@ -86,7 +86,7 @@ export function MedicalLayout({
       )
     }
 
-    if (activeSection === 'atendimento' && isConsultationActive) {
+    if (activeSection === 'atendimento') {
       return children
     }
 
