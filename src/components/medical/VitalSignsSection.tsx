@@ -55,7 +55,7 @@ export function VitalSignsSection({ sinaisVitais, onChange, isRequired }: VitalS
         <CardTitle className="text-lg">Dados Antropométricos e Sinais Vitais {isRequired && <span className="text-red-500">*</span>}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           <div>
             <Label htmlFor="peso">Peso (kg)</Label>
             <Input
@@ -94,7 +94,7 @@ export function VitalSignsSection({ sinaisVitais, onChange, isRequired }: VitalS
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           <div>
             <Label htmlFor="pa_sistolica">PA Sistólica</Label>
             <Input

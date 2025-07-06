@@ -91,7 +91,71 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
+  
+  /* Improve touch targets */
+  button {
+    min-height: 44px;
+  }
+  
+  input, textarea, select {
+    min-height: 44px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  /* Better spacing on mobile */
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.75rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Responsive text sizes */
+  h1 { font-size: 1.875rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  
+  /* Better modal sizing */
+  .fixed.inset-0 .relative {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+/* Ensure proper touch scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better focus states for accessibility */
+*:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Improve button spacing on mobile */
+@media (max-width: 640px) {
+  .flex.gap-2 {
+    gap: 0.5rem;
+  }
+  
+  .grid.gap-4 {
+    gap: 0.75rem;
+  }
+  
+  .grid.gap-6 {
+    gap: 1rem;
+  }
+}
 }
 
 @layer base {

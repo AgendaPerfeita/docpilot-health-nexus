@@ -213,25 +213,28 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
 
   return (
     <Card className="mb-6 border-blue-200">
-      <CardHeader className="bg-blue-50">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Brain className="w-5 h-5 text-blue-600" />
-          🤖 Assistente de IA Médica Avançado
-          <Badge variant="secondary">Powered by Gemini</Badge>
-          {(severityCriteria.sepsis || severityCriteria.hemodynamicInstability) && (
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-          )}
-        </CardTitle>
+      <CardHeader className="bg-blue-50 p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Brain className="w-5 h-5 text-blue-600" />
+            🤖 Assistente de IA Médica Avançado
+            <Badge variant="secondary" className="hidden sm:inline-flex">Powered by Gemini</Badge>
+            {(severityCriteria.sepsis || severityCriteria.hemodynamicInstability) && (
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+            )}
+          </CardTitle>
+          <Badge variant="secondary" className="sm:hidden self-start">Powered by Gemini</Badge>
+        </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 p-3 sm:p-6">
         {!isOpen ? (
-          <Button onClick={() => setIsOpen(true)} className="w-full">
+          <Button onClick={() => setIsOpen(true)} className="w-full" size="lg">
             Abrir Assistente de IA
           </Button>
         ) : (
           <div className="space-y-4">
             {/* Inputs básicos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="ai_age">Idade</Label>
                 <Input
@@ -301,11 +304,12 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button 
                 onClick={generateAdvancedAISuggestion} 
                 disabled={isLoading || !aiInput.symptoms.trim()}
                 className="flex-1"
+                size="lg"
               >
                 {isLoading ? (
                   <>
@@ -319,27 +323,27 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button variant="outline" onClick={() => setIsOpen(false)} className="sm:w-auto">
                 Fechar
               </Button>
             </div>
 
             {aiSuggestion && (
               <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
                   <h4 className="font-semibold text-lg">📋 Análise da IA</h4>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🩺 HIPÓTESE DIAGNÓSTICA', 'diagnostico')}>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🩺 HIPÓTESE DIAGNÓSTICA', 'diagnostico')} className="flex-1 sm:flex-none">
                       <FileText className="w-4 h-4 mr-1" />
-                      Aplicar Diagnóstico
+                      <span className="hidden sm:inline">Aplicar </span>Diagnóstico
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('💊 CONDUTA TERAPÊUTICA', 'conduta')}>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('💊 CONDUTA TERAPÊUTICA', 'conduta')} className="flex-1 sm:flex-none">
                       <Pill className="w-4 h-4 mr-1" />
-                      Aplicar Conduta
+                      <span className="hidden sm:inline">Aplicar </span>Conduta
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🧪 EXAMES COMPLEMENTARES', 'examesComplementares')}>
+                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🧪 EXAMES COMPLEMENTARES', 'examesComplementares')} className="flex-1 sm:flex-none">
                       <TestTube className="w-4 h-4 mr-1" />
-                      Aplicar Exames
+                      <span className="hidden sm:inline">Aplicar </span>Exames
                     </Button>
                   </div>
                 </div>
@@ -349,7 +353,7 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
                 {/* Classificação de Risco Automática */}
                 <div className="mt-6 p-4 border-t bg-blue-50 rounded-b-lg">
                   <h5 className="font-semibold text-sm mb-3">📋 Classificação de Risco Automática</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {riskScores.map((score, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
                         <span className="text-sm font-medium">{score.name}</span>

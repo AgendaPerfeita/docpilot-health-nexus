@@ -143,48 +143,54 @@ export function EvolutionEditor({
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header com informações do paciente */}
       {patientData && (
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {patientData.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{patientData.nome}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-lg truncate">{patientData.nome}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <User className="h-3 w-3" />
                       {patientData.idade.anos} anos
                     </span>
-                    <span>Convênio: {patientData.convenio}</span>
+                    <span className="hidden sm:inline">Convênio: {patientData.convenio}</span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {new Date().toLocaleDateString('pt-BR')}
                     </span>
                   </div>
+                  <div className="sm:hidden text-sm text-muted-foreground mt-1">
+                    Convênio: {patientData.convenio}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button 
                   onClick={handleSave} 
                   disabled={isSaving}
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
+                  size="sm"
                 >
                   <Save className="h-4 w-4" />
-                  {isSaving ? 'Salvando...' : 'Salvar Evolução'}
+                  {isSaving ? 'Salvando...' : 'Salvar'}
                 </Button>
-                <Button variant="outline" className="gap-2">
-                  <Printer className="h-4 w-4" />
-                  Imprimir
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  <History className="h-4 w-4" />
-                  Histórico
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="gap-2 flex-1 sm:flex-none" size="sm">
+                    <Printer className="h-4 w-4" />
+                    <span className="hidden sm:inline">Imprimir</span>
+                  </Button>
+                  <Button variant="outline" className="gap-2 flex-1 sm:flex-none" size="sm">
+                    <History className="h-4 w-4" />
+                    <span className="hidden sm:inline">Histórico</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -200,24 +206,41 @@ export function EvolutionEditor({
       />
 
       {/* Editor de Evolução */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+        <div className="xl:col-span-2 order-2 xl:order-1">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Evolução Médica
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
-                  <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
-                  <TabsTrigger value="exame">Exame Físico</TabsTrigger>
-                  <TabsTrigger value="diagnostico">Diagnóstico</TabsTrigger>
-                  <TabsTrigger value="conduta">Conduta</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                  <TabsList className="grid grid-cols-5 min-w-full h-auto">
+                    <TabsTrigger value="anamnese" className="text-xs sm:text-sm py-2">
+                      <span className="hidden sm:inline">Anamnese</span>
+                      <span className="sm:hidden">Anam.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="sinais" className="text-xs sm:text-sm py-2">
+                      <span className="hidden sm:inline">Sinais Vitais</span>
+                      <span className="sm:hidden">Sinais</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="exame" className="text-xs sm:text-sm py-2">
+                      <span className="hidden sm:inline">Exame Físico</span>
+                      <span className="sm:hidden">Exame</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="diagnostico" className="text-xs sm:text-sm py-2">
+                      <span className="hidden sm:inline">Diagnóstico</span>
+                      <span className="sm:hidden">Diag.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="conduta" className="text-xs sm:text-sm py-2">
+                      <span className="hidden sm:inline">Conduta</span>
+                      <span className="sm:hidden">Cond.</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="anamnese" className="space-y-4">
                   <RichTextEditor
@@ -294,7 +317,7 @@ export function EvolutionEditor({
         </div>
 
         {/* Painel lateral com informações */}
-        <div className="space-y-4">
+        <div className="space-y-4 order-1 xl:order-2">
           {/* Card de status */}
           <Card>
             <CardHeader className="pb-3">
