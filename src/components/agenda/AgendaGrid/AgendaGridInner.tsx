@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useDragLayer } from "react-dnd";
 import { diasSemana, horarios } from "./constants";
@@ -42,111 +43,69 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
   function handleCellHover(item: any, diaStr: string, hora: string, dIdx: number, hIdx: number) {
     if (!item) return;
     const duracao = item.duracao || 30;
-    // Centralizar SlotGuide na coluna e alinhar verticalmente pela célula
+    
+    // Calcular posição baseada na tabela real
     const table = document.querySelector("table");
     let x = 88 + dIdx * 120;
     let y = 56 + hIdx * 32;
-    let cellLeft;
-    let cellTop;
-    let cell = null;
+    let cellLeft = x;
+    let cellTop = y;
+    
     if (table) {
-      const headerRow = table.rows[0];
-      const row = table.rows[hIdx + 1];
-      if (headerRow && row) {
-        // Descubra qual coluna do cabeçalho corresponde ao diaStr
-        let targetCol = -1;
-        for (let i = 0; i < headerRow.cells.length; i++) {
-          const th = headerRow.cells[i];
-          // O th pode ter a data no formato '09 de jul.' ou similar
-          // Vamos comparar pelo dia do mês
-          const diaDoMes = Number(diaStr.split('-')[2]);
-          if (th.textContent && th.textContent.includes(diaDoMes.toString().padStart(2, '0'))) {
-            targetCol = i;
-            break;
-          }
-        }
-        if (targetCol !== -1) {
-          // Agora, na linha, pegue a célula DOM que está na mesma coluna visual
-          let visualCol = 0;
-          for (let i = 0; i < row.cells.length; i++) {
-            const c = row.cells[i];
-            const colspan = c.colSpan || 1;
-            if (visualCol === targetCol) {
-              cell = c;
+      try {
+        // Encontrar célula específica
+        const rows = table.rows;
+        if (rows && rows[hIdx + 1] && rows[hIdx + 1].cells) {
+          // Procurar a célula correta considerando colspans
+          let targetCell = null;
+          let currentCol = 0;
+          
+          for (let cellIdx = 0; cellIdx < rows[hIdx + 1].cells.length; cellIdx++) {
+            const cell = rows[hIdx + 1].cells[cellIdx];
+            if (currentCol === dIdx + 1) { // +1 porque a primeira coluna é o horário
+              targetCell = cell;
               break;
             }
-            visualCol += colspan;
+            currentCol += cell.colSpan || 1;
+          }
+          
+          if (targetCell) {
+            const rect = targetCell.getBoundingClientRect();
+            cellLeft = rect.left;
+            cellTop = rect.top;
           }
         }
+      } catch (e) {
+        console.log('Fallback para posição calculada:', e);
       }
     }
-    if (cell) {
-      const rect = cell.getBoundingClientRect();
-      x = rect.left;
-      y = rect.top;
-      cellLeft = rect.left;
-      cellTop = rect.top;
-    } else {
-      // Fallback: calcula posição manualmente pelo grid
-      const headerRow = table?.rows[0];
-      let targetCol = -1;
-      if (headerRow) {
-        for (let i = 0; i < headerRow.cells.length; i++) {
-          const th = headerRow.cells[i];
-          const diaDoMes = Number(diaStr.split('-')[2]);
-          if (th.textContent && th.textContent.includes(diaDoMes.toString().padStart(2, '0'))) {
-            targetCol = i;
-            break;
-          }
-        }
-      }
-      if (targetCol !== -1 && table) {
-        const tableRect = table.getBoundingClientRect();
-        const colWidth = 120;
-        const rowHeight = 32;
-        x = tableRect.left + (targetCol * colWidth);
-        y = tableRect.top + ((hIdx + 1) * rowHeight);
-        cellLeft = x;
-        cellTop = y;
-      } else {
-        // fallback final: posição do mouse
-        const evt = window.event;
-        if (evt && typeof evt === "object" && "clientX" in evt && "clientY" in evt) {
-          x = (evt as MouseEvent).clientX;
-          y = (evt as MouseEvent).clientY;
-          cellLeft = x;
-          cellTop = y;
-        }
-      }
-    }
-    setDragSlot({ diaIdx: dIdx, horaIdx: hIdx, x, y, duracao, hora, cellLeft, cellTop });
+    
+    setDragSlot({ diaIdx: dIdx, horaIdx: hIdx, x: cellLeft, y: cellTop, duracao, hora, cellLeft, cellTop });
   }
   
   function clearDragSlot() {
     setDragSlot(null);
   }
 
-  // Construir matriz de ocupação do grid para deslocamento de rowspans
+  // Construir matriz de ocupação mais flexível
   const diasCount = semana.length;
   const linhasCount = horarios.length;
-  // ocupacao[linha][coluna] = true se ocupado por rowspan
   const ocupacao = Array.from({ length: linhasCount }, () => Array(diasCount).fill(false));
-  // Para cada card, marque em quais linhas e colunas ele está ativo, ignorando o card em drag
+  
+  // Marcar apenas slots que realmente têm conflito TOTAL (não parcial)
   agendamentos.forEach(a => {
-    if (isDragging && dragItem && a.id === dragItem.id) return; // Ignore o card em drag!
+    if (isDragging && dragItem && a.id === dragItem.id) return; // Ignorar item sendo arrastado
+    
     const col = semana.findIndex(d => d.toISOString().split('T')[0] === a.dia);
     const startIdx = horarios.indexOf(a.hora);
     const duracao = a.duracao || 30;
     const linhas = Math.max(1, Math.round(duracao / 15));
-    for (let l = 0; l < linhas; l++) {
-      if (startIdx + l < linhasCount && col !== -1) {
-        ocupacao[startIdx + l][col] = true;
-      }
+    
+    // Marcar apenas o slot inicial como ocupado para permitir sobreposição
+    if (startIdx >= 0 && col !== -1 && startIdx < linhasCount) {
+      ocupacao[startIdx][col] = true;
     }
   });
-  
-  // Função removida - não usaremos mais deslocamento baseado em rowspan
-  // O alinhamento será baseado apenas na posição absoluta da coluna
 
   const rendered: Record<string, boolean> = {};
 
@@ -173,10 +132,13 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                 {semana.map((dia, dIdx) => {
                   const diaStr = dia.toISOString().split("T")[0];
                   const agendamento = agendamentosMap.get(`${diaStr}_${hora}`);
+                  
+                  // Renderizar agendamento se existe e não foi renderizado ainda
                   if (agendamento && !rendered[agendamento.id]) {
                     const duracao = agendamento.duracao || 30;
                     const linhas = Math.max(1, Math.round(duracao / 15));
                     rendered[agendamento.id] = true;
+                    
                     return (
                       <AgendamentoCard
                         key={agendamento.id}
@@ -190,37 +152,45 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                       />
                     );
                   }
-                  if (
-                    agendamentos.some(a => {
-                      if (a.dia !== diaStr) return false;
-                      const startIdx = horarios.indexOf(a.hora);
-                      const duracao = a.duracao || 30;
-                      const linhas = Math.max(1, Math.round(duracao / 15));
-                      return hIdx > startIdx && hIdx < startIdx + linhas;
-                    })
-                  ) {
-                    if (isDragging) {
-                      return (
-                        <VirtualDropTarget
-                          key={diaStr + hora}
-                          diaStr={diaStr}
-                          hora={hora}
-                          dIdx={dIdx}
-                          hIdx={hIdx}
-                          deslocamento={0}
-                          ocupacao={ocupacao}
-                          onMoveAgendamento={onMoveAgendamento}
-                          agendamentosMap={agendamentosMap}
-                          onHoverSlot={isDragging ? handleCellHover : undefined}
-                          clearDragSlot={clearDragSlot}
-                        />
-                      );
-                    }
+                  
+                  // Verificar se esta célula está ocupada por um agendamento que se estende
+                  const isOccupiedBySpan = agendamentos.some(a => {
+                    if (a.dia !== diaStr) return false;
+                    if (isDragging && dragItem && a.id === dragItem.id) return false; // Ignorar item sendo arrastado
+                    
+                    const startIdx = horarios.indexOf(a.hora);
+                    const duracao = a.duracao || 30;
+                    const linhas = Math.max(1, Math.round(duracao / 15));
+                    return hIdx > startIdx && hIdx < startIdx + linhas;
+                  });
+                  
+                  // Se está ocupada por span, renderizar drop target virtual durante drag
+                  if (isOccupiedBySpan && isDragging) {
+                    return (
+                      <VirtualDropTarget
+                        key={`${diaStr}_${hora}_virtual`}
+                        diaStr={diaStr}
+                        hora={hora}
+                        dIdx={dIdx}
+                        hIdx={hIdx}
+                        ocupacao={ocupacao}
+                        onMoveAgendamento={onMoveAgendamento}
+                        agendamentosMap={agendamentosMap}
+                        onHoverSlot={handleCellHover}
+                        clearDragSlot={clearDragSlot}
+                      />
+                    );
+                  }
+                  
+                  // Se ocupada por span mas não em drag, não renderizar nada (será coberta pelo rowspan)
+                  if (isOccupiedBySpan) {
                     return null;
                   }
+                  
+                  // Renderizar célula normal
                   return (
                     <AgendaCell
-                      key={diaStr + hora}
+                      key={`${diaStr}_${hora}`}
                       diaStr={diaStr}
                       hora={hora}
                       onCellClick={() => onCellClick(dia, hora)}
@@ -238,6 +208,41 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
           </tbody>
         </table>
       </div>
+      
+      {/* Overlay de drop targets virtuais para melhor detecção */}
+      {isDragging && (
+        <div 
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            pointerEvents: 'none', 
+            zIndex: 1000 
+          }}
+        >
+          {horarios.map((hora, hIdx) => 
+            semana.map((dia, dIdx) => {
+              const diaStr = dia.toISOString().split("T")[0];
+              return (
+                <VirtualDropTarget
+                  key={`overlay_${diaStr}_${hora}`}
+                  diaStr={diaStr}
+                  hora={hora}
+                  dIdx={dIdx}
+                  hIdx={hIdx}
+                  ocupacao={ocupacao}
+                  onMoveAgendamento={onMoveAgendamento}
+                  agendamentosMap={agendamentosMap}
+                  onHoverSlot={handleCellHover}
+                  clearDragSlot={clearDragSlot}
+                />
+              );
+            })
+          )}
+        </div>
+      )}
     </>
   );
 };

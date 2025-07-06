@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useDrop } from "react-dnd";
 import { AGENDAMENTO_TYPE } from "./constants";
@@ -19,10 +20,19 @@ export function AgendaCell({
     accept: AGENDAMENTO_TYPE,
     drop: (item: any) => {
       if (onMoveAgendamento) onMoveAgendamento(item.id, diaStr, hora);
-      if (clearDragSlot) clearDragSlot(); // Limpa slot guide imediatamente após drop
+      if (clearDragSlot) clearDragSlot();
     },
     canDrop: (item: any) => {
-      return !agendamentosMap.get(`${diaStr}_${hora}`);
+      // Permitir drop mesmo se há agendamento no slot (sobreposição parcial)
+      const agendamentoExistente = agendamentosMap.get(`${diaStr}_${hora}`);
+      
+      // Não permite drop no mesmo slot do mesmo agendamento
+      if (agendamentoExistente && agendamentoExistente.id === item.id) {
+        return false;
+      }
+      
+      // Permite sobreposição (como iClinic)
+      return true;
     },
     hover: (item, monitor) => {
       if (onHoverSlot) onHoverSlot(item, diaStr, hora, dIdx, hIdx);
@@ -32,27 +42,30 @@ export function AgendaCell({
       canDrop: monitor.canDrop(),
     }),
   });
+  
   return (
     <td
-      className={`border-b border-r h-8 cursor-pointer transition-all duration-200 relative hover:bg-blue-50/30`}
+      className="border-b border-r h-8 cursor-pointer transition-all duration-300 relative agenda-cell"
       style={{ 
         width: 120, 
         minWidth: 120, 
         maxWidth: 120, 
         boxSizing: 'border-box',
         backgroundColor: isOver && canDrop 
-          ? 'rgba(59, 130, 246, 0.08)' 
+          ? 'rgba(59, 130, 246, 0.12)' 
           : isOver && !canDrop 
-          ? 'rgba(239, 68, 68, 0.06)' 
+          ? 'rgba(239, 68, 68, 0.08)' 
           : 'transparent',
         borderColor: isOver && canDrop 
-          ? '#3b82f6' 
+          ? 'rgba(59, 130, 246, 0.4)' 
           : isOver && !canDrop 
-          ? '#ef4444' 
+          ? 'rgba(239, 68, 68, 0.4)' 
           : 'rgb(229, 231, 235)',
         transform: isOver ? 'scale(1.01)' : 'scale(1)',
         boxShadow: isOver && canDrop 
-          ? 'inset 0 0 0 1px #3b82f6, 0 2px 8px rgba(59, 130, 246, 0.15)' 
+          ? 'inset 0 0 0 2px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(59, 130, 246, 0.15)' 
+          : isOver && !canDrop
+          ? 'inset 0 0 0 2px rgba(239, 68, 68, 0.3), 0 4px 12px rgba(239, 68, 68, 0.1)'
           : 'none'
       }}
       onClick={onCellClick}
@@ -61,7 +74,29 @@ export function AgendaCell({
       {children}
       {isOver && canDrop && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <div 
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              animation: 'pulse 1.2s ease-in-out infinite',
+              boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.2)'
+            }}
+          />
+        </div>
+      )}
+      {isOver && !canDrop && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div 
+            style={{
+              width: '12px',
+              height: '2px',
+              borderRadius: '1px',
+              backgroundColor: '#ef4444',
+              opacity: 0.8
+            }}
+          />
         </div>
       )}
     </td>
