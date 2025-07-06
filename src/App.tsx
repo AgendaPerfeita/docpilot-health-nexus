@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,208 +18,91 @@ import Dashboard from "./pages/dashboard/Dashboard";
 // Paciente
 import AreaPaciente from "./pages/paciente/AreaPaciente";
 
+// Médico
+import NovaEvolucao from "./pages/medico/NovaEvolucao";
+import AreaMedico from "./pages/medico/AreaMedico";
+
 // Clínica
+import AreaClinica from "./pages/clinica/AreaClinica";
 import Agenda from "./pages/clinica/Agenda";
 import CRM from "./pages/clinica/CRM";
+import Dashboard as ClinicaDashboard from "./pages/clinica/Dashboard";
 import ProntuarioIndex from "./pages/clinica/prontuario/ProntuarioIndex";
-import NovaEvolucao from "./pages/clinica/prontuario/NovaEvolucao";
-import GestaoMedicos from "./pages/clinica/GestaoMedicos";
+import NovaEvolucaoClinica from "./pages/clinica/prontuario/NovaEvolucao";
 
-// Clínica Pro
-import AcompanhamentoPacientes from "./pages/clinica-pro/AcompanhamentoPacientes";
-import PrescricaoDigital from "./pages/clinica-pro/PrescricaoDigital";
-import WhatsAppAPI from "./pages/clinica-pro/WhatsAppAPI";
+// Prontuário - NOVA ESTRUTURA
+import ProntuarioList from "./pages/prontuario/index";
+import PacienteProntuario from "./pages/prontuario/PacienteProntuario";
+import NovaEvolucaoProntuario from "./pages/prontuario/NovaEvolucao";
 
-// Hospital
-import BIAvancado from "./pages/BIAvancado";
-import GestaoHospitalar from "./pages/GestaoHospitalar";
+// CRM Global
+import CRMGlobal from "./pages/CRM";
 
-// Financeiro
-import Financeiro from "./pages/Financeiro";
-import DRE from "./pages/DRE";
-import Comissoes from "./pages/Comissoes";
-import Relatorios from "./pages/Relatorios";
+// Index
+import Index from "./pages/Index";
 
-// Configurações
-import Configuracoes from "./pages/Configuracoes";
-import PlanosAcesso from "./pages/PlanosAcesso";
-
-// Shared
-import NotFound from "./pages/NotFound";
+// Shared components
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// Protected Route Component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-// App Routes Component
-const AppRoutes = () => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
+function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
-      
-      {/* Protected Routes */}
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout>
-            <Dashboard />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/crm" element={
-        <ProtectedRoute>
-          <Layout><CRM /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/prontuario" element={
-        <ProtectedRoute>
-          <Layout><ProntuarioIndex /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/prontuario/nova" element={
-        <ProtectedRoute>
-          <Layout><NovaEvolucao /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/agenda" element={
-        <ProtectedRoute>
-          <Layout><Agenda /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/area-paciente" element={
-        <ProtectedRoute>
-          <Layout><AreaPaciente /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/prescricao-digital" element={
-        <ProtectedRoute>
-          <Layout><PrescricaoDigital /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/gestao-medicos" element={
-        <ProtectedRoute>
-          <Layout><GestaoMedicos /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/whatsapp-api" element={
-        <ProtectedRoute>
-          <Layout><WhatsAppAPI /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/bi-avancado" element={
-        <ProtectedRoute>
-          <Layout><BIAvancado /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/gestao-hospitalar" element={
-        <ProtectedRoute>
-          <Layout><GestaoHospitalar /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/financeiro" element={
-        <ProtectedRoute>
-          <Layout><Financeiro /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/dre" element={
-        <ProtectedRoute>
-          <Layout><DRE /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/comissoes" element={
-        <ProtectedRoute>
-          <Layout><Comissoes /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/relatorios" element={
-        <ProtectedRoute>
-          <Layout><Relatorios /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/configuracoes" element={
-        <ProtectedRoute>
-          <Layout><Configuracoes /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/planos-acesso" element={
-        <ProtectedRoute>
-          <Layout><PlanosAcesso /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/acompanhamento-pacientes" element={
-        <ProtectedRoute>
-          <Layout><AcompanhamentoPacientes /></Layout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Redirect root to landing for non-authenticated users */}
-      <Route path="*" element={
-        user ? <Navigate to="/" replace /> : <Navigate to="/landing" replace />
-      } />
-    </Routes>
-  );
-};
+    <QueryClient>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ActiveClinicaProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/landing" element={<Landing />} />
+                  
+                  {/* Auth Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ActiveClinicaProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </ActiveClinicaProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+                  {/* Protected Routes */}
+                  <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                    
+                    {/* Dashboard */}
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    
+                    {/* Área do Paciente */}
+                    <Route path="/paciente" element={<AreaPaciente />} />
+                    <Route path="/paciente/*" element={<AreaPaciente />} />
+                    
+                    {/* Área do Médico */}
+                    <Route path="/medico" element={<AreaMedico />} />
+                    <Route path="/medico/evolucao" element={<NovaEvolucao />} />
+                    
+                    {/* Área da Clínica */}
+                    <Route path="/clinica" element={<AreaClinica />} />
+                    <Route path="/clinica/dashboard" element={<ClinicaDashboard />} />
+                    <Route path="/clinica/agenda" element={<Agenda />} />
+                    <Route path="/clinica/crm" element={<CRM />} />
+                    <Route path="/clinica/prontuario" element={<ProntuarioIndex />} />
+                    <Route path="/clinica/prontuario/nova" element={<NovaEvolucaoClinica />} />
+                    
+                    {/* Sistema de Prontuários - NOVA ESTRUTURA */}
+                    <Route path="/prontuario" element={<ProntuarioList />} />
+                    <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
+                    <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
+                    
+                    {/* CRM Global */}
+                    <Route path="/crm" element={<CRMGlobal />} />
+
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ActiveClinicaProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </QueryClient>
+  );
+}
 
 export default App;

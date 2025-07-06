@@ -1,75 +1,73 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { usePacientes, Paciente } from "@/hooks/usePacientes";
-import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface PacienteFormProps {
-  paciente?: Paciente | null;
-  onSuccess?: () => void;
+  paciente?: Paciente;
   onCancel?: () => void;
+  onSuccess?: (paciente: Paciente) => void;
 }
 
-export const PacienteForm = ({ paciente, onSuccess, onCancel }: PacienteFormProps) => {
-  const [formData, setFormData] = useState({
-    nome: paciente?.nome || "",
-    email: paciente?.email || "",
-    telefone: paciente?.telefone || "",
-    cpf: paciente?.cpf || "",
-    data_nascimento: paciente?.data_nascimento || "",
-    endereco: paciente?.endereco || "",
-    cidade: paciente?.cidade || "",
-    estado: paciente?.estado || "",
-    cep: paciente?.cep || "",
-    convenio: paciente?.convenio || "",
-    numero_convenio: paciente?.numero_convenio || ""
-  });
-  
-  const [loading, setLoading] = useState(false);
+export const PacienteForm = ({ paciente, onCancel, onSuccess }: PacienteFormProps) => {
   const { criarPaciente, atualizarPaciente } = usePacientes();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const [formData, setFormData] = useState({
+    nome: paciente?.nome || '',
+    email: paciente?.email || '',
+    telefone: paciente?.telefone || '',
+    cpf: paciente?.cpf || '',
+    data_nascimento: paciente?.data_nascimento || '',
+    endereco: paciente?.endereco || '',
+    cidade: paciente?.cidade || '',
+    estado: paciente?.estado || '',
+    cep: paciente?.cep || '',
+    convenio: paciente?.convenio || '',
+    numero_convenio: paciente?.numero_convenio || '',
+    origem: paciente?.origem || 'Indicação'
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nome.trim()) {
       toast({
-        title: "Erro",
-        description: "Nome é obrigatório",
+        title: "Nome obrigatório",
+        description: "Por favor, informe o nome do paciente.",
         variant: "destructive"
       });
       return;
     }
 
     setLoading(true);
+    
     try {
-      if (paciente) {
-        await atualizarPaciente(paciente.id, formData);
-        toast({
-          title: "Sucesso",
-          description: "Paciente atualizado com sucesso"
-        });
+      let result;
+      if (paciente?.id) {
+        result = await atualizarPaciente(paciente.id, formData);
       } else {
-        await criarPaciente(formData);
-        toast({
-          title: "Sucesso",
-          description: "Paciente criado com sucesso"
-        });
+        result = await criarPaciente(formData);
       }
-      onSuccess?.();
+
+      toast({
+        title: paciente?.id ? "Paciente atualizado" : "Paciente cadastrado",
+        description: `${formData.nome} foi ${paciente?.id ? 'atualizado' : 'cadastrado'} com sucesso.`
+      });
+
+      if (onSuccess && result) {
+        onSuccess(result);
+      }
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao salvar paciente",
+        title: "Erro ao salvar",
+        description: error.message || "Ocorreu um erro ao salvar o paciente.",
         variant: "destructive"
       });
     } finally {
@@ -77,139 +75,154 @@ export const PacienteForm = ({ paciente, onSuccess, onCancel }: PacienteFormProp
     }
   };
 
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {paciente ? "Editar Paciente" : "Novo Paciente"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome Completo *</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => handleChange("nome", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-              />
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="nome">Nome Completo *</Label>
+          <Input
+            id="nome"
+            value={formData.nome}
+            onChange={(e) => handleChange('nome', e.target.value)}
+            placeholder="Nome completo do paciente"
+          />
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={formData.telefone}
-                onChange={(e) => handleChange("telefone", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cpf">CPF</Label>
-              <Input
-                id="cpf"
-                value={formData.cpf}
-                onChange={(e) => handleChange("cpf", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="data_nascimento">Data de Nascimento</Label>
-              <Input
-                id="data_nascimento"
-                type="date"
-                value={formData.data_nascimento}
-                onChange={(e) => handleChange("data_nascimento", e.target.value)}
-              />
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => handleChange('email', e.target.value)}
+            placeholder="email@exemplo.com"
+          />
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="endereco">Endereço</Label>
-            <Textarea
-              id="endereco"
-              value={formData.endereco}
-              onChange={(e) => handleChange("endereco", e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="telefone">Telefone</Label>
+          <Input
+            id="telefone"
+            value={formData.telefone}
+            onChange={(e) => handleChange('telefone', e.target.value)}
+            placeholder="(11) 99999-9999"
+          />
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cidade">Cidade</Label>
-              <Input
-                id="cidade"
-                value={formData.cidade}
-                onChange={(e) => handleChange("cidade", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
-              <Input
-                id="estado"
-                value={formData.estado}
-                onChange={(e) => handleChange("estado", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cep">CEP</Label>
-              <Input
-                id="cep"
-                value={formData.cep}
-                onChange={(e) => handleChange("cep", e.target.value)}
-              />
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="cpf">CPF</Label>
+          <Input
+            id="cpf"
+            value={formData.cpf}
+            onChange={(e) => handleChange('cpf', e.target.value)}
+            placeholder="000.000.000-00"
+          />
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="convenio">Convênio</Label>
-              <Select value={formData.convenio} onValueChange={(value) => handleChange("convenio", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o convênio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Particular">Particular</SelectItem>
-                  <SelectItem value="Unimed">Unimed</SelectItem>
-                  <SelectItem value="Bradesco Saúde">Bradesco Saúde</SelectItem>
-                  <SelectItem value="Amil">Amil</SelectItem>
-                  <SelectItem value="SulAmérica">SulAmérica</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="numero_convenio">Número do Convênio</Label>
-              <Input
-                id="numero_convenio"
-                value={formData.numero_convenio}
-                onChange={(e) => handleChange("numero_convenio", e.target.value)}
-              />
-            </div>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+          <Input
+            id="data_nascimento"
+            type="date"
+            value={formData.data_nascimento}
+            onChange={(e) => handleChange('data_nascimento', e.target.value)}
+          />
+        </div>
 
-          <div className="flex gap-2 justify-end">
-            {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
-              </Button>
-            )}
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {paciente ? "Atualizar" : "Criar"} Paciente
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="space-y-2">
+          <Label htmlFor="origem">Origem</Label>
+          <Select value={formData.origem} onValueChange={(value) => handleChange('origem', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Como chegou até nós?" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Google">Google</SelectItem>
+              <SelectItem value="Instagram">Instagram</SelectItem>
+              <SelectItem value="Facebook">Facebook</SelectItem>
+              <SelectItem value="Indicação">Indicação</SelectItem>
+              <SelectItem value="Marketplace">Marketplace</SelectItem>
+              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="convenio">Convênio</Label>
+          <Input
+            id="convenio"
+            value={formData.convenio}
+            onChange={(e) => handleChange('convenio', e.target.value)}
+            placeholder="Nome do convênio (ou deixe vazio para particular)"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="numero_convenio">Número do Convênio</Label>
+          <Input
+            id="numero_convenio"
+            value={formData.numero_convenio}
+            onChange={(e) => handleChange('numero_convenio', e.target.value)}
+            placeholder="Número da carteirinha"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="endereco">Endereço</Label>
+        <Input
+          id="endereco"
+          value={formData.endereco}
+          onChange={(e) => handleChange('endereco', e.target.value)}
+          placeholder="Rua, número, complemento"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="cidade">Cidade</Label>
+          <Input
+            id="cidade"
+            value={formData.cidade}
+            onChange={(e) => handleChange('cidade', e.target.value)}
+            placeholder="Cidade"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="estado">Estado</Label>
+          <Input
+            id="estado"
+            value={formData.estado}
+            onChange={(e) => handleChange('estado', e.target.value)}
+            placeholder="Estado"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cep">CEP</Label>
+          <Input
+            id="cep"
+            value={formData.cep}
+            onChange={(e) => handleChange('cep', e.target.value)}
+            placeholder="00000-000"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+        )}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Salvando..." : (paciente?.id ? "Atualizar" : "Cadastrar")}
+        </Button>
+      </div>
+    </form>
   );
 };

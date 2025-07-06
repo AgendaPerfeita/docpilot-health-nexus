@@ -1,0 +1,188 @@
+
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { usePacientes } from "@/hooks/usePacientes";
+import { useProntuarios } from "@/hooks/useProntuarios";
+import { ArrowLeft, User, Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { MedicalLayout } from "@/components/medical/MedicalLayout";
+
+const NovaEvolucao = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { pacientes, loading: loadingPacientes } = usePacientes();
+  const { criarProntuario } = useProntuarios();
+  
+  const [isConsultationActive, setIsConsultationActive] = useState(false);
+  const [prontuarioData, setProntuarioData] = useState({
+    queixa_principal: '',
+    historia_doenca_atual: '',
+    exame_fisico: '',
+    hipotese_diagnostica: '',
+    conduta: '',
+    observacoes: ''
+  });
+
+  const paciente = pacientes.find(p => p.id === id);
+
+  useEffect(() => {
+    if (!loadingPacientes && !paciente) {
+      toast({
+        title: "Paciente não encontrado",
+        description: "O paciente selecionado não foi encontrado.",
+        variant: "destructive"
+      });
+      navigate('/prontuario');
+    }
+  }, [paciente, loadingPacientes, navigate, toast]);
+
+  const handleStartConsultation = () => {
+    setIsConsultationActive(true);
+  };
+
+  const handleFinishConsultation = async () => {
+    if (!paciente) return;
+
+    try {
+      await criarProntuario({
+        paciente_id: paciente.id,
+        data_atendimento: new Date().toISOString(),
+        ...prontuarioData
+      });
+
+      toast({
+        title: "Evolução salva com sucesso",
+        description: "A evolução médica foi registrada no prontuário do paciente."
+      });
+
+      navigate(`/prontuario/paciente/${paciente.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar evolução",
+        description: error.message || "Ocorreu um erro ao salvar a evolução.",
+        variant: "destructive"
+      });
+    }
+    
+    setIsConsultationActive(false);
+  };
+
+  if (loadingPacientes) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!paciente) {
+    return null;
+  }
+
+  // Criar dados do paciente no formato esperado pelo MedicalLayout
+  const patientData = {
+    nome: paciente.nome,
+    idade: paciente.data_nascimento ? {
+      anos: new Date().getFullYear() - new Date(paciente.data_nascimento).getFullYear(),
+      meses: 0,
+      dias: 0
+    } : { anos: 0, meses: 0, dias: 0 },
+    convenio: paciente.convenio || "Particular",
+    primeiraConsulta: new Date().toLocaleDateString('pt-BR'),
+    antecedentes: {
+      clinicos: null,
+      cirurgicos: null,
+      familiares: null,
+      habitos: null,
+      alergias: null,
+      medicamentos: null
+    },
+    ultimosDiagnosticos: []
+  };
+
+  return (
+    <div>
+      {!isConsultationActive ? (
+        <div className="space-y-6 p-6">
+          {/* Header */}
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" size="sm" onClick={() => navigate('/prontuario')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold tracking-tight">Nova Evolução</h1>
+              <p className="text-muted-foreground">
+                Registrar nova evolução para {paciente.nome}
+              </p>
+            </div>
+          </div>
+
+          {/* Patient Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="h-5 w-5 mr-2" />
+                Dados do Paciente
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                  <p className="font-medium">{paciente.nome}</p>
+                </div>
+                {paciente.convenio && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Convênio</label>
+                    <p className="font-medium">{paciente.convenio}</p>
+                  </div>
+                )}
+                {paciente.telefone && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                    <p className="font-medium">{paciente.telefone}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Start Consultation */}
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <h2 className="text-xl font-semibold mb-2">Iniciar Atendimento</h2>
+              <p className="text-muted-foreground mb-4">
+                Clique para iniciar o atendimento e acessar a interface completa de evolução médica
+              </p>
+              <Button size="lg" onClick={handleStartConsultation}>
+                <Save className="h-4 w-4 mr-2" />
+                Iniciar Atendimento
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <MedicalLayout
+          patientData={patientData}
+          onStartConsultation={handleStartConsultation}
+          onFinishConsultation={handleFinishConsultation}
+          isConsultationActive={isConsultationActive}
+        >
+          {/* Aqui seria o conteúdo específico da evolução médica */}
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Evolução Médica</h2>
+            <p className="text-muted-foreground">
+              Interface de evolução médica para {paciente.nome}
+            </p>
+          </div>
+        </MedicalLayout>
+      )}
+    </div>
+  );
+};
+
+export default NovaEvolucao;

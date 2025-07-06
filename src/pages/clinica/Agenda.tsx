@@ -1,8 +1,11 @@
+
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar } from "@/components/ui/calendar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AgendaConsultas } from "@/components/modules/consultas/AgendaConsultas"
 import { 
   Calendar as CalendarIcon, 
@@ -11,21 +14,30 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  FileText,
+  User,
+  Eye
 } from "lucide-react"
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, isSameDay, isToday } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { usePacientes } from "@/hooks/usePacientes"
 
 const Agenda = () => {
+  const navigate = useNavigate()
+  const { pacientes } = usePacientes()
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date())
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week')
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
+  const [showPatientModal, setShowPatientModal] = useState(false)
 
-  // Mock appointments data
+  // Mock appointments data com pacientes reais
   const appointments = [
     {
       id: '1',
-      patientName: 'Maria Silva',
+      patientId: pacientes[0]?.id || 'mock1',
+      patientName: pacientes[0]?.nome || 'Maria Silva',
       time: '09:00',
       duration: 30,
       type: 'Consulta',
@@ -35,7 +47,8 @@ const Agenda = () => {
     },
     {
       id: '2',
-      patientName: 'João Santos',
+      patientId: pacientes[1]?.id || 'mock2',
+      patientName: pacientes[1]?.nome || 'João Santos',
       time: '10:30',
       duration: 45,
       type: 'Retorno',
@@ -45,7 +58,8 @@ const Agenda = () => {
     },
     {
       id: '3',
-      patientName: 'Ana Costa',
+      patientId: pacientes[2]?.id || 'mock3',
+      patientName: pacientes[2]?.nome || 'Ana Costa',
       time: '14:00',
       duration: 30,
       type: 'Primeira consulta',
@@ -105,6 +119,15 @@ const Agenda = () => {
       default:
         return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const handleAppointmentClick = (appointment: any) => {
+    setSelectedAppointment(appointment)
+    setShowPatientModal(true)
+  }
+
+  const getPatientData = (patientId: string) => {
+    return pacientes.find(p => p.id === patientId)
   }
 
   return (
@@ -240,6 +263,7 @@ const Agenda = () => {
                       <div
                         key={appointment.id}
                         className="p-2 rounded-lg border bg-card hover:bg-accent cursor-pointer transition-colors"
+                        onClick={() => handleAppointmentClick(appointment)}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-medium">{appointment.time}</span>
@@ -297,6 +321,75 @@ const Agenda = () => {
           )}
         </div>
       </div>
+
+      {/* Patient Modal */}
+      <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <User className="h-5 w-5 mr-2" />
+              Detalhes do Agendamento
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAppointment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Paciente</label>
+                  <p className="font-medium">{selectedAppointment.patientName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Horário</label>
+                  <p className="font-medium">{selectedAppointment.time}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Tipo</label>
+                  <Badge variant="outline" className={getTypeColor(selectedAppointment.type)}>
+                    {selectedAppointment.type}
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <Badge className={getStatusColor(selectedAppointment.status)}>
+                    {selectedAppointment.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              {selectedAppointment.notes && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Observações</label>
+                  <p className="text-sm mt-1">{selectedAppointment.notes}</p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2 pt-4">
+                <Button 
+                  onClick={() => {
+                    navigate(`/prontuario/paciente/${selectedAppointment.patientId}`)
+                    setShowPatientModal(false)
+                  }}
+                  className="flex-1"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Ver Prontuário
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    navigate(`/prontuario/paciente/${selectedAppointment.patientId}/nova`)
+                    setShowPatientModal(false)
+                  }}
+                  className="flex-1"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Evolução
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
