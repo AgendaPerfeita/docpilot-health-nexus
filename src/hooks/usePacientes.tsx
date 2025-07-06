@@ -27,8 +27,8 @@ export const usePacientes = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchPacientes = async () => {
-    if (!profile) {
-      console.log('usePacientes - No profile, returning');
+    if (!profile?.id) {
+      console.log('usePacientes - No profile ID, returning');
       return;
     }
     
@@ -45,7 +45,7 @@ export const usePacientes = () => {
         throw error;
       }
       
-      console.log('usePacientes - Fetched data:', data);
+      console.log('usePacientes - Fetched data count:', data?.length || 0);
       setPacientes(data || []);
     } catch (error) {
       console.error('usePacientes - Error fetching pacientes:', error);
@@ -107,10 +107,11 @@ export const usePacientes = () => {
   };
 
   useEffect(() => {
-    if (profile) {
+    if (profile?.id) {
+      console.log('usePacientes - useEffect triggered with profile ID:', profile.id);
       fetchPacientes();
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   return {
     pacientes,
