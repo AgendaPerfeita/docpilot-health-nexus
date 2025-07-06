@@ -27,7 +27,13 @@ const NovaEvolucao = () => {
     observacoes: ''
   });
 
+  // Debug logs
+  console.log('NovaEvolucao - ID from params:', id);
+  console.log('NovaEvolucao - All pacientes:', pacientes);
+  console.log('NovaEvolucao - Loading pacientes:', loadingPacientes);
+
   const paciente = pacientes.find(p => p.id === id);
+  console.log('NovaEvolucao - Found paciente:', paciente);
 
   useEffect(() => {
     if (!loadingPacientes && !paciente) {
