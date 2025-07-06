@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useDragLayer } from "react-dnd";
 import { diasSemana, horarios } from "./constants";
 import { AgendamentoCard } from "./AgendamentoCard";
@@ -14,6 +14,7 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
   onMoveAgendamento 
 }) => {
   const [resizePreview, setResizePreview] = useState<{ id: string, duracao: number } | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
   
   const agendamentosMap = React.useMemo(() => {
     const map = new Map();
@@ -29,12 +30,48 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
     currentOffset: monitor.getClientOffset()
   }));
 
+  // Função para detectar qual célula está sendo hovereada
+  const getHoveredCell = (clientOffset: { x: number; y: number } | null) => {
+    if (!clientOffset || !tableRef.current) return null;
+    
+    const table = tableRef.current;
+    const rect = table.getBoundingClientRect();
+    
+    // Calcular posição relativa dentro da tabela
+    const x = clientOffset.x - rect.left;
+    const y = clientOffset.y - rect.top;
+    
+    // Calcular índices baseados nas dimensões conhecidas
+    const headerHeight = 56; // altura do header
+    const rowHeight = 32;     // altura de cada linha
+    const timeColWidth = 80;  // largura da coluna de tempo
+    const dayColWidth = 120;  // largura da coluna de cada dia
+    
+    if (y < headerHeight || x < timeColWidth) return null;
+    
+    const rowIndex = Math.floor((y - headerHeight) / rowHeight);
+    const colIndex = Math.floor((x - timeColWidth) / dayColWidth);
+    
+    if (rowIndex >= 0 && rowIndex < horarios.length && colIndex >= 0 && colIndex < semana.length) {
+      return {
+        diaIdx: colIndex,
+        horaIdx: rowIndex,
+        diaStr: semana[colIndex].toISOString().split("T")[0],
+        hora: horarios[rowIndex]
+      };
+    }
+    
+    return null;
+  };
+
+  const hoveredCell = isDragging ? getHoveredCell(currentOffset) : null;
+
   const rendered: Record<string, boolean> = {};
 
   return (
     <>
       <div className="overflow-x-auto relative">
-        <table className="min-w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+        <table ref={tableRef} className="min-w-full border-collapse" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr>
               <th className="w-20 bg-muted text-xs font-bold p-2 border-b" style={{ width: 80, minWidth: 80, maxWidth: 80 }} />
@@ -90,6 +127,10 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                     return null;
                   }
                   
+                  // Verificar se é a célula sendo hovereada
+                  const isHovered = hoveredCell && hoveredCell.diaIdx === dIdx && hoveredCell.horaIdx === hIdx;
+                  const canDrop = dragItem && !(dragItem.dia === diaStr && dragItem.hora === hora);
+                  
                   // Renderizar célula normal
                   return (
                     <AgendaCell
@@ -98,8 +139,8 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
                       hora={hora}
                       onCellClick={() => onCellClick(dia, hora)}
                       onMoveAgendamento={onMoveAgendamento}
-                      dragItem={dragItem}
-                      isDragging={isDragging}
+                      isHovered={isHovered && isDragging}
+                      canDrop={canDrop}
                     />
                   );
                 })}
@@ -107,6 +148,24 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
             ))}
           </tbody>
         </table>
+        
+        {/* Overlay invisível pra capturar drops */}
+        {isDragging && (
+          <div 
+            className="absolute inset-0 pointer-events-auto"
+            onMouseUp={(e) => {
+              const cell = getHoveredCell({ x: e.clientX, y: e.clientY });
+              if (cell && dragItem && onMoveAgendamento) {
+                const canDrop = !(dragItem.dia === cell.diaStr && dragItem.hora === cell.hora);
+                if (canDrop) {
+                  console.log('Drop via overlay:', { from: `${dragItem.dia}_${dragItem.hora}`, to: `${cell.diaStr}_${cell.hora}` });
+                  onMoveAgendamento(dragItem.id, cell.diaStr, cell.hora);
+                }
+              }
+            }}
+            style={{ zIndex: 1000 }}
+          />
+        )}
       </div>
       
       {/* Preview do drag */}
@@ -114,6 +173,7 @@ export const AgendaGridInner: React.FC<AgendaGridProps> = ({
         <DragPreview 
           item={dragItem} 
           currentOffset={currentOffset}
+          hoveredCell={hoveredCell}
         />
       )}
     </>
