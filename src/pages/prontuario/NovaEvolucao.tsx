@@ -21,6 +21,7 @@ const NovaEvolucao = () => {
   const [currentProntuarioId, setCurrentProntuarioId] = useState<string | undefined>();
   const [pacienteFromDB, setPacienteFromDB] = useState<any>(null);
   const [fetchingPatient, setFetchingPatient] = useState(false);
+  const [hasAttemptedDirectFetch, setHasAttemptedDirectFetch] = useState(false);
   const [prontuarioData, setProntuarioData] = useState({
     queixa_principal: '',
     historia_doenca_atual: '',
@@ -47,7 +48,7 @@ const NovaEvolucao = () => {
   }
 
   useEffect(() => {
-    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id, fetchingPatient, pacientesCount: pacientes.length });
+    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id, fetchingPatient, pacientesCount: pacientes.length, hasAttemptedDirectFetch });
     
     // If we're still loading pacientes, wait
     if (loadingPacientes) {
@@ -56,9 +57,10 @@ const NovaEvolucao = () => {
     }
     
     // If we have pacientes loaded but no match found, and we're not already fetching directly
-    if (pacientes.length > 0 && !paciente && id && !fetchingPatient) {
+    if (pacientes.length > 0 && !paciente && id && !fetchingPatient && !hasAttemptedDirectFetch) {
       console.log('NovaEvolucao - Pacientes loaded but patient not found in list, attempting direct fetch');
       setFetchingPatient(true);
+      setHasAttemptedDirectFetch(true);
       
       const fetchPatientDirectly = async () => {
         try {
@@ -99,9 +101,10 @@ const NovaEvolucao = () => {
     }
     
     // If we have no pacientes loaded and we're not loading, try direct fetch as fallback
-    if (pacientes.length === 0 && !loadingPacientes && id && !fetchingPatient && !pacienteFromDB) {
+    if (pacientes.length === 0 && !loadingPacientes && id && !fetchingPatient && !pacienteFromDB && !hasAttemptedDirectFetch) {
       console.log('NovaEvolucao - No pacientes loaded and not loading, attempting direct fetch as fallback');
       setFetchingPatient(true);
+      setHasAttemptedDirectFetch(true);
       
       const fetchPatientDirectly = async () => {
         try {
@@ -140,7 +143,7 @@ const NovaEvolucao = () => {
       
       fetchPatientDirectly();
     }
-  }, [paciente, loadingPacientes, navigate, toast, id, fetchingPatient, pacientes.length, pacienteFromDB]);
+  }, [paciente, loadingPacientes, navigate, toast, id, fetchingPatient, pacientes.length, pacienteFromDB, hasAttemptedDirectFetch]);
 
   useEffect(() => {
     if (!id) {
@@ -208,10 +211,21 @@ const NovaEvolucao = () => {
     );
   }
 
-  // Only return null if we're not loading and still don't have a patient
-  if (!paciente) {
+  // Only show error if we're not loading anything and have attempted all fetch methods
+  if (!paciente && !loadingPacientes && !fetchingPatient && hasAttemptedDirectFetch) {
     console.log('NovaEvolucao - No patient found after all attempts');
     return null;
+  }
+
+  // If we don't have a patient yet but haven't attempted direct fetch, show loading
+  if (!paciente) {
+    console.log('NovaEvolucao - Patient not loaded yet, showing loading state');
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2">Carregando dados do paciente...</span>
+      </div>
+    );
   }
 
   // Create patient data from real patient information
