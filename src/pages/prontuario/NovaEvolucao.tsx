@@ -47,15 +47,17 @@ const NovaEvolucao = () => {
   }
 
   useEffect(() => {
-    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id, fetchingPatient });
+    console.log('NovaEvolucao - useEffect triggered:', { loadingPacientes, paciente: !!paciente, id, fetchingPatient, pacientesCount: pacientes.length });
     
-    // Only attempt direct fetch if:
-    // 1. Not currently loading patients from usePacientes
-    // 2. No patient found in the list
-    // 3. We have an ID
-    // 4. Not already fetching patient directly
-    if (!loadingPacientes && !paciente && id && !fetchingPatient) {
-      console.log('NovaEvolucao - Patient not found in list, attempting direct fetch');
+    // If we're still loading pacientes, wait
+    if (loadingPacientes) {
+      console.log('NovaEvolucao - Still loading pacientes, waiting...');
+      return;
+    }
+    
+    // If we have pacientes loaded but no match found, and we're not already fetching directly
+    if (pacientes.length > 0 && !paciente && id && !fetchingPatient) {
+      console.log('NovaEvolucao - Pacientes loaded but patient not found in list, attempting direct fetch');
       setFetchingPatient(true);
       
       const fetchPatientDirectly = async () => {
@@ -95,7 +97,50 @@ const NovaEvolucao = () => {
       
       fetchPatientDirectly();
     }
-  }, [paciente, loadingPacientes, navigate, toast, id, fetchingPatient]);
+    
+    // If we have no pacientes loaded and we're not loading, try direct fetch as fallback
+    if (pacientes.length === 0 && !loadingPacientes && id && !fetchingPatient && !pacienteFromDB) {
+      console.log('NovaEvolucao - No pacientes loaded and not loading, attempting direct fetch as fallback');
+      setFetchingPatient(true);
+      
+      const fetchPatientDirectly = async () => {
+        try {
+          console.log('NovaEvolucao - Fetching patient directly with ID (fallback):', id);
+          const { data, error } = await supabase
+            .from('pacientes')
+            .select('*')
+            .eq('id', id)
+            .single();
+          
+          if (error) {
+            console.error('NovaEvolucao - Direct fetch error (fallback):', error);
+            throw error;
+          }
+          
+          if (data) {
+            console.log('NovaEvolucao - Found patient directly (fallback):', data);
+            setPacienteFromDB(data);
+            setFetchingPatient(false);
+            return;
+          }
+          
+          // If we get here, no patient was found
+          throw new Error('Patient not found');
+        } catch (error) {
+          console.error('NovaEvolucao - Failed to fetch patient directly (fallback):', error);
+          setFetchingPatient(false);
+          toast({
+            title: "Paciente não encontrado",
+            description: "O paciente selecionado não foi encontrado.",
+            variant: "destructive"
+          });
+          navigate('/prontuario');
+        }
+      };
+      
+      fetchPatientDirectly();
+    }
+  }, [paciente, loadingPacientes, navigate, toast, id, fetchingPatient, pacientes.length, pacienteFromDB]);
 
   useEffect(() => {
     if (!id) {

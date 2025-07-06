@@ -29,6 +29,7 @@ export const usePacientes = () => {
   const fetchPacientes = async () => {
     if (!profile?.id) {
       console.log('usePacientes - No profile ID, returning');
+      setLoading(false);
       return;
     }
     
