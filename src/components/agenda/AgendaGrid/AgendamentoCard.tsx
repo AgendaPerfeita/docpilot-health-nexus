@@ -28,7 +28,7 @@ export function AgendamentoCard({
     }),
   });
 
-  // Estado de resize local
+  // Estado de resize
   const [isResizing, setIsResizing] = useState(false);
   const [startY, setStartY] = useState(0);
   const [startDur, setStartDur] = useState(agendamento.duracao || 30);
@@ -48,17 +48,17 @@ export function AgendamentoCard({
     if (!isResizing) return;
     function onMouseMove(e: MouseEvent) {
       const deltaY = e.clientY - startY;
-      const minutos = Math.round(deltaY / 4) * 5; // Mais sensível
+      const minutos = Math.round(deltaY / 4) * 5;
       let novaDuracao = startDur + minutos;
-      if (novaDuracao < 15) novaDuracao = 15; // Mínimo 15 minutos
-      if (novaDuracao > 12 * 60) novaDuracao = 12 * 60; // Máximo 12 horas
+      if (novaDuracao < 15) novaDuracao = 15;
+      if (novaDuracao > 12 * 60) novaDuracao = 12 * 60;
       setResizePreview({ id: agendamento.id!, duracao: novaDuracao });
     }
     function onMouseUp() {
       setIsResizing(false);
       document.body.style.cursor = "";
       if (resizePreview && resizePreview.id === agendamento.id && resizePreview.duracao !== agendamento.duracao && onResize) {
-        onResize(agendamento.id!, resizePreview.duracao);
+        onResize(agendamento.id!, resizePreview.duracao);  
       }
       setResizePreview(null);
     }
@@ -76,7 +76,6 @@ export function AgendamentoCard({
     }
   }, [preview]);
 
-  // Duração visual durante o resize
   const visualDuracao = resizePreview && resizePreview.id === agendamento.id ? resizePreview.duracao : agendamento.duracao || 30;
   const visualLinhas = Math.max(1, Math.round(visualDuracao / 15));
 
@@ -86,13 +85,13 @@ export function AgendamentoCard({
       className="border-b border-r relative align-top p-0 transition-all duration-200"
       style={{ 
         minWidth: 120,
-        opacity: isDragging ? 0.4 : 1,
-        transform: isDragging ? 'scale(0.95)' : 'scale(1)',
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
       }}
       ref={dragCard}
     >
       <div className="absolute inset-0 flex flex-col h-full select-none">
-        <div className="flex-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 text-xs font-semibold rounded-t">
+        <div className="flex-1 p-2 bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 text-xs font-semibold">
           <div className="flex items-center gap-1 mb-1">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
             <span className="font-bold">{hora} - {addMinutes(hora, visualDuracao)}</span>
@@ -100,13 +99,11 @@ export function AgendamentoCard({
           <div className="text-blue-600">{agendamento.paciente || "Agendado"}</div>
         </div>
         
-        {/* Handle de resize */}
         <div
-          className="h-3 cursor-s-resize bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-200 rounded-b flex items-center justify-center group"
-          title="Arraste para redimensionar"
+          className="h-3 cursor-s-resize bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 transition-all duration-200 flex items-center justify-center group"
           onMouseDown={onResizeMouseDown}
         >
-          <div className="flex space-x-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+          <div className="flex space-x-0.5 opacity-60 group-hover:opacity-100">
             <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
             <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
             <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
