@@ -69,8 +69,8 @@ const mockFollowUps: FollowUpEntry[] = [
 export function FollowUpTable() {
   const [followUps, setFollowUps] = useState<FollowUpEntry[]>(mockFollowUps)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [tipoFilter, setTipoFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('todos')
+  const [tipoFilter, setTipoFilter] = useState<string>('todos')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<FollowUpEntry | null>(null)
 
@@ -109,8 +109,8 @@ export function FollowUpTable() {
   const filteredFollowUps = followUps.filter(item => {
     const matchesSearch = item.medico.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.observacoes.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = !statusFilter || item.status === statusFilter
-    const matchesTipo = !tipoFilter || item.tipo === tipoFilter
+    const matchesStatus = statusFilter === 'todos' || item.status === statusFilter
+    const matchesTipo = tipoFilter === 'todos' || item.tipo === tipoFilter
     
     return matchesSearch && matchesStatus && matchesTipo
   })
@@ -263,7 +263,7 @@ export function FollowUpTable() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="Agendado">Agendado</SelectItem>
                 <SelectItem value="Realizado">Realizado</SelectItem>
                 <SelectItem value="Cancelado">Cancelado</SelectItem>
@@ -274,7 +274,7 @@ export function FollowUpTable() {
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 <SelectItem value="Consulta">Consulta</SelectItem>
                 <SelectItem value="Retorno">Retorno</SelectItem>
                 <SelectItem value="Exame">Exame</SelectItem>
