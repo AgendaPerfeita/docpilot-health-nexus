@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { usePacientes } from "@/hooks/usePacientes";
 import { useProntuarios } from "@/hooks/useProntuarios";
+import { formatarTelefone } from "@/lib/formatters";
 import { ArrowLeft, User, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MedicalLayout } from "@/components/medical/MedicalLayout";
@@ -286,7 +287,7 @@ const NovaEvolucao = () => {
                 {paciente.telefone && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                    <p className="font-medium text-sm sm:text-base break-all">{paciente.telefone}</p>
+                    <p className="font-medium text-sm sm:text-base break-all">{formatarTelefone(paciente.telefone)}</p>
                   </div>
                 )}
               </div>

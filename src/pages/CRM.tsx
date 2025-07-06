@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Search, Plus, Edit, Eye, Phone, Mail, Calendar, User } from "lucide-react"
 import { usePacientes } from "@/hooks/usePacientes"
+import { formatarCPF, formatarTelefone } from "@/lib/formatters"
 import { PacienteForm } from "@/components/modules/pacientes/PacienteForm"
 import { useToast } from "@/hooks/use-toast"
 
@@ -177,7 +178,7 @@ export default function CRM() {
                       {patient.telefone && (
                         <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3" />
-                          <span className="truncate">{patient.telefone}</span>
+                          <span className="truncate">{formatarTelefone(patient.telefone)}</span>
                         </div>
                       )}
                       {patient.email && (
@@ -248,7 +249,7 @@ export default function CRM() {
                           {patient.telefone && (
                             <div className="flex items-center gap-1 text-sm">
                               <Phone className="h-3 w-3" />
-                              {patient.telefone}
+                              {formatarTelefone(patient.telefone)}
                             </div>
                           )}
                           {patient.email && (
@@ -319,11 +320,11 @@ export default function CRM() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-sm font-medium">Telefone:</span>
-                  <div>{selectedPatient.telefone || 'Não informado'}</div>
+                                          <div>{selectedPatient.telefone ? formatarTelefone(selectedPatient.telefone) : 'Não informado'}</div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-sm font-medium">CPF:</span>
-                  <div>{selectedPatient.cpf || 'Não informado'}</div>
+                                          <span className="text-sm font-medium">CPF:</span>
+                        <div>{selectedPatient.cpf ? formatarCPF(selectedPatient.cpf) : 'Não informado'}</div>
                 </div>
                 <div className="space-y-1">
                   <span className="text-sm font-medium">Data de Nascimento:</span>

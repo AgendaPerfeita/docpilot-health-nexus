@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { EspecialidadeCombobox } from "@/components/ui/especialidade-combobox";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Stethoscope, Eye, EyeOff } from "lucide-react";
@@ -16,7 +17,7 @@ const Register = () => {
     email: "",
     telefone: "",
     documento: "",
-    tipo: "" as "medico" | "clinica" | "hospital" | "",
+    tipo: "" as "medico" | "paciente" | "clinica" | "hospital" | "",
     especialidade: "",
     crm: "",
     password: "",
@@ -144,6 +145,7 @@ const Register = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="medico">Médico</SelectItem>
+                      <SelectItem value="paciente">Paciente</SelectItem>
                       <SelectItem value="clinica">Clínica</SelectItem>
                       <SelectItem value="hospital">Hospital</SelectItem>
                     </SelectContent>
@@ -179,11 +181,11 @@ const Register = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="documento">
-                  {formData.tipo === "medico" ? "CPF" : formData.tipo === "clinica" ? "CNPJ" : "CPF/CNPJ"}
+                  {formData.tipo === "medico" || formData.tipo === "paciente" ? "CPF" : formData.tipo === "clinica" ? "CNPJ" : "CPF/CNPJ"}
                 </Label>
                 <Input
                   id="documento"
-                  placeholder={formData.tipo === "medico" ? "000.000.000-00" : formData.tipo === "clinica" ? "00.000.000/0000-00" : "Documento"}
+                  placeholder={formData.tipo === "medico" || formData.tipo === "paciente" ? "000.000.000-00" : formData.tipo === "clinica" ? "00.000.000/0000-00" : "Documento"}
                   value={formData.documento}
                   onChange={(e) => handleInputChange("documento", e.target.value)}
                   required
@@ -207,11 +209,10 @@ const Register = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="especialidade">Especialidade</Label>
-                    <Input
-                      id="especialidade"
-                      placeholder="Ex: Cardiologia"
+                    <EspecialidadeCombobox
                       value={formData.especialidade}
-                      onChange={(e) => handleInputChange("especialidade", e.target.value)}
+                      onValueChange={(value) => handleInputChange("especialidade", value)}
+                      placeholder="Selecione uma especialidade..."
                       disabled={isLoading}
                     />
                   </div>

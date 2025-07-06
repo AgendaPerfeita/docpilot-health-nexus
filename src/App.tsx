@@ -19,6 +19,8 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import ProntuarioList from "./pages/prontuario/index";
 import PacienteProntuario from "./pages/prontuario/PacienteProntuario";
 import NovaEvolucaoProntuario from "./pages/prontuario/NovaEvolucao";
+import VisualizarProntuario from "./pages/prontuario/VisualizarProntuario";
+import EditarProntuario from "./pages/prontuario/EditarProntuario";
 
 // ÁREAS ESPECÍFICAS POR TIPO DE USUÁRIO
 // Área do Paciente
@@ -37,6 +39,28 @@ import CRMGlobal from "./pages/CRM";
 // Index
 import Index from "./pages/Index";
 import PrescricaoDigital from "./pages/PrescricaoDigital";
+
+// Configurações
+import Configuracoes from "./pages/Configuracoes";
+
+// Clínica
+import GestaoMedicos from "./pages/clinica/GestaoMedicos";
+import WhatsAppAPI from "./pages/WhatsAppAPI";
+
+// Hospital
+import GestaoHospitalar from "./pages/GestaoHospitalar";
+
+// Financeiro
+import Financeiro from "./pages/Financeiro";
+import DRE from "./pages/DRE";
+import Comissoes from "./pages/Comissoes";
+
+// Relatórios
+import Relatorios from "./pages/Relatorios";
+import BIAvancado from "./pages/BIAvancado";
+
+// Acompanhamento
+import AcompanhamentoPacientes from "./pages/clinica-pro/AcompanhamentoPacientes";
 
 // Shared components
 import { PermissionGuard } from "./components/PermissionGuard";
@@ -71,6 +95,8 @@ function App() {
                   <Route path="/prontuario" element={<ProntuarioList />} />
                   <Route path="/prontuario/paciente/:id" element={<PacienteProntuario />} />
                   <Route path="/prontuario/paciente/:id/nova" element={<NovaEvolucaoProntuario />} />
+                  <Route path="/prontuario/paciente/:id/visualizar/:prontuarioId" element={<VisualizarProntuario />} />
+                  <Route path="/prontuario/paciente/:id/editar/:prontuarioId" element={<EditarProntuario />} />
                   
                   {/* ===== ÁREAS ESPECÍFICAS POR TIPO DE USUÁRIO ===== */}
                   
@@ -94,6 +120,34 @@ function App() {
                   
                   {/* Prescrição Digital - acessível por médicos */}
                   <Route path="/prescricao-digital" element={<PrescricaoDigital />} />
+
+                  {/* Clínica */}
+                  <Route path="/clinica/gestao-medicos" element={<GestaoMedicos />} />
+                  <Route path="/clinica/whatsapp-api" element={<WhatsAppAPI />} />
+
+                  {/* Hospital */}
+                  <Route path="/hospital" element={<GestaoHospitalar />} />
+                  <Route path="/hospital/gestao" element={<GestaoHospitalar />} />
+
+                  {/* Financeiro */}
+                  <Route path="/financeiro" element={<Financeiro />} />
+                  <Route path="/financeiro/dre" element={<DRE />} />
+                  <Route path="/financeiro/comissoes" element={<Comissoes />} />
+
+                  {/* Relatórios */}
+                  <Route path="/relatorios" element={<Relatorios />} />
+                  <Route path="/relatorios/bi-avancado" element={<BIAvancado />} />
+
+                  {/* Acompanhamento */}
+                  <Route path="/acompanhamento-pacientes" element={<AcompanhamentoPacientes />} />
+
+                  {/* Rotas de teste para debug */}
+                  <Route path="/teste-clinica" element={<div>Teste Clínica</div>} />
+                  <Route path="/teste-hospital" element={<div>Teste Hospital</div>} />
+                  <Route path="/teste-financeiro" element={<div>Teste Financeiro</div>} />
+
+                  {/* Configurações - acessível por todos */}
+                  <Route path="/configuracoes" element={<Configuracoes />} />
 
                 </Route>
               </Routes>

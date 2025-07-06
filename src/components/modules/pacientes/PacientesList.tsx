@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePacientes, Paciente } from "@/hooks/usePacientes";
 import { Search, Edit, Trash2, Plus, Phone, Mail } from "lucide-react";
+import { formatarCPF, formatarTelefone } from "@/lib/formatters";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -98,6 +99,8 @@ export const PacientesList = ({ onEdit, onNew }: PacientesListProps) => {
                   <TableHead>Contato</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>Convênio</TableHead>
+                  <TableHead>Origem</TableHead>
+                  <TableHead>Endereço</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -115,7 +118,7 @@ export const PacientesList = ({ onEdit, onNew }: PacientesListProps) => {
                         {paciente.telefone && (
                           <div className="flex items-center gap-1 text-sm">
                             <Phone className="h-3 w-3" />
-                            {paciente.telefone}
+                            {formatarTelefone(paciente.telefone)}
                           </div>
                         )}
                         {paciente.email && (
@@ -126,13 +129,36 @@ export const PacientesList = ({ onEdit, onNew }: PacientesListProps) => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{paciente.cpf || "-"}</TableCell>
+                    <TableCell>{paciente.cpf ? formatarCPF(paciente.cpf) : "-"}</TableCell>
                     <TableCell>
                       {paciente.convenio ? (
                         <Badge variant="secondary">{paciente.convenio}</Badge>
                       ) : (
+                        <Badge variant="outline">Particular</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {paciente.origem ? (
+                        <Badge variant="outline">{paciente.origem}</Badge>
+                      ) : (
                         "-"
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {paciente.endereco && (
+                          <div>{paciente.endereco}</div>
+                        )}
+                        {paciente.bairro && (
+                          <div className="text-muted-foreground">{paciente.bairro}</div>
+                        )}
+                        {paciente.cidade && paciente.estado && (
+                          <div className="text-muted-foreground">{paciente.cidade} - {paciente.estado}</div>
+                        )}
+                        {!paciente.endereco && !paciente.bairro && !paciente.cidade && (
+                          "-"
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">

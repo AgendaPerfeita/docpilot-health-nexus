@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { usePacientes, Paciente } from "@/hooks/usePacientes";
 import { PacienteForm } from "@/components/modules/pacientes/PacienteForm";
 import { Search, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { formatarCPF, formatarTelefone } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 interface PacienteSelectorProps {
@@ -96,10 +97,10 @@ export const PacienteSelector = ({
                     />
                     <div className="flex-1">
                       <div className="font-medium">{paciente.nome}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {paciente.cpf && `CPF: ${paciente.cpf}`}
-                        {paciente.telefone && ` • ${paciente.telefone}`}
-                      </div>
+                                              <div className="text-sm text-muted-foreground">
+                          {paciente.cpf && `CPF: ${formatarCPF(paciente.cpf)}`}
+                          {paciente.telefone && ` • ${formatarTelefone(paciente.telefone)}`}
+                        </div>
                     </div>
                   </CommandItem>
                 ))}

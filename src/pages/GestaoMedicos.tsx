@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Search, Plus, Edit, Eye, UserCheck, Calendar, Clock, DollarSign, TrendingUp } from "lucide-react"
 import { useMedicosCadastro } from "@/hooks/useMedicosCadastro"
+import { formatarTelefone } from "@/lib/formatters"
 
 const mockMedicos = [
   {
@@ -483,7 +484,7 @@ export default function GestaoMedicos() {
                   <div><strong>CRM:</strong> {selectedMedico.crm}</div>
                   <div><strong>Especialidade:</strong> {selectedMedico.specialty}</div>
                   <div><strong>Email:</strong> {selectedMedico.email}</div>
-                  <div><strong>Telefone:</strong> {selectedMedico.phone}</div>
+                                          <div><strong>Telefone:</strong> {formatarTelefone(selectedMedico.phone)}</div>
                   <div><strong>Plano:</strong> {selectedMedico.plan}</div>
                 </div>
               </TabsContent>

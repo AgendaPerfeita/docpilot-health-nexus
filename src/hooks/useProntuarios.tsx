@@ -44,8 +44,19 @@ export const useProntuarios = () => {
   const fetchProntuarios = async (pacienteId?: string) => {
     if (!profile) return;
     
+    console.log('useProntuarios - Fetching prontuarios for profile:', profile.id, 'pacienteId:', pacienteId);
     setLoading(true);
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('useProntuarios - Current auth user:', user?.id);
+      
+      if (!user) {
+        console.error('useProntuarios - No authenticated user found');
+        setProntuarios([]);
+        return;
+      }
+
       let query = supabase
         .from('prontuarios')
         .select(`
@@ -60,8 +71,13 @@ export const useProntuarios = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('useProntuarios - Database error:', error);
+        throw error;
+      }
       
+      console.log('useProntuarios - Fetched prontuarios count:', data?.length || 0);
+      console.log('useProntuarios - Fetched prontuarios:', data);
       setProntuarios(data || []);
     } catch (error) {
       console.error('Erro ao buscar prontuários:', error);
@@ -145,6 +161,27 @@ export const useProntuarios = () => {
     return data || [];
   };
 
+  const buscarProntuarioPorId = async (id: string) => {
+    console.log('useProntuarios - buscando prontuário por ID:', id);
+    const { data, error } = await supabase
+      .from('prontuarios')
+      .select(`
+        *,
+        paciente:pacientes(nome, data_nascimento, convenio),
+        prescricoes(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('useProntuarios - Erro ao buscar prontuário por ID:', error);
+      throw error;
+    }
+    
+    console.log('useProntuarios - Prontuário encontrado por ID:', data);
+    return data;
+  };
+
   useEffect(() => {
     if (profile) {
       fetchProntuarios();
@@ -159,6 +196,7 @@ export const useProntuarios = () => {
     adicionarPrescricao,
     removerPrescricao,
     buscarProntuarios,
+    buscarProntuarioPorId,
     refetch: fetchProntuarios
   };
 };

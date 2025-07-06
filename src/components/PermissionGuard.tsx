@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { useMedicoPermissions } from '@/hooks/useMedicoPermissions';
 import { useAuth } from '@/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock } from 'lucide-react';
@@ -20,24 +19,34 @@ export const PermissionGuard = ({
   showUpgradeMessage = true 
 }: PermissionGuardProps) => {
   const { profile } = useAuth();
-  const { permissions, loading, temPermissao, isPremium } = useMedicoPermissions();
 
-  // Não é médico - liberado
-  if (profile?.tipo !== 'medico') {
+  // Se não há perfil, mostrar loading ou fallback
+  if (!profile) {
+    return fallback || (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Para usuários que não são médicos, liberar acesso
+  if (profile.tipo !== 'medico') {
     return <>{children}</>;
   }
 
-  if (loading) {
-    return <div className="animate-pulse bg-muted h-20 rounded" />;
-  }
-
-  // Verificar se tem a permissão específica
-  if (requiredPermission && !temPermissao(requiredPermission)) {
-    return fallback || (showUpgradeMessage ? <UpgradeMessage /> : null);
+  // Para médicos, verificar permissões básicas do perfil
+  if (requiredPermission) {
+    const hasPermission = profile[requiredPermission as keyof typeof profile];
+    if (!hasPermission) {
+      return fallback || (showUpgradeMessage ? <UpgradeMessage /> : null);
+    }
   }
 
   // Verificar se precisa de plano premium
-  if (requiresPremium && !isPremium()) {
+  if (requiresPremium && profile.plano_medico !== 'premium') {
     return fallback || (showUpgradeMessage ? <UpgradeMessage /> : null);
   }
 

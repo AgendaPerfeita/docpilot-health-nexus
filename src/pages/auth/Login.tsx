@@ -22,16 +22,41 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        // Tratar erro de login
+        let errorMessage = "Verifique suas credenciais e tente novamente.";
+        
+        if (error.message === "Invalid login credentials") {
+          errorMessage = "Email ou senha incorretos.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Email não confirmado. Verifique sua caixa de entrada.";
+        } else if (error.message.includes("Too many requests")) {
+          errorMessage = "Muitas tentativas. Tente novamente em alguns minutos.";
+        } else {
+          errorMessage = error.message;
+        }
+        
+        toast({
+          title: "Erro no login",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Login bem-sucedido
       toast({
         title: "Login realizado com sucesso!",
         description: "Bem-vindo ao SmartDoc",
       });
       navigate("/");
     } catch (error: any) {
+      // Erro inesperado
       toast({
         title: "Erro no login",
-        description: error.message || "Verifique suas credenciais e tente novamente.",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
     } finally {

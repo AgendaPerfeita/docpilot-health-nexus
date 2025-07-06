@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { usePacientes } from "@/hooks/usePacientes";
 import { useProntuarios } from "@/hooks/useProntuarios";
+import { formatarCPF, formatarTelefone } from "@/lib/formatters";
 import { 
   ArrowLeft, 
   Plus, 
@@ -26,22 +26,47 @@ const PacienteProntuario = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { pacientes, loading: loadingPacientes } = usePacientes();
+  const { pacientes, loading: loadingPacientes, buscarPacientePorId } = usePacientes();
   const { prontuarios, loading: loadingProntuarios } = useProntuarios();
+  const [pacienteFromDB, setPacienteFromDB] = useState<any>(null);
+  const [fetchingPatient, setFetchingPatient] = useState(false);
 
-  const paciente = pacientes.find(p => p.id === id);
+  // Debug logs
+  console.log('PacienteProntuario - ID from params:', id);
+  console.log('PacienteProntuario - All pacientes:', pacientes);
+  console.log('PacienteProntuario - Loading pacientes:', loadingPacientes);
+
+  const paciente = pacientes.find(p => p.id === id) || pacienteFromDB;
   const pacienteProntuarios = prontuarios.filter(p => p.paciente_id === id);
 
+  console.log('PacienteProntuario - Found paciente:', paciente);
+  console.log('PacienteProntuario - Paciente prontuarios:', pacienteProntuarios);
+
+  // Buscar paciente diretamente se não encontrado na lista
   useEffect(() => {
-    if (!loadingPacientes && !paciente) {
-      toast({
-        title: "Paciente não encontrado",
-        description: "O paciente selecionado não foi encontrado.",
-        variant: "destructive"
-      });
-      navigate('/prontuario');
-    }
-  }, [paciente, loadingPacientes, navigate, toast]);
+    const fetchPacienteDirectly = async () => {
+      if (!loadingPacientes && !paciente && id && !fetchingPatient) {
+        console.log('PacienteProntuario - Paciente não encontrado na lista, buscando diretamente...');
+        setFetchingPatient(true);
+        try {
+          const pacienteData = await buscarPacientePorId(id);
+          setPacienteFromDB(pacienteData);
+        } catch (error) {
+          console.error('PacienteProntuario - Erro ao buscar paciente diretamente:', error);
+          toast({
+            title: "Paciente não encontrado",
+            description: "O paciente selecionado não foi encontrado.",
+            variant: "destructive"
+          });
+          navigate('/prontuario');
+        } finally {
+          setFetchingPatient(false);
+        }
+      }
+    };
+
+    fetchPacienteDirectly();
+  }, [loadingPacientes, paciente, id, buscarPacientePorId, toast, navigate, fetchingPatient]);
 
   const formatDate = (dateString: string) => {
     return new Intl.DateTimeFormat('pt-BR', {
@@ -66,7 +91,7 @@ const PacienteProntuario = () => {
     return `${age} anos`;
   };
 
-  if (loadingPacientes || loadingProntuarios) {
+  if (loadingPacientes || loadingProntuarios || fetchingPatient) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -123,7 +148,7 @@ const PacienteProntuario = () => {
               {paciente.cpf && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">CPF</label>
-                  <p className="font-medium text-sm sm:text-base">{paciente.cpf}</p>
+                  <p className="font-medium text-sm sm:text-base">{formatarCPF(paciente.cpf)}</p>
                 </div>
               )}
             </div>
@@ -134,7 +159,7 @@ const PacienteProntuario = () => {
                   <label className="text-sm font-medium text-muted-foreground">Telefone</label>
                   <p className="font-medium flex items-center text-sm sm:text-base">
                     <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="break-all">{paciente.telefone}</span>
+                    <span className="break-all">{formatarTelefone(paciente.telefone)}</span>
                   </p>
                 </div>
               )}
@@ -222,12 +247,22 @@ const PacienteProntuario = () => {
                       )}
                     </div>
                     <div className="flex space-x-2 w-full sm:w-auto">
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 sm:flex-none"
+                        onClick={() => navigate(`/prontuario/paciente/${id}/visualizar/${prontuario.id}`)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Visualizar</span>
                         <span className="sm:hidden">Ver</span>
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 sm:flex-none"
+                        onClick={() => navigate(`/prontuario/paciente/${id}/editar/${prontuario.id}`)}
+                      >
                         <Edit className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Editar</span>
                         <span className="sm:hidden">Edit</span>

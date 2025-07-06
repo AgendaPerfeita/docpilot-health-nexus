@@ -61,7 +61,7 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
   },
   {
     title: "Área do Paciente",
-    url: "/area-paciente",
+            url: "/paciente",
     icon: Stethoscope,
     group: "clinico"
   },
@@ -73,25 +73,25 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
   },
   {
     title: "Gestão de Médicos",
-    url: "/gestao-medicos",
+    url: "/clinica/gestao-medicos",
     icon: UserPlus,
     group: "clinica"
   },
   {
     title: "WhatsApp API",
-    url: "/whatsapp-api",
+    url: "/clinica/whatsapp-api",
     icon: Send,
     group: "clinica"
   },
   {
     title: "BI Avançado",
-    url: "/bi-avancado",
+    url: "/relatorios/bi-avancado",
     icon: BarChart3,
     group: "clinica"
   },
   {
     title: "Gestão Hospitalar",
-    url: "/gestao-hospitalar",
+    url: "/hospital",
     icon: Building2,
     group: "hospital"
   },
@@ -103,13 +103,13 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
   },
   {
     title: "DRE",
-    url: "/dre",
+    url: "/financeiro/dre",
     icon: TrendingUp,
     group: "financeiro"
   },
   {
     title: "Comissões",
-    url: "/comissoes",
+    url: "/financeiro/comissoes",
     icon: CreditCard,
     group: "financeiro"
   },
@@ -168,7 +168,7 @@ export function AppSidebar() {
         // Funcionalidades básicas sempre disponíveis
         visibleGroups.clinico = groupedItems.clinico.filter(item => {
           // Médicos free só veem funcionalidades básicas
-          const basicItems = ['CRM', 'Prontuário', 'Agenda'];
+          const basicItems = ['CRM', 'Prontuário', 'Agenda', 'Acompanhamento Pacientes'];
           return basicItems.includes(item.title);
         });
         
@@ -187,7 +187,7 @@ export function AppSidebar() {
 
       case 'paciente':
         visibleGroups.paciente = [
-          { title: "Área do Paciente", url: "/area-paciente", icon: Stethoscope, group: "paciente" },
+          { title: "Área do Paciente", url: "/paciente", icon: Stethoscope, group: "paciente" },
           { title: "Meus Agendamentos", url: "/agenda", icon: Calendar, group: "paciente" }
         ]
         visibleGroups.sistema = groupedItems.sistema

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePacientes } from "@/hooks/usePacientes";
 import { useProntuarios } from "@/hooks/useProntuarios";
+import { formatarTelefone } from "@/lib/formatters";
 import { useConsultas } from "@/hooks/useConsultas";
 import { 
   Search, 
@@ -258,7 +259,7 @@ const PacientesList = () => {
                                 {consulta.paciente?.telefone && (
                                   <div className="flex items-center">
                                     <Phone className="h-3 w-3 mr-1" />
-                                    <span className="truncate">{consulta.paciente.telefone}</span>
+                                    <span className="truncate">{formatarTelefone(consulta.paciente.telefone)}</span>
                                   </div>
                                 )}
                               </div>
@@ -356,7 +357,7 @@ const PacientesList = () => {
                               {paciente.telefone && (
                                 <div className="flex items-center">
                                   <Phone className="h-3 w-3 mr-1" />
-                                  <span className="truncate">{paciente.telefone}</span>
+                                  <span className="truncate">{formatarTelefone(paciente.telefone)}</span>
                                 </div>
                               )}
                               {paciente.email && (

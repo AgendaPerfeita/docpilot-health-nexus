@@ -8,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { EspecialidadeCombobox } from "@/components/ui/especialidade-combobox";
 import { useToast } from "@/hooks/use-toast";
 import { useMedicosCadastro, MedicoCadastroData } from "@/hooks/useMedicosCadastro";
+import { formatarTelefone } from "@/lib/formatters";
 import { 
   UserPlus, 
   Users, 
@@ -237,10 +239,10 @@ const GestaoMedicos = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="especialidade">Especialidade</Label>
-                      <Input
-                        id="especialidade"
+                      <EspecialidadeCombobox
                         value={formData.especialidade}
-                        onChange={(e) => handleInputChange("especialidade", e.target.value)}
+                        onValueChange={(value) => handleInputChange("especialidade", value)}
+                        placeholder="Selecione uma especialidade..."
                       />
                     </div>
                     
@@ -444,7 +446,7 @@ const GestaoMedicos = () => {
                         </span>
                         <span className="flex items-center">
                           <Phone className="h-3 w-3 mr-1" />
-                          {medico.telefone}
+                          {formatarTelefone(medico.telefone)}
                         </span>
                         <span>{medico.crm}</span>
                         <span>{medico.especialidade}</span>

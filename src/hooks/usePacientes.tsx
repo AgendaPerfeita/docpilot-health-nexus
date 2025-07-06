@@ -10,6 +10,7 @@ export interface Paciente {
   cpf?: string;
   data_nascimento?: string;
   endereco?: string;
+  bairro?: string;
   cidade?: string;
   estado?: string;
   cep?: string;
@@ -33,9 +34,19 @@ export const usePacientes = () => {
       return;
     }
     
-    console.log('usePacientes - Fetching pacientes for profile:', profile.id);
+    console.log('usePacientes - Fetching pacientes for profile:', profile.id, 'tipo:', profile.tipo);
     setLoading(true);
     try {
+      // Verificar se o usuário está autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('usePacientes - Current auth user:', user?.id);
+      
+      if (!user) {
+        console.error('usePacientes - No authenticated user found');
+        setPacientes([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('pacientes')
         .select('*')
@@ -47,6 +58,7 @@ export const usePacientes = () => {
       }
       
       console.log('usePacientes - Fetched data count:', data?.length || 0);
+      console.log('usePacientes - Fetched pacientes:', data);
       setPacientes(data || []);
     } catch (error) {
       console.error('usePacientes - Error fetching pacientes:', error);
@@ -107,6 +119,38 @@ export const usePacientes = () => {
     return data || [];
   };
 
+  const buscarPacientePorId = async (id: string) => {
+    console.log('usePacientes - buscando paciente por ID:', id);
+    const { data, error } = await supabase
+      .from('pacientes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('usePacientes - Erro ao buscar paciente por ID:', error);
+      throw error;
+    }
+    
+    console.log('usePacientes - Paciente encontrado por ID:', data);
+    return data;
+  };
+
+  const buscarPacientePorIdSemRLS = async (id: string) => {
+    console.log('usePacientes - buscando paciente por ID sem RLS:', id);
+    // Usar função RPC para bypassar RLS temporariamente
+    const { data, error } = await supabase
+      .rpc('get_paciente_by_id', { paciente_id: id });
+
+    if (error) {
+      console.error('usePacientes - Erro ao buscar paciente por ID sem RLS:', error);
+      throw error;
+    }
+    
+    console.log('usePacientes - Paciente encontrado por ID sem RLS:', data);
+    return data;
+  };
+
   useEffect(() => {
     if (profile?.id) {
       console.log('usePacientes - useEffect triggered with profile ID:', profile.id);
@@ -121,6 +165,8 @@ export const usePacientes = () => {
     atualizarPaciente,
     deletarPaciente,
     buscarPacientes,
+    buscarPacientePorId,
+    buscarPacientePorIdSemRLS,
     refetch: fetchPacientes
   };
 };
