@@ -91,6 +91,19 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 /* Mobile-first responsive design */
 @media (max-width: 640px) {
   .container {
@@ -154,16 +167,5 @@ All colors MUST be HSL.
   
   .grid.gap-6 {
     gap: 1rem;
-  }
-}
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }
