@@ -39,6 +39,17 @@ const NovaEvolucao = () => {
     }
   }, [paciente, loadingPacientes, navigate, toast]);
 
+  useEffect(() => {
+    if (!id) {
+      toast({
+        title: "ID do paciente não fornecido",
+        description: "É necessário selecionar um paciente para criar uma evolução.",
+        variant: "destructive"
+      });
+      navigate('/prontuario');
+    }
+  }, [id, navigate, toast]);
+
   const handleStartConsultation = () => {
     setIsConsultationActive(true);
   };
@@ -70,6 +81,19 @@ const NovaEvolucao = () => {
     setIsConsultationActive(false);
   };
 
+  const calculateAge = (birthDate?: string) => {
+    if (!birthDate) return { anos: 0, meses: 0, dias: 0 };
+    const today = new Date();
+    const birth = new Date(birthDate);
+    const age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      return { anos: age - 1, meses: 0, dias: 0 };
+    }
+    return { anos: age, meses: 0, dias: 0 };
+  };
+
   if (loadingPacientes) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -82,14 +106,10 @@ const NovaEvolucao = () => {
     return null;
   }
 
-  // Criar dados do paciente no formato esperado pelo MedicalLayout
+  // Create patient data from real patient information
   const patientData = {
     nome: paciente.nome,
-    idade: paciente.data_nascimento ? {
-      anos: new Date().getFullYear() - new Date(paciente.data_nascimento).getFullYear(),
-      meses: 0,
-      dias: 0
-    } : { anos: 0, meses: 0, dias: 0 },
+    idade: calculateAge(paciente.data_nascimento),
     convenio: paciente.convenio || "Particular",
     primeiraConsulta: new Date().toLocaleDateString('pt-BR'),
     antecedentes: {
@@ -172,7 +192,6 @@ const NovaEvolucao = () => {
           onFinishConsultation={handleFinishConsultation}
           isConsultationActive={isConsultationActive}
         >
-          {/* Aqui seria o conteúdo específico da evolução médica */}
           <div className="p-6">
             <h2 className="text-2xl font-bold mb-4">Evolução Médica</h2>
             <p className="text-muted-foreground">

@@ -13,32 +13,9 @@ import { DocumentsSection } from './DocumentsSection'
 import { ImagesSection } from './ImagesSection'
 import { MedicalLayoutProps, PatientData } from './types'
 
-const mockPatientData: PatientData = {
-  nome: "Maria Silva dos Santos", 
-  idade: { anos: 45, meses: 3, dias: 9 },
-  convenio: "Particular",
-  primeiraConsulta: "04/07/2025",
-  antecedentes: {
-    clinicos: null,
-    cirurgicos: null,
-    familiares: null,
-    habitos: null,
-    alergias: "Dipirona, Penicilina",
-    medicamentos: "Losartana 50mg 1x/dia"
-  },
-  ultimosDiagnosticos: [
-    {
-      data: "04/07/2025",
-      medico: "Thiago Anver",
-      duracao: "10 minutos",
-      tipo: "Atendimento"
-    }
-  ]
-}
-
 export function MedicalLayout({ 
   children, 
-  patientData = mockPatientData, 
+  patientData, 
   onStartConsultation, 
   onFinishConsultation, 
   isConsultationActive 

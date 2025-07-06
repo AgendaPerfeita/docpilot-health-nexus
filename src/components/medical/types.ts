@@ -1,11 +1,4 @@
 
-export interface DiagnosticItem {
-  data: string
-  medico: string
-  duracao: string
-  tipo: string
-}
-
 export interface PatientData {
   nome: string
   idade: { anos: number; meses: number; dias: number }
@@ -19,12 +12,17 @@ export interface PatientData {
     alergias: string | null
     medicamentos: string | null
   }
-  ultimosDiagnosticos: DiagnosticItem[]
+  ultimosDiagnosticos: Array<{
+    data: string
+    medico: string
+    duracao: string
+    tipo: string
+  }>
 }
 
 export interface MedicalLayoutProps {
-  children: React.ReactNode
-  patientData: any
+  children?: React.ReactNode
+  patientData: PatientData  // Removed optional and default
   onStartConsultation: () => void
   onFinishConsultation: () => void
   isConsultationActive: boolean
