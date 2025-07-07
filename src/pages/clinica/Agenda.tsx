@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { AgendaGrid } from "@/components/agenda/AgendaGrid"
+import { AgendaGridPro } from "@/components/agenda/AgendaGridPro"
 import { AgendamentoModal } from "@/components/agenda/AgendamentoModal"
 import { AgendaHeader } from "@/components/agenda/AgendaHeader"
 
@@ -19,7 +19,7 @@ const Agenda = () => {
   const [dataBase, setDataBase] = useState(new Date())
   const semana = getSemanaBase(dataBase)
   const [modal, setModal] = useState<{ open: boolean; dia: Date; hora: string } | null>(null)
-  const [agendamentos, setAgendamentos] = useState<{ id?: string; dia: string; hora: string; duracao?: number; paciente?: string }[]>([])
+  const [agendamentos, setAgendamentos] = useState<{ id: string; dia: string; hora: string; duracao: number; paciente?: string }[]>([])
   const [clinicaSelecionada, setClinicaSelecionada] = useState<string | null>(null)
   const [pacienteSelecionado, setPacienteSelecionado] = useState<string | null>(null)
 
@@ -41,22 +41,20 @@ const Agenda = () => {
     setModal(null)
   }
 
-  const handleImprimir = () => {
-    window.print()
+  const handleMoveAgendamento = (id: string, novoDia: string, novoHora: string) => {
+    setAgendamentos((prev) =>
+      prev.map(a => a.id === id ? { ...a, dia: novoDia, hora: novoHora, duracao: a.duracao } : a)
+    )
   }
 
-  // Atualiza a duração do agendamento ao redimensionar
   const handleResizeAgendamento = (id: string, novaDuracao: number) => {
     setAgendamentos((prev) =>
       prev.map(a => a.id === id ? { ...a, duracao: novaDuracao } : a)
     )
   }
 
-  // Atualiza dia/hora ao mover o card
-  const handleMoveAgendamento = (id: string, novoDia: string, novoHora: string) => {
-    setAgendamentos((prev) =>
-      prev.map(a => a.id === id ? { ...a, dia: novoDia, hora: novoHora } : a)
-    )
+  const handleImprimir = () => {
+    window.print()
   }
 
   return (
@@ -93,12 +91,12 @@ const Agenda = () => {
           Próxima semana
         </button>
       </div>
-      <AgendaGrid
+      <AgendaGridPro
         semana={semana}
         onCellClick={handleCellClick}
         agendamentos={agendamentos}
-        onResizeAgendamento={handleResizeAgendamento}
         onMoveAgendamento={handleMoveAgendamento}
+        onResizeAgendamento={handleResizeAgendamento}
       />
       {modal && (
         <AgendamentoModal
@@ -114,3 +112,4 @@ const Agenda = () => {
 }
 
 export default Agenda
+ 
