@@ -427,6 +427,7 @@ export type Database = {
       }
       pacientes: {
         Row: {
+          bairro: string | null
           cep: string | null
           cidade: string | null
           convenio: string | null
@@ -448,6 +449,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bairro?: string | null
           cep?: string | null
           cidade?: string | null
           convenio?: string | null
@@ -469,6 +471,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bairro?: string | null
           cep?: string | null
           cidade?: string | null
           convenio?: string | null
