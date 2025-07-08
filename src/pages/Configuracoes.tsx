@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { formatarTelefone } from "@/lib/formatters"
-import { User, Bell, Settings, Calendar, Clock, Plus, Trash2 } from "lucide-react"
+import { User, Bell, Settings, Calendar, Clock, Plus, Trash2, FileText, Upload, Type, Image } from "lucide-react"
 
 export default function Configuracoes() {
   const { profile, refreshProfile } = useAuth();
@@ -52,6 +52,44 @@ export default function Configuracoes() {
     permitirEncaixe: true,
     antecedenciaMinima: 24, // horas
     limiteCancelamento: 2 // horas
+  });
+
+  // Configurações de receituário
+  const [receituarioConfig, setReceituarioConfig] = useState({
+    // Layout e design
+    fonte: 'Arial',
+    tamanhoFonte: 12,
+    logoUrl: '',
+    mostrarLogo: true,
+    posicaoLogo: 'esquerda', // esquerda, centro, direita
+    
+    // Cabeçalho
+    nomeClinica: '',
+    enderecoClinica: '',
+    telefoneClinica: '',
+    emailClinica: '',
+    mostrarCabecalho: true,
+    
+    // Informações do médico
+    mostrarCRM: true,
+    mostrarEspecialidade: true,
+    
+    // Assinatura
+    tipoAssinatura: 'nome', // nome, digital, manuscrita
+    assinaturaDigitalUrl: '',
+    posicaoAssinatura: 'direita', // esquerda, centro, direita
+    mostrarDataAssinatura: true,
+    
+    // Rodapé
+    textoRodape: '',
+    mostrarRodape: false,
+    
+    // Configurações gerais
+    margemSuperior: 20,
+    margemInferior: 20,
+    margemEsquerda: 15,
+    margemDireita: 15,
+    espacamentoEntreLinhas: 1.2
   });
 
   // Estados brasileiros para o CRM
@@ -146,6 +184,43 @@ export default function Configuracoes() {
     }));
   };
 
+  const handleReceituarioConfigChange = (field: string, value: any) => {
+    setReceituarioConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const logoUrl = e.target?.result as string;
+        setReceituarioConfig(prev => ({
+          ...prev,
+          logoUrl
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAssinaturaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const assinaturaUrl = e.target?.result as string;
+        setReceituarioConfig(prev => ({
+          ...prev,
+          assinaturaDigitalUrl: assinaturaUrl
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile) return;
 
@@ -200,13 +275,14 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="perfil" className="space-y-4">
-          <TabsList className={`grid w-full ${profile?.tipo === 'medico' ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${profile?.tipo === 'medico' ? 'grid-cols-6' : 'grid-cols-3'}`}>
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="sistema">Sistema</TabsTrigger>
             {profile?.tipo === 'medico' && (
               <>
                 <TabsTrigger value="agenda">Agenda</TabsTrigger>
+                <TabsTrigger value="receituario">Receituário</TabsTrigger>
                 <TabsTrigger value="plano">Plano de Acesso</TabsTrigger>
               </>
             )}
@@ -573,6 +649,382 @@ export default function Configuracoes() {
 
                       <Button className="w-full">
                         Salvar Configurações da Agenda
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="receituario">
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Configurações do Receituário
+                      </CardTitle>
+                      <CardDescription>
+                        Personalize o layout e aparência das suas prescrições
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Layout e Design */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Type className="h-5 w-5" />
+                          Layout e Design
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Fonte</Label>
+                            <Select 
+                              value={receituarioConfig.fonte} 
+                              onValueChange={(value) => handleReceituarioConfigChange('fonte', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Arial">Arial</SelectItem>
+                                <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                <SelectItem value="Calibri">Calibri</SelectItem>
+                                <SelectItem value="Verdana">Verdana</SelectItem>
+                                <SelectItem value="Georgia">Georgia</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tamanho da Fonte</Label>
+                            <Select 
+                              value={receituarioConfig.tamanhoFonte.toString()} 
+                              onValueChange={(value) => handleReceituarioConfigChange('tamanhoFonte', parseInt(value))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="10">10pt</SelectItem>
+                                <SelectItem value="11">11pt</SelectItem>
+                                <SelectItem value="12">12pt</SelectItem>
+                                <SelectItem value="14">14pt</SelectItem>
+                                <SelectItem value="16">16pt</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Espaçamento entre linhas</Label>
+                            <Select 
+                              value={receituarioConfig.espacamentoEntreLinhas.toString()} 
+                              onValueChange={(value) => handleReceituarioConfigChange('espacamentoEntreLinhas', parseFloat(value))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">Simples</SelectItem>
+                                <SelectItem value="1.2">1.2</SelectItem>
+                                <SelectItem value="1.5">1.5</SelectItem>
+                                <SelectItem value="2">Duplo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Logotipo */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Image className="h-5 w-5" />
+                          Logotipo
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="mostrarLogo"
+                              checked={receituarioConfig.mostrarLogo}
+                              onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarLogo', checked)}
+                            />
+                            <Label htmlFor="mostrarLogo">Mostrar logotipo no cabeçalho</Label>
+                          </div>
+                          
+                          {receituarioConfig.mostrarLogo && (
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label>Upload do Logotipo</Label>
+                                <div className="flex items-center gap-4">
+                                  <Button variant="outline" className="relative">
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Escolher arquivo
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleLogoUpload}
+                                      className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                  </Button>
+                                  {receituarioConfig.logoUrl && (
+                                    <div className="flex items-center gap-2">
+                                      <img 
+                                        src={receituarioConfig.logoUrl} 
+                                        alt="Preview" 
+                                        className="h-12 w-12 object-contain border rounded"
+                                      />
+                                      <span className="text-sm text-muted-foreground">Logo carregado</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label>Posição do Logo</Label>
+                                <Select 
+                                  value={receituarioConfig.posicaoLogo} 
+                                  onValueChange={(value) => handleReceituarioConfigChange('posicaoLogo', value)}
+                                >
+                                  <SelectTrigger className="w-48">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="esquerda">Esquerda</SelectItem>
+                                    <SelectItem value="centro">Centro</SelectItem>
+                                    <SelectItem value="direita">Direita</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Informações da Clínica */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Informações da Clínica/Consultório</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="mostrarCabecalho"
+                              checked={receituarioConfig.mostrarCabecalho}
+                              onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarCabecalho', checked)}
+                            />
+                            <Label htmlFor="mostrarCabecalho">Mostrar informações no cabeçalho</Label>
+                          </div>
+                          
+                          {receituarioConfig.mostrarCabecalho && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Nome da Clínica/Consultório</Label>
+                                <Input
+                                  value={receituarioConfig.nomeClinica}
+                                  onChange={(e) => handleReceituarioConfigChange('nomeClinica', e.target.value)}
+                                  placeholder="Ex: Clínica Médica Dr. Silva"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Telefone</Label>
+                                <Input
+                                  value={receituarioConfig.telefoneClinica}
+                                  onChange={(e) => handleReceituarioConfigChange('telefoneClinica', e.target.value)}
+                                  placeholder="(11) 99999-9999"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Endereço</Label>
+                                <Input
+                                  value={receituarioConfig.enderecoClinica}
+                                  onChange={(e) => handleReceituarioConfigChange('enderecoClinica', e.target.value)}
+                                  placeholder="Rua, número, bairro, cidade"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input
+                                  value={receituarioConfig.emailClinica}
+                                  onChange={(e) => handleReceituarioConfigChange('emailClinica', e.target.value)}
+                                  placeholder="contato@clinica.com.br"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Informações do Médico */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Informações do Médico</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="mostrarCRM"
+                              checked={receituarioConfig.mostrarCRM}
+                              onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarCRM', checked)}
+                            />
+                            <Label htmlFor="mostrarCRM">Mostrar CRM</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="mostrarEspecialidade"
+                              checked={receituarioConfig.mostrarEspecialidade}
+                              onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarEspecialidade', checked)}
+                            />
+                            <Label htmlFor="mostrarEspecialidade">Mostrar especialidade</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Assinatura */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Assinatura</h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Tipo de Assinatura</Label>
+                            <Select 
+                              value={receituarioConfig.tipoAssinatura} 
+                              onValueChange={(value) => handleReceituarioConfigChange('tipoAssinatura', value)}
+                            >
+                              <SelectTrigger className="w-48">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="nome">Apenas nome</SelectItem>
+                                <SelectItem value="digital">Assinatura digital</SelectItem>
+                                <SelectItem value="manuscrita">Espaço para assinatura manuscrita</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {receituarioConfig.tipoAssinatura === 'digital' && (
+                            <div className="space-y-2">
+                              <Label>Upload da Assinatura Digital</Label>
+                              <div className="flex items-center gap-4">
+                                <Button variant="outline" className="relative">
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Escolher arquivo
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAssinaturaUpload}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                  />
+                                </Button>
+                                {receituarioConfig.assinaturaDigitalUrl && (
+                                  <div className="flex items-center gap-2">
+                                    <img 
+                                      src={receituarioConfig.assinaturaDigitalUrl} 
+                                      alt="Preview Assinatura" 
+                                      className="h-8 w-20 object-contain border rounded"
+                                    />
+                                    <span className="text-sm text-muted-foreground">Assinatura carregada</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Posição da Assinatura</Label>
+                              <Select 
+                                value={receituarioConfig.posicaoAssinatura} 
+                                onValueChange={(value) => handleReceituarioConfigChange('posicaoAssinatura', value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="esquerda">Esquerda</SelectItem>
+                                  <SelectItem value="centro">Centro</SelectItem>
+                                  <SelectItem value="direita">Direita</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="mostrarDataAssinatura"
+                                checked={receituarioConfig.mostrarDataAssinatura}
+                                onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarDataAssinatura', checked)}
+                              />
+                              <Label htmlFor="mostrarDataAssinatura">Mostrar data na assinatura</Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rodapé */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Rodapé</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="mostrarRodape"
+                              checked={receituarioConfig.mostrarRodape}
+                              onCheckedChange={(checked) => handleReceituarioConfigChange('mostrarRodape', checked)}
+                            />
+                            <Label htmlFor="mostrarRodape">Mostrar rodapé personalizado</Label>
+                          </div>
+                          
+                          {receituarioConfig.mostrarRodape && (
+                            <div className="space-y-2">
+                              <Label>Texto do Rodapé</Label>
+                              <Textarea
+                                value={receituarioConfig.textoRodape}
+                                onChange={(e) => handleReceituarioConfigChange('textoRodape', e.target.value)}
+                                placeholder="Ex: Este medicamento não pode ser fracionado. Válido por 30 dias."
+                                rows={3}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Margens */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Margens (mm)</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <Label>Superior</Label>
+                            <Input
+                              type="number"
+                              min="10"
+                              max="50"
+                              value={receituarioConfig.margemSuperior}
+                              onChange={(e) => handleReceituarioConfigChange('margemSuperior', parseInt(e.target.value) || 20)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Inferior</Label>
+                            <Input
+                              type="number"
+                              min="10"
+                              max="50"
+                              value={receituarioConfig.margemInferior}
+                              onChange={(e) => handleReceituarioConfigChange('margemInferior', parseInt(e.target.value) || 20)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Esquerda</Label>
+                            <Input
+                              type="number"
+                              min="10"
+                              max="50"
+                              value={receituarioConfig.margemEsquerda}
+                              onChange={(e) => handleReceituarioConfigChange('margemEsquerda', parseInt(e.target.value) || 15)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Direita</Label>
+                            <Input
+                              type="number"
+                              min="10"
+                              max="50"
+                              value={receituarioConfig.margemDireita}
+                              onChange={(e) => handleReceituarioConfigChange('margemDireita', parseInt(e.target.value) || 15)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button className="w-full">
+                        Salvar Configurações do Receituário
                       </Button>
                     </CardContent>
                   </Card>
