@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTimer } from '@/hooks/useTimer'
+import { useConsultationState } from '@/hooks/useConsultationState'
 import { PatientHeader } from './PatientHeader'
 import { SidebarNavigation } from './SidebarNavigation'
 import { ConsultationActions } from './ConsultationActions'
@@ -24,9 +25,29 @@ export function MedicalLayout({
   prontuarioId
 }: MedicalLayoutProps & { pacienteId?: string; prontuarioId?: string }) {
   const timer = useTimer()
+  const { updateConsultationState } = useConsultationState(pacienteId)
   const [activeSection, setActiveSection] = useState('resumo')
   const [finalizationOpen, setFinalizationOpen] = useState(false)
   const [signatureType, setSignatureType] = useState<'none' | 'installed' | 'cloud'>('none')
+
+  // Garante que o timer sempre inicia quando a consulta está ativa
+  useEffect(() => {
+    if (isConsultationActive && !timer.isRunning) {
+      timer.start();
+    }
+    if (!isConsultationActive && timer.isRunning) {
+      timer.stop();
+    }
+  }, [isConsultationActive]);
+
+  // Atualizar o estado persistente com o tempo decorrido
+  useEffect(() => {
+    if (isConsultationActive && timer.isRunning) {
+      updateConsultationState({
+        elapsedSeconds: timer.seconds
+      });
+    }
+  }, [timer.seconds, isConsultationActive]);
 
   const handleStartConsultation = () => {
     timer.start()

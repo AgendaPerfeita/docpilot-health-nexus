@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const profileRef = useRef<UserProfile | null>(null);
 
   const createProfileIfNotExists = async (userId: string, user: User) => {
     try {
@@ -98,10 +99,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       console.log('✅ Profile fetched successfully:', data);
-      setProfile(data as UserProfile);
+      const profileData = data as UserProfile;
+      setProfile(profileData);
+      profileRef.current = profileData;
     } catch (error) {
       console.log('💥 Exception in fetchProfile:', error);
       setProfile(null);
+      profileRef.current = null;
     } finally {
       setLoadingProfile(false);
     }
@@ -115,21 +119,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔔 Auth state change:', event, 'Session user:', session?.user?.id);
+        console.log('🔔 Auth state change:', event, 'Session user:', session?.user?.id, 'timestamp:', new Date().toISOString());
         
         if (!isMounted) return;
+        
+        // Se já temos um profile válido e o user não mudou, não fazer nada
+        if (profileRef.current && session?.user && profileRef.current.user_id === session.user.id) {
+          console.log('✅ Profile already valid and user unchanged, skipping auth state change');
+          return;
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
           console.log('👤 User found, will fetch profile later...');
-          // Por enquanto, apenas definir loading como false
-          setProfile(null);
-          setLoadingProfile(true);
+          // Só resetar o profile se não tivermos um profile válido ou se o user mudou
+          if (!profileRef.current || profileRef.current.user_id !== session.user.id) {
+            console.log('🔄 Resetting profile because:', { hasProfile: !!profileRef.current, profileUserId: profileRef.current?.user_id, sessionUserId: session.user.id });
+            setProfile(null);
+            profileRef.current = null;
+            setLoadingProfile(true);
+          } else {
+            console.log('✅ Profile already valid, not resetting');
+          }
         } else {
           console.log('🚪 No user, clearing profile');
           setProfile(null);
+          profileRef.current = null;
         }
         
         console.log('✅ Setting loading to false (auth state change)');
@@ -177,11 +194,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // useEffect separado para buscar o perfil
   useEffect(() => {
-    if (!loading && user && !profile) {
+    if (!loading && user && !profileRef.current) {
       console.log('🔄 Loading finished, user exists but no profile, fetching...');
       fetchProfile(user.id);
     }
-  }, [loading, user, profile]);
+  }, [loading, user]); // Removido profile?.id da dependência
 
   const signUp = async (email: string, password: string, userData: any) => {
     const redirectUrl = `${window.location.origin}/`;

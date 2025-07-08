@@ -26,41 +26,18 @@ export function PatientHeader({ patientData, timer }: PatientHeaderProps) {
   
   return (
     <div className="p-4 border-b">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-            {patientData.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{patientData.nome}</h3>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>
-                {patientData.idade.anos} anos, {patientData.idade.meses} meses, {patientData.idade.dias} dias
-              </span>
-              <span>Convênio: <strong>{patientData.convenio}</strong></span>
-            </div>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+          {patientData.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
         </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => printElement('medical-content')}
-            disabled={exporting}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => printElement('medical-content')}
-            disabled={exporting}
-          >
-            <FileText className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
+        <div>
+          <h3 className="font-semibold text-gray-900">{patientData.nome}</h3>
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span>
+              {patientData.idade.anos} anos, {patientData.idade.meses} meses, {patientData.idade.dias} dias
+            </span>
+            <span>Convênio: <strong>{patientData.convenio}</strong></span>
+          </div>
         </div>
       </div>
       

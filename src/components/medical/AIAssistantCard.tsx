@@ -22,11 +22,10 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
   const [isLoading, setIsLoading] = useState(false)
   const [aiInput, setAiInput] = useState({
     symptoms: "",
-    age: "",
     sex: "",
     isPregnant: "",
-    mainComplaint: "",
-    currentMedications: ""
+    mainComplaint: ""
+    // Removido: currentMedications
   })
   const [aiSuggestion, setAiSuggestion] = useState("")
   const [analysisType, setAnalysisType] = useState("complete")
@@ -116,17 +115,25 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
     try {
       const riskScores = calculateRiskScores()
       const severityCriteria = assessSeverityCriteria()
-      
+      const medicamentos = patientData.medicamentos || patientData.antecedentes?.medicamentos || 'Não informado';
+      const alergias = patientData.alergias || patientData.antecedentes?.alergias || 'Não informado';
+      const antecedentes = patientData.antecedentes || 'Não informado';
+      const habitos = patientData.antecedentes?.habitos || 'Não informado';
+      // Calcular idade do patientData
+      const idade = patientData.idade?.anos ? `${patientData.idade.anos} anos${patientData.idade.meses ? ", " + patientData.idade.meses + " meses" : ""}${patientData.idade.dias ? ", " + patientData.idade.dias + " dias" : ""}` : 'Não informado';
       const prompt = `
         Como assistente médico especializado, analise os dados completos do paciente e forneça uma avaliação clínica abrangente:
 
         DADOS DO PACIENTE:
-        - Idade: ${aiInput.age}
+        - Idade: ${idade}
         - Sexo: ${aiInput.sex}
         ${aiInput.sex === "Feminino" && aiInput.isPregnant ? `- Gestante: ${aiInput.isPregnant}` : ""}
-        - Medicamentos atuais: ${aiInput.currentMedications}
-        - Alergias: ${patientData.alergias || 'Não informado'}
-        - Antecedentes: ${patientData.antecedentes || 'Não informado'}
+        - Medicamentos atuais: ${medicamentos}
+        - Alergias: ${alergias}
+        - HPP: ${patientData.antecedentes?.clinicos || 'Não informado'}
+        - Cirúrgicos: ${patientData.antecedentes?.cirurgicos || 'Não informado'}
+        - História Familiar: ${patientData.antecedentes?.familiares || 'Não informado'}
+        - Hábitos de Vida: ${habitos}
 
         SINAIS VITAIS:
         - PA: ${vitalSigns.pa_sistolica}/${vitalSigns.pa_diastolica} mmHg
@@ -227,178 +234,141 @@ export function AIAssistantCard({ patientData, vitalSigns, physicalExam, onSugge
         </div>
       </CardHeader>
       <CardContent className="pt-4 p-3 sm:p-6">
-        {!isOpen ? (
-          <Button onClick={() => setIsOpen(true)} className="w-full" size="lg">
-            Abrir Assistente de IA
-          </Button>
-        ) : (
-          <div className="space-y-4">
-            {/* Inputs básicos */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="ai_age">Idade</Label>
-                <Input
-                  id="ai_age"
-                  placeholder="35"
-                  value={aiInput.age}
-                  onChange={(e) => setAiInput(prev => ({...prev, age: e.target.value}))}
-                />
+        {/* Resumo dos dados do paciente */}
+        <div className="mb-4 p-3 bg-gray-50 rounded border text-xs">
+          <div><strong>Medicamentos em uso:</strong> {patientData.medicamentos || patientData.antecedentes?.medicamentos || 'Não informado'}</div>
+          <div><strong>Alergias:</strong> {patientData.alergias || patientData.antecedentes?.alergias || 'Não informado'}</div>
+          <div><strong>HPP:</strong> {patientData.antecedentes?.clinicos || 'Não informado'}</div>
+          <div><strong>Cirúrgicos:</strong> {patientData.antecedentes?.cirurgicos || 'Não informado'}</div>
+          <div><strong>História Familiar:</strong> {patientData.antecedentes?.familiares || 'Não informado'}</div>
+          <div><strong>Hábitos de Vida:</strong> {patientData.antecedentes?.habitos || 'Não informado'}</div>
+        </div>
+        {/* Formulário IA */}
+        <form onSubmit={e => { e.preventDefault(); generateAdvancedAISuggestion(); }} className="space-y-4">
+          <div>
+            <Label htmlFor="ai_sex">Sexo</Label>
+            <Select value={aiInput.sex} onValueChange={value => setAiInput({ ...aiInput, sex: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Masculino">Masculino</SelectItem>
+                <SelectItem value="Feminino">Feminino</SelectItem>
+                <SelectItem value="Outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {aiInput.sex === "Feminino" && (
+            <div>
+              <Label htmlFor="ai_pregnant">Gestante?</Label>
+              <Select value={aiInput.isPregnant} onValueChange={(value) => setAiInput(prev => ({...prev, isPregnant: value}))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Não">Não</SelectItem>
+                  <SelectItem value="Sim">Sim</SelectItem>
+                  <SelectItem value="Não sei">Não sei</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div>
+            <Label htmlFor="ai_main_complaint">Queixa Principal</Label>
+            <Input
+              id="ai_main_complaint"
+              value={aiInput.mainComplaint}
+              onChange={e => setAiInput({ ...aiInput, mainComplaint: e.target.value })}
+              placeholder="Ex: Dor no peito há 2 horas"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ai_symptoms">Sintomas Detalhados</Label>
+            <Textarea
+              id="ai_symptoms"
+              value={aiInput.symptoms}
+              onChange={e => setAiInput({ ...aiInput, symptoms: e.target.value })}
+              placeholder="Descreva os sintomas completos, evolução, fatores de melhora/piora, sintomas associados..."
+              rows={4}
+            />
+          </div>
+          {/* Campo de medicamentos removido */}
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isLoading} className="mt-2">
+              {isLoading ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Brain className="w-4 h-4 mr-2" />}
+              Gerar Sugestão
+            </Button>
+          </div>
+        </form>
+        {aiSuggestion && (
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
+              <h4 className="font-semibold text-lg">📋 Análise da IA</h4>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🩺 HIPÓTESE DIAGNÓSTICA', 'diagnostico')} className="flex-1 sm:flex-none">
+                  <FileText className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Aplicar </span>Diagnóstico
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('💊 CONDUTA TERAPÊUTICA', 'conduta')} className="flex-1 sm:flex-none">
+                  <Pill className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Aplicar </span>Conduta
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🧪 EXAMES COMPLEMENTARES', 'examesComplementares')} className="flex-1 sm:flex-none">
+                  <TestTube className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Aplicar </span>Exames
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="ai_sex">Sexo</Label>
-                <Select value={aiInput.sex} onValueChange={(value) => setAiInput(prev => ({...prev, sex: value}))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Masculino">Masculino</SelectItem>
-                    <SelectItem value="Feminino">Feminino</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {aiInput.sex === "Feminino" && (
-                <div>
-                  <Label htmlFor="ai_pregnant">Gestante?</Label>
-                  <Select value={aiInput.isPregnant} onValueChange={(value) => setAiInput(prev => ({...prev, isPregnant: value}))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Não">Não</SelectItem>
-                      <SelectItem value="Sim">Sim</SelectItem>
-                      <SelectItem value="Não sei">Não sei</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
-
-            <div>
-              <Label htmlFor="ai_main_complaint">Queixa Principal</Label>
-              <Input
-                id="ai_main_complaint"
-                placeholder="Ex: Dor no peito há 2 horas"
-                value={aiInput.mainComplaint}
-                onChange={(e) => setAiInput(prev => ({...prev, mainComplaint: e.target.value}))}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="ai_symptoms">Sintomas Detalhados</Label>
-              <Textarea
-                id="ai_symptoms"
-                placeholder="Descreva os sintomas completos, evolução, fatores de melhora/piora, sintomas associados..."
-                value={aiInput.symptoms}
-                onChange={(e) => setAiInput(prev => ({...prev, symptoms: e.target.value}))}
-                rows={4}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="ai_medications">Medicamentos em Uso</Label>
-              <Input
-                id="ai_medications"
-                placeholder="Ex: Losartana 50mg 1x/dia, Metformina 850mg 2x/dia"
-                value={aiInput.currentMedications}
-                onChange={(e) => setAiInput(prev => ({...prev, currentMedications: e.target.value}))}
-              />
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                onClick={generateAdvancedAISuggestion} 
-                disabled={isLoading || !aiInput.symptoms.trim()}
-                className="flex-1"
-                size="lg"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Analisando...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-4 h-4 mr-2" />
-                    Gerar Análise Completa
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={() => setIsOpen(false)} className="sm:w-auto">
-                Fechar
-              </Button>
-            </div>
-
-            {aiSuggestion && (
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-3">
-                  <h4 className="font-semibold text-lg">📋 Análise da IA</h4>
-                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🩺 HIPÓTESE DIAGNÓSTICA', 'diagnostico')} className="flex-1 sm:flex-none">
-                      <FileText className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">Aplicar </span>Diagnóstico
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('💊 CONDUTA TERAPÊUTICA', 'conduta')} className="flex-1 sm:flex-none">
-                      <Pill className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">Aplicar </span>Conduta
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => extractAndApplySuggestion('🧪 EXAMES COMPLEMENTARES', 'examesComplementares')} className="flex-1 sm:flex-none">
-                      <TestTube className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">Aplicar </span>Exames
-                    </Button>
-                  </div>
-                </div>
-                <div className="whitespace-pre-wrap text-sm prose prose-sm max-w-none" 
-                     dangerouslySetInnerHTML={{ __html: aiSuggestion.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                
-                {/* Classificação de Risco Automática */}
-                <div className="mt-6 p-4 border-t bg-blue-50 rounded-b-lg">
-                  <h5 className="font-semibold text-sm mb-3">📋 Classificação de Risco Automática</h5>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {riskScores.map((score, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <span className="text-sm font-medium">{score.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{score.score}</span>
-                          <Badge variant={score.risk === 'alto' ? 'destructive' : score.risk === 'moderado' ? 'default' : 'secondary'}>
-                            {score.risk.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-4">
-                    <h6 className="font-medium text-sm mb-2">Critérios de Gravidade</h6>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className={severityCriteria.sepsis ? "text-red-600" : "text-green-600"}>
-                          {severityCriteria.sepsis ? "❌" : "✅"}
-                        </span>
-                        <span>Sinais de Sepse</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={severityCriteria.hemodynamicInstability ? "text-red-600" : "text-green-600"}>
-                          {severityCriteria.hemodynamicInstability ? "❌" : "✅"}
-                        </span>
-                        <span>Instabilidade Hemodinâmica</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={severityCriteria.acuteDeterioration ? "text-red-600" : "text-green-600"}>
-                          {severityCriteria.acuteDeterioration ? "❌" : "✅"}
-                        </span>
-                        <span>Risco de Deterioração</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={severityCriteria.internationRecommended ? "text-red-600" : "text-green-600"}>
-                          {severityCriteria.internationRecommended ? "❌" : "✅"}
-                        </span>
-                        <span>Recomendação de Internação</span>
-                      </div>
+            <div className="whitespace-pre-wrap text-sm prose prose-sm max-w-none" 
+                 dangerouslySetInnerHTML={{ __html: aiSuggestion.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+            
+            {/* Classificação de Risco Automática */}
+            <div className="mt-6 p-4 border-t bg-blue-50 rounded-b-lg">
+              <h5 className="font-semibold text-sm mb-3">📋 Classificação de Risco Automática</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {riskScores.map((score, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                    <span className="text-sm font-medium">{score.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{score.score}</span>
+                      <Badge variant={score.risk === 'alto' ? 'destructive' : score.risk === 'moderado' ? 'default' : 'secondary'}>
+                        {score.risk.toUpperCase()}
+                      </Badge>
                     </div>
                   </div>
+                ))}
+              </div>
+              
+              <div className="mt-4">
+                <h6 className="font-medium text-sm mb-2">Critérios de Gravidade</h6>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className={severityCriteria.sepsis ? "text-red-600" : "text-green-600"}>
+                      {severityCriteria.sepsis ? "❌" : "✅"}
+                    </span>
+                    <span>Sinais de Sepse</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={severityCriteria.hemodynamicInstability ? "text-red-600" : "text-green-600"}>
+                      {severityCriteria.hemodynamicInstability ? "❌" : "✅"}
+                    </span>
+                    <span>Instabilidade Hemodinâmica</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={severityCriteria.acuteDeterioration ? "text-red-600" : "text-green-600"}>
+                      {severityCriteria.acuteDeterioration ? "❌" : "✅"}
+                    </span>
+                    <span>Risco de Deterioração</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={severityCriteria.internationRecommended ? "text-red-600" : "text-green-600"}>
+                      {severityCriteria.internationRecommended ? "❌" : "✅"}
+                    </span>
+                    <span>Recomendação de Internação</span>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
       </CardContent>

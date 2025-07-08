@@ -11,6 +11,7 @@ import { RenalFunctionCalculator } from './RenalFunctionCalculator'
 import { Save, FileText, User, Clock, AlertCircle, Printer, History } from 'lucide-react'
 import { useProntuarios } from '@/hooks/useProntuarios'
 import { useToast } from '@/hooks/use-toast'
+import { useConsultationState } from '@/hooks/useConsultationState'
 
 interface EvolutionEditorProps {
   pacienteId?: string
@@ -27,6 +28,7 @@ export function EvolutionEditor({
 }: EvolutionEditorProps) {
   const { atualizarProntuario, criarProntuario } = useProntuarios()
   const { toast } = useToast()
+  const { updateConsultationState } = useConsultationState(pacienteId)
   const [activeTab, setActiveTab] = useState('anamnese')
   const [isSaving, setIsSaving] = useState(false)
   
@@ -68,6 +70,14 @@ export function EvolutionEditor({
       ...prev,
       [field]: value
     }))
+    
+    // Atualizar estado persistente
+    updateConsultationState({
+      prontuarioData: {
+        ...evolutionData,
+        [field]: value
+      }
+    })
   }
 
   const handleVitalSignChange = (field: string, value: string) => {

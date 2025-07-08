@@ -20,6 +20,12 @@ export interface Paciente {
   responsavel_id: string;
   created_at: string;
   updated_at: string;
+  antecedentes_clinicos?: string;
+  antecedentes_cirurgicos?: string;
+  antecedentes_familiares?: string;
+  antecedentes_habitos?: string;
+  antecedentes_alergias?: string;
+  medicamentos_em_uso?: any;
 }
 
 export const usePacientes = () => {
@@ -85,7 +91,8 @@ export const usePacientes = () => {
     return data;
   };
 
-  const atualizarPaciente = async (id: string, pacienteData: Partial<Paciente>) => {
+  const atualizarPaciente = async (id: string, pacienteData: any) => {
+    console.log('Payload enviado para update:', pacienteData);
     const { data, error } = await supabase
       .from('pacientes')
       .update(pacienteData)
@@ -93,7 +100,11 @@ export const usePacientes = () => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao atualizar paciente:', error);
+      throw error;
+    }
+    console.log('Update retornou:', data);
     await fetchPacientes();
     return data;
   };
@@ -157,7 +168,12 @@ export const usePacientes = () => {
   useEffect(() => {
     if (profile?.id) {
       console.log('usePacientes - useEffect triggered with profile ID:', profile.id);
-      fetchPacientes();
+      // Só fazer fetch se não temos pacientes carregados
+      if (pacientes.length === 0) {
+        fetchPacientes();
+      } else {
+        console.log('usePacientes - Pacientes already loaded, skipping fetch');
+      }
     }
   }, [profile?.id]);
 

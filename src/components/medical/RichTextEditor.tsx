@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Save, FileText, History, Lightbulb, Volume2, VolumeX } from 'lucide-react'
-import { callGeminiAPI } from "@/lib/gemini"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { FileText, Volume2, VolumeX, FileText as FileTextIcon } from 'lucide-react'
 
 interface RichTextEditorProps {
   title: string
@@ -27,8 +28,8 @@ export function RichTextEditor({
   patientData 
 }: RichTextEditorProps) {
   const [isListening, setIsListening] = useState(false)
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const templates = [
@@ -46,41 +47,28 @@ export function RichTextEditor({
     }
   ]
 
-  const generateAISuggestions = async () => {
-    if (!value.trim() || !showAIFeatures) return
+  const insertTemplates = () => {
+    const selectedContent = selectedTemplates
+      .map(name => templates.find(t => t.name === name)?.content)
+      .filter(Boolean)
+      .join('\n\n')
     
-    setIsLoadingSuggestions(true)
-    try {
-      const prompt = `
-        Como assistente médico, analise o texto a seguir e forneça 3 sugestões de melhoria ou complemento para torná-lo mais completo e profissional:
-
-        Texto atual: "${value}"
-        
-        Contexto do paciente: ${patientData ? JSON.stringify(patientData) : 'Não disponível'}
-
-        Forneça apenas as sugestões numeradas, de forma direta e concisa:
-      `
-      
-      const response = await callGeminiAPI(prompt)
-      const suggestions = response.split('\n').filter(line => line.trim() && /^\d+/.test(line.trim()))
-      setAiSuggestions(suggestions.slice(0, 3))
-    } catch (error) {
-      console.error('Erro ao gerar sugestões:', error)
-    } finally {
-      setIsLoadingSuggestions(false)
+    if (selectedContent) {
+      const cursorPosition = textareaRef.current?.selectionStart || value.length
+      const newValue = value.slice(0, cursorPosition) + selectedContent + value.slice(cursorPosition)
+      onChange(newValue)
     }
+    
+    setSelectedTemplates([])
+    setIsModalOpen(false)
   }
 
-  const applySuggestion = (suggestion: string) => {
-    const cleanSuggestion = suggestion.replace(/^\d+\.\s*/, '').trim()
-    onChange(value + '\n\n' + cleanSuggestion)
-    setAiSuggestions([])
-  }
-
-  const insertTemplate = (template: typeof templates[0]) => {
-    const cursorPosition = textareaRef.current?.selectionStart || value.length
-    const newValue = value.slice(0, cursorPosition) + template.content + value.slice(cursorPosition)
-    onChange(newValue)
+  const handleTemplateToggle = (templateName: string) => {
+    setSelectedTemplates(prev => 
+      prev.includes(templateName) 
+        ? prev.filter(name => name !== templateName)
+        : [...prev, templateName]
+    )
   }
 
   const startDictation = () => {
@@ -121,62 +109,70 @@ export function RichTextEditor({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
             {title}
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             {showAIFeatures && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={generateAISuggestions}
-                  disabled={isLoadingSuggestions}
-                >
-                  <Lightbulb className="w-4 h-4 mr-1" />
-                  {isLoadingSuggestions ? 'Gerando...' : 'Sugestões IA'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={startDictation}
-                  disabled={isListening}
-                >
-                  {isListening ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                  {isListening ? 'Ouvindo...' : 'Ditado'}
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={startDictation}
+                disabled={isListening}
+                className="text-xs sm:text-sm"
+              >
+                {isListening ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                <span className="hidden sm:inline">{isListening ? 'Ouvindo...' : 'Ditado'}</span>
+                <span className="sm:hidden">{isListening ? 'Ouvindo...' : 'Ditado'}</span>
+              </Button>
             )}
-            <Button variant="outline" size="sm">
-              <Save className="w-4 h-4 mr-1" />
-              Salvar Modelo
-            </Button>
-            <Button variant="outline" size="sm">
-              <History className="w-4 h-4 mr-1" />
-              Histórico
-            </Button>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                  <FileTextIcon className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Usar modelo</span>
+                  <span className="sm:hidden">Modelo</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Selecionar modelos</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {templates.map((template, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`template-${index}`}
+                        checked={selectedTemplates.includes(template.name)}
+                        onCheckedChange={() => handleTemplateToggle(template.name)}
+                      />
+                      <label
+                        htmlFor={`template-${index}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {template.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={insertTemplates} disabled={selectedTemplates.length === 0}>
+                    Inserir ({selectedTemplates.length})
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Templates */}
-        <div className="flex flex-wrap gap-2">
-          {templates.map((template, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="sm"
-              onClick={() => insertTemplate(template)}
-            >
-              {template.name}
-            </Button>
-          ))}
-        </div>
-
         {/* Editor */}
         <Textarea
           ref={textareaRef}
@@ -186,25 +182,6 @@ export function RichTextEditor({
           rows={rows}
           className="min-h-[120px] resize-y"
         />
-
-        {/* Sugestões da IA */}
-        {aiSuggestions.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700">Sugestões da IA:</div>
-            {aiSuggestions.map((suggestion, index) => (
-              <div key={index} className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                <div className="flex-1 text-sm text-gray-700">{suggestion}</div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => applySuggestion(suggestion)}
-                >
-                  Aplicar
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Estatísticas */}
         <div className="flex items-center gap-4 text-xs text-gray-500">

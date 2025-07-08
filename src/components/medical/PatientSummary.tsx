@@ -70,20 +70,28 @@ export function PatientSummary({ patientData }: PatientSummaryProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium text-gray-700 mb-1">
-                  Clínicos
+                  História Patológica Pregressa (HPP)
                 </div>
                 <div className="text-sm text-gray-600">
-                  {patientData.antecedentes.clinicos || (
+                  {patientData.antecedentes.clinicos === "Nega" ? (
+                    <span className="text-gray-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.clinicos ? (
+                    patientData.antecedentes.clinicos
+                  ) : (
                     <span className="text-gray-400 italic">Inserir informação</span>
                   )}
                 </div>
               </div>
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium text-gray-700 mb-1">
-                  Cirúrgicos
+                  Antec. Cirúrgicos
                 </div>
                 <div className="text-sm text-gray-600">
-                  {patientData.antecedentes.cirurgicos || (
+                  {patientData.antecedentes.cirurgicos === "Nega" ? (
+                    <span className="text-gray-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.cirurgicos ? (
+                    patientData.antecedentes.cirurgicos
+                  ) : (
                     <span className="text-gray-400 italic">Inserir informação</span>
                   )}
                 </div>
@@ -92,20 +100,28 @@ export function PatientSummary({ patientData }: PatientSummaryProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium text-gray-700 mb-1">
-                  Familiares
+                  História Familiar (HF)
                 </div>
                 <div className="text-sm text-gray-600">
-                  {patientData.antecedentes.familiares || (
+                  {patientData.antecedentes.familiares === "Nega" ? (
+                    <span className="text-gray-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.familiares ? (
+                    patientData.antecedentes.familiares
+                  ) : (
                     <span className="text-gray-400 italic">Inserir informação</span>
                   )}
                 </div>
               </div>
               <div className="border rounded-lg p-3">
                 <div className="text-sm font-medium text-gray-700 mb-1">
-                  Hábitos
+                  Hábitos de Vida
                 </div>
                 <div className="text-sm text-gray-600">
-                  {patientData.antecedentes.habitos || (
+                  {patientData.antecedentes.habitos === "Nega" ? (
+                    <span className="text-gray-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.habitos ? (
+                    patientData.antecedentes.habitos
+                  ) : (
                     <span className="text-gray-400 italic">Inserir informação</span>
                   )}
                 </div>
@@ -115,20 +131,35 @@ export function PatientSummary({ patientData }: PatientSummaryProps) {
               <div className="border rounded-lg p-3 bg-red-50 border-red-200">
                 <div className="text-sm font-medium text-red-700 mb-1 flex items-center gap-1">
                   <AlertCircle className="w-4 h-4" />
-                  Alergias
+                  Alergias e Reações Adversas
                 </div>
                 <div className="text-sm text-red-600 font-medium">
-                  {patientData.antecedentes.alergias || (
+                  {patientData.antecedentes.alergias === "Nega" ? (
+                    <span className="text-red-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.alergias ? (
+                    patientData.antecedentes.alergias
+                  ) : (
                     <span className="text-gray-400 italic font-normal">Inserir informação</span>
                   )}
                 </div>
               </div>
-              <div className="border rounded-lg p-3">
-                <div className="text-sm font-medium text-gray-700 mb-1">
+              <div className="border rounded-lg p-3 min-h-[80px]">
+                <div className="text-sm font-medium text-gray-700 mb-2">
                   Medicamentos em uso
                 </div>
                 <div className="text-sm text-gray-600">
-                  {patientData.antecedentes.medicamentos || (
+                  {patientData.antecedentes.medicamentos === "Nega" ? (
+                    <span className="text-gray-600 font-medium">Nega</span>
+                  ) : patientData.antecedentes.medicamentos ? (
+                    <div className="space-y-1">
+                      {patientData.antecedentes.medicamentos.split('\n').map((medicamento, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <span className="text-blue-600 font-medium flex-shrink-0">•</span>
+                          <span className="break-words leading-relaxed">{medicamento}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
                     <span className="text-gray-400 italic">Inserir informação</span>
                   )}
                 </div>
@@ -148,16 +179,20 @@ export function PatientSummary({ patientData }: PatientSummaryProps) {
               <Button variant="outline" size="sm">Imprimir</Button>
             </div>
           </div>
-          <div className="space-y-3">
-            {patientData.ultimosDiagnosticos && patientData.ultimosDiagnosticos.map((item: DiagnosticItem, index: number) => (
-              <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{String(item.data)} - Por: {String(item.medico)} - {String(item.duracao)}</span>
+          <div className="space-y-3 min-h-[40px] flex items-center text-muted-foreground">
+            {patientData.ultimosDiagnosticos && patientData.ultimosDiagnosticos.length > 0 ? (
+              patientData.ultimosDiagnosticos.map((item: DiagnosticItem, index: number) => (
+                <div key={index} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                    <Calendar className="w-4 h-4" />
+                    <span>{String(item.data)} - Por: {String(item.medico)} - {String(item.duracao)}</span>
+                  </div>
+                  <div className="font-medium">{String(item.tipo)}</div>
                 </div>
-                <div className="font-medium">{String(item.tipo)}</div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <span>Nenhum diagnóstico registrado.</span>
+            )}
           </div>
         </CardContent>
       </Card>

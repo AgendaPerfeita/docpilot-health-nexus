@@ -64,14 +64,15 @@ export function RenalFunctionCalculator({ age, weight, gender }: RenalFunctionCa
 
   return (
     <Card className="mb-4">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <Calculator className="h-4 w-4" />
-          Calculadora de Função Renal
+          <span className="hidden sm:inline">Calculadora de Função Renal</span>
+          <span className="sm:hidden">Função Renal</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <CardContent className="space-y-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <div>
             <Label htmlFor="calc_age" className="text-xs">Idade (anos)</Label>
             <Input
@@ -122,9 +123,9 @@ export function RenalFunctionCalculator({ age, weight, gender }: RenalFunctionCa
 
         {clearance && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">Clearance:</span>
-              <Badge variant="secondary" className={getRiskColor(clearance)}>
+              <Badge variant="secondary" className={`text-xs ${getRiskColor(clearance)}`}>
                 {clearance.toFixed(1)} mL/min
               </Badge>
               <Badge variant="outline" className="text-xs">
@@ -134,10 +135,10 @@ export function RenalFunctionCalculator({ age, weight, gender }: RenalFunctionCa
             
             {clearance < 60 && (
               <div className="flex items-start gap-2 p-2 bg-orange-50 rounded-md">
-                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
-                <div className="text-xs text-orange-800">
+                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-orange-800 min-w-0">
                   <p className="font-medium">Ajuste de dose necessário:</p>
-                  <p>{getRenalDoseAdjustment(clearance, 'medicamentos')}</p>
+                  <p className="break-words">{getRenalDoseAdjustment(clearance, 'medicamentos')}</p>
                 </div>
               </div>
             )}
