@@ -656,18 +656,19 @@ export default function Configuracoes() {
               </TabsContent>
 
               <TabsContent value="receituario">
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Configurações */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Configurações do Receituário
+                        <Settings className="h-5 w-5" />
+                        Configurações
                       </CardTitle>
                       <CardDescription>
-                        Personalize o layout e aparência das suas prescrições
+                        Personalize o layout das suas prescrições
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 max-h-[600px] overflow-y-auto">
                       {/* Layout e Design */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -1026,6 +1027,146 @@ export default function Configuracoes() {
                       <Button className="w-full">
                         Salvar Configurações do Receituário
                       </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Preview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Preview do Receituário
+                      </CardTitle>
+                      <CardDescription>
+                        Visualização em tempo real
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="bg-white border border-gray-200 mx-4 mb-4 shadow-sm" style={{ aspectRatio: '210/297' }}>
+                        {/* Simulação da página A4 */}
+                        <div 
+                          className="h-full p-4 text-black"
+                          style={{
+                            fontFamily: receituarioConfig.fonte,
+                            fontSize: `${receituarioConfig.tamanhoFonte}px`,
+                            lineHeight: receituarioConfig.espacamentoEntreLinhas,
+                            paddingTop: `${receituarioConfig.margemSuperior}px`,
+                            paddingBottom: `${receituarioConfig.margemInferior}px`,
+                            paddingLeft: `${receituarioConfig.margemEsquerda}px`,
+                            paddingRight: `${receituarioConfig.margemDireita}px`,
+                          }}
+                        >
+                          {/* Cabeçalho com Logo */}
+                          {(receituarioConfig.mostrarLogo && receituarioConfig.logoUrl) || receituarioConfig.mostrarCabecalho ? (
+                            <div className="border-b border-gray-300 pb-4 mb-6">
+                              <div className={`flex items-start gap-4 ${
+                                receituarioConfig.posicaoLogo === 'centro' ? 'justify-center text-center' :
+                                receituarioConfig.posicaoLogo === 'direita' ? 'justify-end text-right' : 'justify-start text-left'
+                              }`}>
+                                {receituarioConfig.mostrarLogo && receituarioConfig.logoUrl && (
+                                  <img 
+                                    src={receituarioConfig.logoUrl} 
+                                    alt="Logo" 
+                                    className="h-16 w-auto object-contain"
+                                  />
+                                )}
+                                {receituarioConfig.mostrarCabecalho && (
+                                  <div className="flex-1">
+                                    {receituarioConfig.nomeClinica && (
+                                      <h1 className="font-bold text-lg mb-1">{receituarioConfig.nomeClinica}</h1>
+                                    )}
+                                    {receituarioConfig.enderecoClinica && (
+                                      <p className="text-sm mb-1">{receituarioConfig.enderecoClinica}</p>
+                                    )}
+                                    <div className="text-sm">
+                                      {receituarioConfig.telefoneClinica && (
+                                        <span>Tel: {receituarioConfig.telefoneClinica}</span>
+                                      )}
+                                      {receituarioConfig.telefoneClinica && receituarioConfig.emailClinica && (
+                                        <span> | </span>
+                                      )}
+                                      {receituarioConfig.emailClinica && (
+                                        <span>Email: {receituarioConfig.emailClinica}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {/* Informações do Médico */}
+                          <div className="mb-6">
+                            <p className="font-semibold">Dr(a). {formData.nome || 'Nome do Médico'}</p>
+                            {receituarioConfig.mostrarEspecialidade && formData.especialidade && (
+                              <p className="text-sm">{formData.especialidade}</p>
+                            )}
+                            {receituarioConfig.mostrarCRM && (formData.crmEstado || formData.crmNumero) && (
+                              <p className="text-sm">CRM/{formData.crmEstado} {formData.crmNumero}</p>
+                            )}
+                          </div>
+
+                          {/* Dados do Paciente */}
+                          <div className="mb-6">
+                            <p><strong>Paciente:</strong> João Silva</p>
+                            <p><strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
+                          </div>
+
+                          {/* Prescrição de Exemplo */}
+                          <div className="mb-8">
+                            <h3 className="font-semibold mb-3">PRESCRIÇÃO MÉDICA</h3>
+                            <div className="space-y-2">
+                              <p>1. Dipirona Sódica 500mg</p>
+                              <p className="text-sm ml-4">Tomar 1 comprimido de 6 em 6 horas se dor</p>
+                              <p className="text-sm ml-4">Quantidade: 20 comprimidos</p>
+                              
+                              <p className="mt-4">2. Omeprazol 20mg</p>
+                              <p className="text-sm ml-4">Tomar 1 cápsula pela manhã em jejum</p>
+                              <p className="text-sm ml-4">Quantidade: 30 cápsulas</p>
+                            </div>
+                          </div>
+
+                          {/* Área de Assinatura */}
+                          <div className={`mt-auto ${
+                            receituarioConfig.posicaoAssinatura === 'centro' ? 'text-center' :
+                            receituarioConfig.posicaoAssinatura === 'direita' ? 'text-right' : 'text-left'
+                          }`}>
+                            {receituarioConfig.tipoAssinatura === 'digital' && receituarioConfig.assinaturaDigitalUrl ? (
+                              <div>
+                                <img 
+                                  src={receituarioConfig.assinaturaDigitalUrl} 
+                                  alt="Assinatura" 
+                                  className="h-12 w-auto mx-auto"
+                                />
+                                <p className="text-sm border-t border-gray-400 pt-1 mt-2 inline-block">
+                                  Dr(a). {formData.nome || 'Nome do Médico'}
+                                </p>
+                              </div>
+                            ) : receituarioConfig.tipoAssinatura === 'manuscrita' ? (
+                              <div>
+                                <div className="h-16 border-b border-gray-400 mb-2" style={{ minWidth: '200px' }}></div>
+                                <p className="text-sm">Dr(a). {formData.nome || 'Nome do Médico'}</p>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-sm border-b border-gray-400 pb-1 inline-block">
+                                  Dr(a). {formData.nome || 'Nome do Médico'}
+                                </p>
+                              </div>
+                            )}
+                            {receituarioConfig.mostrarDataAssinatura && (
+                              <p className="text-xs mt-2">{new Date().toLocaleDateString('pt-BR')}</p>
+                            )}
+                          </div>
+
+                          {/* Rodapé */}
+                          {receituarioConfig.mostrarRodape && receituarioConfig.textoRodape && (
+                            <div className="border-t border-gray-300 pt-2 mt-4">
+                              <p className="text-xs text-center">{receituarioConfig.textoRodape}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
