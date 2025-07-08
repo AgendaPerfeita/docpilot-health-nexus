@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { formatarTelefone } from "@/lib/formatters"
-import { User, Bell, Settings, Calendar, Clock, Plus, Trash2, FileText, Upload, Type, Image } from "lucide-react"
+import { User, Bell, Settings, Calendar, Clock, Plus, Trash2, FileText, Upload, Type, Image, Info, Eye } from "lucide-react"
 
 export default function Configuracoes() {
   const { profile, refreshProfile } = useAuth();
@@ -463,195 +463,321 @@ export default function Configuracoes() {
             </Card>
           </TabsContent>
 
-          {profile?.tipo === 'medico' && (
+          {(profile?.tipo === 'medico' || profile?.tipo === 'clinica') && (
             <>
               <TabsContent value="agenda">
                 <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        Configurações de Agenda
-                      </CardTitle>
-                      <CardDescription>
-                        Configure seus horários de atendimento e preferências da agenda
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Horários de funcionamento */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Horários de Funcionamento</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-4">
-                            <h4 className="font-medium text-primary">Manhã</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-2">
-                                <Label>Início</Label>
-                                <Input
-                                  type="time"
-                                  value={agendaConfig.horarioInicioManha}
-                                  onChange={(e) => handleAgendaConfigChange('horarioInicioManha', e.target.value)}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>Fim</Label>
-                                <Input
-                                  type="time"
-                                  value={agendaConfig.horarioFimManha}
-                                  onChange={(e) => handleAgendaConfigChange('horarioFimManha', e.target.value)}
-                                />
-                              </div>
+                  {profile?.tipo === 'medico' ? (
+                    // Configuração para Médico - configurar por local de trabalho
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Configurações de Agenda - Médico
+                        </CardTitle>
+                        <CardDescription>
+                          Configure seus horários de atendimento para cada local onde você trabalha
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Seletor de Local de Trabalho */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Local de Trabalho</h3>
+                          <div className="flex gap-4">
+                            <div className="space-y-2">
+                              <Label>Configurar agenda para:</Label>
+                              <Select defaultValue="individual">
+                                <SelectTrigger className="w-64">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="individual">Atendimento Individual</SelectItem>
+                                  {/* Aqui seria listado as clínicas vinculadas */}
+                                  <SelectItem value="clinica-1">Clínica ABC - Centro</SelectItem>
+                                  <SelectItem value="clinica-2">Hospital XYZ - Zona Norte</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </div>
-                          <div className="space-y-4">
-                            <h4 className="font-medium text-primary">Tarde</h4>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-2">
-                                <Label>Início</Label>
-                                <Input
-                                  type="time"
-                                  value={agendaConfig.horarioInicioTarde}
-                                  onChange={(e) => handleAgendaConfigChange('horarioInicioTarde', e.target.value)}
-                                />
+                        </div>
+
+                        {/* Horários de funcionamento */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Horários de Funcionamento</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-primary">Manhã</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-2">
+                                  <Label>Início</Label>
+                                  <Input
+                                    type="time"
+                                    value={agendaConfig.horarioInicioManha}
+                                    onChange={(e) => handleAgendaConfigChange('horarioInicioManha', e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Fim</Label>
+                                  <Input
+                                    type="time"
+                                    value={agendaConfig.horarioFimManha}
+                                    onChange={(e) => handleAgendaConfigChange('horarioFimManha', e.target.value)}
+                                  />
+                                </div>
                               </div>
-                              <div className="space-y-2">
-                                <Label>Fim</Label>
-                                <Input
-                                  type="time"
-                                  value={agendaConfig.horarioFimTarde}
-                                  onChange={(e) => handleAgendaConfigChange('horarioFimTarde', e.target.value)}
-                                />
+                            </div>
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-primary">Tarde</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-2">
+                                  <Label>Início</Label>
+                                  <Input
+                                    type="time"
+                                    value={agendaConfig.horarioInicioTarde}
+                                    onChange={(e) => handleAgendaConfigChange('horarioInicioTarde', e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Fim</Label>
+                                  <Input
+                                    type="time"
+                                    value={agendaConfig.horarioFimTarde}
+                                    onChange={(e) => handleAgendaConfigChange('horarioFimTarde', e.target.value)}
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Duração da consulta */}
-                      <div className="space-y-2">
-                        <Label>Duração padrão da consulta (minutos)</Label>
-                        <Select 
-                          value={agendaConfig.duracaoConsulta.toString()} 
-                          onValueChange={(value) => handleAgendaConfigChange('duracaoConsulta', parseInt(value))}
-                        >
-                          <SelectTrigger className="w-48">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="15">15 minutos</SelectItem>
-                            <SelectItem value="20">20 minutos</SelectItem>
-                            <SelectItem value="30">30 minutos</SelectItem>
-                            <SelectItem value="45">45 minutos</SelectItem>
-                            <SelectItem value="60">60 minutos</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                        {/* Duração da consulta */}
+                        <div className="space-y-2">
+                          <Label>Duração padrão da consulta (minutos)</Label>
+                          <Select 
+                            value={agendaConfig.duracaoConsulta.toString()} 
+                            onValueChange={(value) => handleAgendaConfigChange('duracaoConsulta', parseInt(value))}
+                          >
+                            <SelectTrigger className="w-48">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="15">15 minutos</SelectItem>
+                              <SelectItem value="20">20 minutos</SelectItem>
+                              <SelectItem value="30">30 minutos</SelectItem>
+                              <SelectItem value="45">45 minutos</SelectItem>
+                              <SelectItem value="60">60 minutos</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                      {/* Dias da semana */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Dias de Atendimento</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {Object.entries(agendaConfig.diasSemana).map(([dia, ativo]) => (
-                            <div key={dia} className="flex items-center space-x-2">
-                              <Switch
-                                id={dia}
-                                checked={ativo}
-                                onCheckedChange={(checked) => handleDiaSemanaChange(dia, checked)}
+                        {/* Dias da semana */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Dias de Atendimento</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {Object.entries(agendaConfig.diasSemana).map(([dia, ativo]) => (
+                              <div key={dia} className="flex items-center space-x-2">
+                                <Switch
+                                  id={dia}
+                                  checked={ativo}
+                                  onCheckedChange={(checked) => handleDiaSemanaChange(dia, checked)}
+                                />
+                                <Label htmlFor={dia} className="capitalize">
+                                  {dia === 'terca' ? 'Terça' : 
+                                   dia === 'quarta' ? 'Quarta' :
+                                   dia === 'quinta' ? 'Quinta' :
+                                   dia === 'sabado' ? 'Sábado' : dia}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Intervalos */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold">Intervalos</h3>
+                            <Button onClick={adicionarIntervalo} size="sm" variant="outline">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            {agendaConfig.intervalos.map((intervalo, index) => (
+                              <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  type="time"
+                                  value={intervalo.inicio}
+                                  onChange={(e) => atualizarIntervalo(index, 'inicio', e.target.value)}
+                                  className="w-32"
+                                />
+                                <span className="text-muted-foreground">até</span>
+                                <Input
+                                  type="time"
+                                  value={intervalo.fim}
+                                  onChange={(e) => atualizarIntervalo(index, 'fim', e.target.value)}
+                                  className="w-32"
+                                />
+                                <Input
+                                  placeholder="Descrição"
+                                  value={intervalo.descricao}
+                                  onChange={(e) => atualizarIntervalo(index, 'descricao', e.target.value)}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  onClick={() => removerIntervalo(index)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Regras de agendamento */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Regras de Agendamento</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Antecedência mínima (horas)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={agendaConfig.antecedenciaMinima}
+                                onChange={(e) => handleAgendaConfigChange('antecedenciaMinima', parseInt(e.target.value) || 0)}
                               />
-                              <Label htmlFor={dia} className="capitalize">
-                                {dia === 'terca' ? 'Terça' : 
-                                 dia === 'quarta' ? 'Quarta' :
-                                 dia === 'quinta' ? 'Quinta' :
-                                 dia === 'sabado' ? 'Sábado' : dia}
-                              </Label>
                             </div>
-                          ))}
+                            <div className="space-y-2">
+                              <Label>Limite para cancelamento (horas)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={agendaConfig.limiteCancelamento}
+                                onChange={(e) => handleAgendaConfigChange('limiteCancelamento', parseInt(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              id="permitirEncaixe"
+                              checked={agendaConfig.permitirEncaixe}
+                              onCheckedChange={(checked) => handleAgendaConfigChange('permitirEncaixe', checked)}
+                            />
+                            <Label htmlFor="permitirEncaixe">Permitir consultas de encaixe</Label>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Intervalos */}
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold">Intervalos</h3>
-                          <Button onClick={adicionarIntervalo} size="sm" variant="outline">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar
+                        <Button className="w-full">
+                          Salvar Configurações da Agenda
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    // Configuração para Clínica - visualizar agendas dos médicos vinculados
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Configurações de Agenda - Clínica
+                        </CardTitle>
+                        <CardDescription>
+                          Visualize e gerencie os horários dos profissionais da sua clínica
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold">Médicos Vinculados</h3>
+                          
+                          {/* Lista de médicos */}
+                          <div className="space-y-4">
+                            <div className="border rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <h4 className="font-medium">Dr. João Silva</h4>
+                                  <p className="text-sm text-muted-foreground">Cardiologia - CRM 12345</p>
+                                </div>
+                                <Button variant="outline" size="sm">
+                                  <Settings className="h-4 w-4 mr-2" />
+                                  Ver Agenda
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium">Horário Manhã:</span>
+                                  <p>08:00 - 12:00</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Horário Tarde:</span>
+                                  <p>14:00 - 18:00</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Duração consulta:</span>
+                                  <p>30 minutos</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Dias ativos:</span>
+                                  <p>Seg, Ter, Qua, Qui, Sex</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="border rounded-lg p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <h4 className="font-medium">Dra. Maria Santos</h4>
+                                  <p className="text-sm text-muted-foreground">Pediatria - CRM 67890</p>
+                                </div>
+                                <Button variant="outline" size="sm">
+                                  <Settings className="h-4 w-4 mr-2" />
+                                  Ver Agenda
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="font-medium">Horário Manhã:</span>
+                                  <p>07:30 - 11:30</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Horário Tarde:</span>
+                                  <p>13:30 - 17:30</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Duração consulta:</span>
+                                  <p>20 minutos</p>
+                                </div>
+                                <div>
+                                  <span className="font-medium">Dias ativos:</span>
+                                  <p>Seg, Ter, Qui, Sex, Sáb</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-muted/50 p-4 rounded-lg">
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <Info className="h-4 w-4" />
+                              Informação
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              As configurações de agenda são gerenciadas individualmente por cada médico. 
+                              A clínica pode visualizar e monitorar os horários, mas apenas os profissionais 
+                              podem alterar suas próprias configurações.
+                            </p>
+                          </div>
+
+                          <Button className="w-full" variant="outline">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Visualizar Agenda Completa da Clínica
                           </Button>
                         </div>
-                        <div className="space-y-2">
-                          {agendaConfig.intervalos.map((intervalo, index) => (
-                            <div key={index} className="flex items-center gap-2 p-3 border rounded-lg">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="time"
-                                value={intervalo.inicio}
-                                onChange={(e) => atualizarIntervalo(index, 'inicio', e.target.value)}
-                                className="w-32"
-                              />
-                              <span className="text-muted-foreground">até</span>
-                              <Input
-                                type="time"
-                                value={intervalo.fim}
-                                onChange={(e) => atualizarIntervalo(index, 'fim', e.target.value)}
-                                className="w-32"
-                              />
-                              <Input
-                                placeholder="Descrição"
-                                value={intervalo.descricao}
-                                onChange={(e) => atualizarIntervalo(index, 'descricao', e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button
-                                onClick={() => removerIntervalo(index)}
-                                size="sm"
-                                variant="outline"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Regras de agendamento */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Regras de Agendamento</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Antecedência mínima (horas)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={agendaConfig.antecedenciaMinima}
-                              onChange={(e) => handleAgendaConfigChange('antecedenciaMinima', parseInt(e.target.value) || 0)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Limite para cancelamento (horas)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={agendaConfig.limiteCancelamento}
-                              onChange={(e) => handleAgendaConfigChange('limiteCancelamento', parseInt(e.target.value) || 0)}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="permitirEncaixe"
-                            checked={agendaConfig.permitirEncaixe}
-                            onCheckedChange={(checked) => handleAgendaConfigChange('permitirEncaixe', checked)}
-                          />
-                          <Label htmlFor="permitirEncaixe">Permitir consultas de encaixe</Label>
-                        </div>
-                      </div>
-
-                      <Button className="w-full">
-                        Salvar Configurações da Agenda
-                      </Button>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </TabsContent>
 
