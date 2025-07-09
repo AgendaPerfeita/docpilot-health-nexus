@@ -66,7 +66,7 @@ export function useChatMensagens() {
       author_nome: data.author?.nome || 'Usuário'
     };
     
-    setMensagens((prev) => [...prev, mensagemComNome]);
+    setMensagens((prev) => [...prev, mensagemComNome as ChatMensagem]);
     return mensagemComNome;
   }
 

@@ -144,7 +144,7 @@ export const usePacientes = () => {
 
     console.log('🔍 criarPaciente - Dados para inserir:', dadosParaInserir);
 
-    // Criar o paciente (sem campos de vínculo antigos)
+    // Criar o paciente
     const { data: paciente, error: pacienteError } = await supabase
       .from('pacientes')
       .insert(dadosParaInserir)
@@ -160,43 +160,116 @@ export const usePacientes = () => {
 
     console.log('✅ criarPaciente - Paciente criado com sucesso:', paciente);
 
-    // Criar vínculo usando as tabelas de vínculo
-    if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
-      const clinicaId = profile.tipo === 'clinica' ? profile.id : profile.clinica_id;
-      console.log('🔍 criarPaciente - Criando vínculo com clínica:', clinicaId);
-      
-      const { error: vinculoError } = await supabase
-        .from('paciente_clinica')
-        .insert({ 
-          paciente_id: paciente.id, 
-          clinica_id: clinicaId 
-        });
-      
-      if (vinculoError) {
-        console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoError);
-        throw vinculoError;
+    // Criar vínculos apropriados baseado no tipo de usuário
+    try {
+      if (profile.tipo === 'clinica') {
+        // Clínica cria vínculo direto
+        console.log('🔍 criarPaciente - Criando vínculo clínica:', profile.id);
+        const { error: vinculoError } = await supabase
+          .from('paciente_clinica')
+          .insert({ 
+            paciente_id: paciente.id, 
+            clinica_id: profile.id 
+          });
+        
+        if (vinculoError) {
+          console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoError);
+          throw vinculoError;
+        }
+        
+      } else if (profile.tipo === 'staff') {
+        // Staff cria vínculo para a clínica onde trabalha
+        if (!profile.clinica_id) {
+          throw new Error('Staff deve estar vinculado a uma clínica');
+        }
+        console.log('🔍 criarPaciente - Staff criando vínculo para clínica:', profile.clinica_id);
+        const { error: vinculoError } = await supabase
+          .from('paciente_clinica')
+          .insert({ 
+            paciente_id: paciente.id, 
+            clinica_id: profile.clinica_id 
+          });
+        
+        if (vinculoError) {
+          console.error('❌ criarPaciente - Erro ao criar vínculo clínica via staff:', vinculoError);
+          throw vinculoError;
+        }
+        
+      } else if (profile.tipo === 'medico') {
+        console.log('🔍 criarPaciente - Médico criando vínculo:', profile.id);
+        
+        // Verificar se médico tem clínicas vinculadas
+        const { data: clinicas, error: clinicasError } = await supabase
+          .from('clinica_medicos')
+          .select('clinica_id')
+          .eq('medico_id', profile.id)
+          .eq('ativo', true);
+        
+        if (clinicasError) {
+          console.error('❌ Erro ao buscar clínicas do médico:', clinicasError);
+          throw clinicasError;
+        }
+        
+        if (clinicas && clinicas.length > 0) {
+          // Médico vinculado a clínicas - criar vínculo para a primeira clínica
+          const clinicaId = clinicas[0].clinica_id;
+          console.log('🔍 criarPaciente - Médico vinculado, usando clínica:', clinicaId);
+          
+          // Criar vínculo médico-paciente
+          const { error: vinculoMedicoError } = await supabase
+            .from('paciente_medico')
+            .insert({ 
+              paciente_id: paciente.id, 
+              medico_id: profile.id,
+              clinica_id: clinicaId
+            });
+          
+          if (vinculoMedicoError) {
+            console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoMedicoError);
+            throw vinculoMedicoError;
+          }
+          
+          // Criar vínculo clínica-paciente também
+          const { error: vinculoClinicaError } = await supabase
+            .from('paciente_clinica')
+            .insert({ 
+              paciente_id: paciente.id, 
+              clinica_id: clinicaId 
+            });
+          
+          if (vinculoClinicaError) {
+            console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoClinicaError);
+            throw vinculoClinicaError;
+          }
+          
+        } else {
+          // Médico individual - criar vínculo médico com auto-referência
+          console.log('🔍 criarPaciente - Médico individual, criando auto-referência');
+          const { error: vinculoError } = await supabase
+            .from('paciente_medico')
+            .insert({ 
+              paciente_id: paciente.id, 
+              medico_id: profile.id,
+              clinica_id: profile.id // Auto-referência para médicos individuais
+            });
+          
+          if (vinculoError) {
+            console.error('❌ criarPaciente - Erro ao criar vínculo médico individual:', vinculoError);
+            throw vinculoError;
+          }
+        }
       }
       
-    } else if (profile.tipo === 'medico') {
-      console.log('🔍 criarPaciente - Criando vínculo com médico:', profile.id);
+      console.log('✅ criarPaciente - Vínculos criados com sucesso');
+      await fetchPacientes();
+      return paciente;
       
-      const { error: vinculoError } = await supabase
-        .from('paciente_medico')
-        .insert({ 
-          paciente_id: paciente.id, 
-          medico_id: profile.id,
-          clinica_id: profile.clinica_id || profile.id
-        });
-      
-      if (vinculoError) {
-        console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
-        throw vinculoError;
-      }
+    } catch (vinculoError) {
+      // Se houve erro no vínculo, tentar deletar o paciente criado
+      console.error('❌ Erro ao criar vínculos, deletando paciente:', vinculoError);
+      await supabase.from('pacientes').delete().eq('id', paciente.id);
+      throw vinculoError;
     }
-
-    console.log('✅ criarPaciente - Vínculo criado com sucesso');
-    await fetchPacientes();
-    return paciente;
   };
 
   const atualizarPaciente = async (id: string, pacienteData: any) => {

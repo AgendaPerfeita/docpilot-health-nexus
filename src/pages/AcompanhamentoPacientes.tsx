@@ -125,6 +125,7 @@ export default function AcompanhamentoPacientes() {
         name: p.nome,
         email: p.email,
         phone: p.telefone,
+        status: 'active' as const,
         unreadMessages: 0,
         pendingExams: 0
       })));
@@ -146,7 +147,7 @@ export default function AcompanhamentoPacientes() {
       clinica_id: null, // ou defina conforme contexto
       author_id: profile.id, // id real do usuário logado
       // Garantir tipo correto para o chat
-      author_type: profile.tipo === 'medico' ? 'doctor' : profile.tipo === 'paciente' ? 'patient' : profile.tipo, // 'doctor', 'patient', 'clinic', 'staff'
+      author_type: profile.tipo === 'medico' ? 'doctor' : profile.tipo === 'paciente' ? 'patient' : profile.tipo === 'clinica' ? 'clinic' : 'staff',
       content: newMessage,
       media_url: null,
       media_type: null

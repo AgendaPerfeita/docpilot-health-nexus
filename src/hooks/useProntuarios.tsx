@@ -103,13 +103,7 @@ export const useProntuarios = () => {
 
     if (error) throw error;
 
-    // Atualizar responsavel_id do paciente para o médico que atendeu
-    if (prontuarioData.paciente_id) {
-      await supabase
-        .from('pacientes')
-        .update({ responsavel_id: profile.id })
-        .eq('id', prontuarioData.paciente_id);
-    }
+    // Não há mais campo responsavel_id - vínculos são gerenciados pelas tabelas de relacionamento
 
     await fetchProntuarios();
     return data;
