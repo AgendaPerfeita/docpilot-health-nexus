@@ -39,6 +39,8 @@ export const useUserProfile = () => {
 
       if (profile.tipo === 'clinica') {
         query = query.eq('clinica_id', profile.id);
+      } else if (profile.tipo === 'staff' && profile.clinica_id) {
+        query = query.eq('clinica_id', profile.clinica_id);
       } else if (profile.tipo === 'medico') {
         query = query.eq('medico_id', profile.id);
       }

@@ -20,6 +20,12 @@ import { PacienteSelectorModal } from "@/components/prontuario/PacienteSelectorM
 const Dashboard = () => {
   const { profile } = useAuth();
 
+  // Adicionando logs para depuração do plano
+  console.log('[DASHBOARD] Renderizando Dashboard. Profile:', profile);
+  if (profile) {
+    console.log('[DASHBOARD] Tipo:', profile.tipo, '| Plano:', profile.plano_medico);
+  }
+
   const quickActions = [
     {
       title: "Nova Consulta",
@@ -205,7 +211,7 @@ const Dashboard = () => {
       </div>
 
       {/* System Alerts */}
-      {profile?.tipo === 'medico' && (
+      {profile?.tipo === 'medico' && profile?.plano_medico !== 'premium' && (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-4 sm:pt-6 px-4 sm:px-6">
             <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5 sm:mt-0" />

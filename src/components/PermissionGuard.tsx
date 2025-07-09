@@ -39,7 +39,9 @@ export const PermissionGuard = ({
 
   // Para médicos, verificar permissões básicas do perfil
   if (requiredPermission) {
-    const hasPermission = profile[requiredPermission as keyof typeof profile];
+    // Tenta camelCase e snake_case
+    const snakeCase = requiredPermission.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    const hasPermission = profile[requiredPermission as keyof typeof profile] ?? profile[snakeCase as keyof typeof profile];
     if (!hasPermission) {
       return fallback || (showUpgradeMessage ? <UpgradeMessage /> : null);
     }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { User, FileText, Calendar, Upload, Download, MessageCircle, Send, FileImage, File, Plus, Search, Phone, Mail, Clock, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useChatMensagens } from "@/hooks/useChatMensagens";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation, useNavigate } from "react-router-dom"
+import { Tabs as UITabs, TabsList as UITabsList, TabsTrigger as UITabsTrigger, TabsContent as UITabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Patient {
   id: string
@@ -52,226 +57,135 @@ interface Exam {
   notes?: string
 }
 
-const mockPatients: Patient[] = [
-  {
-    id: '1',
-    name: 'Ana Silva',
-    email: 'ana.silva@email.com',
-    phone: '(11) 99999-0001',
-    lastMessage: 'Estou bem, doutor. Só queria saber se posso fazer exercícios físicos.',
-    lastMessageDate: '2024-01-15T14:20:00',
-    unreadMessages: 2,
-    pendingExams: 1,
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Carlos Santos',
-    email: 'carlos.santos@email.com',
-    phone: '(11) 99999-0002',
-    lastMessage: 'Doutor, anexei o resultado do hemograma.',
-    lastMessageDate: '2024-01-14T16:30:00',
-    unreadMessages: 0,
-    pendingExams: 0,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Maria Oliveira',
-    email: 'maria.oliveira@email.com',
-    phone: '(11) 99999-0003',
-    unreadMessages: 1,
-    pendingExams: 2,
-    status: 'active'
-  }
-]
-
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    patientId: '1',
-    from: 'doctor',
-    content: 'Olá! Como você está se sentindo após a última consulta?',
-    timestamp: '2024-01-15T10:30:00',
-    read: true
-  },
-  {
-    id: '2',
-    patientId: '1',
-    from: 'patient',
-    content: 'Estou bem, doutor. Só queria saber se posso fazer exercícios físicos.',
-    timestamp: '2024-01-15T14:20:00',
-    read: false
-  },
-  {
-    id: '3',
-    patientId: '1',
-    from: 'doctor',
-    content: 'Claro! Pode fazer exercícios leves como caminhada, natação ou yoga. Evite exercícios de alto impacto por enquanto.',
-    timestamp: '2024-01-15T15:00:00',
-    read: true
-  },
-  {
-    id: '4',
-    patientId: '2',
-    from: 'patient',
-    content: 'Doutor, anexei o resultado do hemograma.',
-    timestamp: '2024-01-14T16:30:00',
-    read: true
-  },
-  {
-    id: '5',
-    patientId: '2',
-    from: 'doctor',
-    content: 'Obrigado! Vou analisar os resultados e entrar em contato em breve.',
-    timestamp: '2024-01-14T17:00:00',
-    read: true
-  },
-  {
-    id: '6',
-    patientId: '3',
-    from: 'doctor',
-    content: 'Olá! Lembre-se da consulta de retorno amanhã às 14h.',
-    timestamp: '2024-01-13T09:00:00',
-    read: false
-  }
-]
-
-const mockExams: Exam[] = [
-  {
-    id: '1',
-    patientId: '1',
-    name: 'Raio-X Tórax',
-    type: 'requested',
-    date: '2024-01-12',
-    status: 'requested',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Avaliar possível pneumonia. Paciente com tosse há 5 dias e febre.',
-    priority: 'high',
-    labName: 'Laboratório Central',
-    cost: 85.50,
-    insurance: 'Unimed',
-    scheduledDate: '2024-01-15',
-    notes: 'Paciente deve estar em jejum de 4 horas'
-  },
-  {
-    id: '2',
-    patientId: '1',
-    name: 'Eletrocardiograma',
-    type: 'uploaded',
-    date: '2024-01-13',
-    status: 'completed',
-    file: 'ecg_ana.pdf',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Avaliação cardiológica de rotina',
-    priority: 'medium',
-    labName: 'CardioLab',
-    cost: 120.00,
-    insurance: 'Unimed',
-    resultDate: '2024-01-13',
-    resultSummary: 'Ritmo sinusal, FC 72 bpm, eixo normal. Sem alterações significativas.',
-    notes: 'Exame normal'
-  },
-  {
-    id: '3',
-    patientId: '2',
-    name: 'Hemograma Completo',
-    type: 'uploaded',
-    date: '2024-01-10',
-    status: 'completed',
-    file: 'hemograma_carlos.pdf',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Avaliação de anemia e infecção',
-    priority: 'medium',
-    labName: 'LabExame',
-    cost: 45.00,
-    insurance: 'Amil',
-    resultDate: '2024-01-10',
-    resultSummary: 'Hemoglobina 12.5 g/dL, leucócitos 8.500/mm³. Valores normais.',
-    notes: 'Resultados dentro da normalidade'
-  },
-  {
-    id: '4',
-    patientId: '2',
-    name: 'Glicemia em Jejum',
-    type: 'requested',
-    date: '2024-01-11',
-    status: 'in_progress',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Controle de diabetes mellitus',
-    priority: 'high',
-    labName: 'LabExame',
-    cost: 25.00,
-    insurance: 'Amil',
-    scheduledDate: '2024-01-16',
-    notes: 'Jejum de 8-12 horas obrigatório'
-  },
-  {
-    id: '5',
-    patientId: '3',
-    name: 'Glicemia em Jejum',
-    type: 'requested',
-    date: '2024-01-11',
-    status: 'requested',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Rastreamento de diabetes',
-    priority: 'medium',
-    labName: 'LabExame',
-    cost: 25.00,
-    insurance: 'Particular',
-    scheduledDate: '2024-01-18',
-    notes: 'Jejum de 8-12 horas obrigatório'
-  },
-  {
-    id: '6',
-    patientId: '3',
-    name: 'Perfil Lipídico',
-    type: 'requested',
-    date: '2024-01-11',
-    status: 'requested',
-    requestedBy: 'Dr. João Silva',
-    observations: 'Avaliação de risco cardiovascular',
-    priority: 'medium',
-    labName: 'LabExame',
-    cost: 35.00,
-    insurance: 'Particular',
-    scheduledDate: '2024-01-18',
-    notes: 'Jejum de 12 horas obrigatório'
-  }
-]
-
 export default function AcompanhamentoPacientes() {
   const [activeTab, setActiveTab] = useState('patients')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
   const [isRequestExamDialogOpen, setIsRequestExamDialogOpen] = useState(false)
+  const [isPatientDetailsOpen, setIsPatientDetailsOpen] = useState(false)
   const [newMessage, setNewMessage] = useState('')
-  const [patients] = useState<Patient[]>(mockPatients)
-  const [messages, setMessages] = useState<Message[]>(mockMessages)
-  const [exams, setExams] = useState<Exam[]>(mockExams)
+  const { profile } = useAuth();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([])
+  const [exams, setExams] = useState<Exam[]>([])
+  const { mensagens, loading: loadingMensagens, fetchMensagens, sendMensagem, markAsRead } = useChatMensagens();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // CORREÇÃO: chamar o hook no topo do componente, não dentro de useMemo
+  const anexosMedicos = useAnexosMedicos(selectedPatient?.id);
+
+  // Buscar pacientes reais do novo modelo multi-clínica/multi-médico
+  useEffect(() => {
+    async function fetchPatients() {
+      setLoadingPatients(true);
+      console.log('[ACOMPANHAMENTO] Iniciando fetchPatients. Profile:', profile);
+      let data = [];
+      let error = null;
+      // Exemplo: buscar pacientes da clínica selecionada (ou do médico solo)
+      try {
+        if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
+          // Pacientes da clínica
+          const { data: pacientes, error: err } = await supabase
+            .from('paciente_clinica')
+            .select('paciente:paciente_id(id, nome, email, telefone)')
+            .eq('clinica_id', profile.tipo === 'clinica' ? profile.id : profile.clinica_id);
+          error = err;
+          data = pacientes?.map(pc => pc.paciente) || [];
+        } else if (profile.tipo === 'medico') {
+          // Pacientes do médico solo (consultório próprio)
+          const { data: pacientesSolo, error: errSolo } = await supabase
+            .from('paciente_medico')
+            .select('paciente:paciente_id(id, nome, email, telefone)')
+            .eq('medico_id', profile.id)
+            .eq('clinica_id', profile.id); // solo: clinica_id = medico_id
+          // Pacientes do médico em clínicas
+          const { data: pacientesClinicas, error: errClinicas } = await supabase
+            .from('paciente_medico')
+            .select('paciente:paciente_id(id, nome, email, telefone)')
+            .eq('medico_id', profile.id)
+            .neq('clinica_id', profile.id); // clínicas reais
+          error = errSolo || errClinicas;
+          data = [
+            ...(pacientesSolo?.map(pm => pm.paciente) || []),
+            ...(pacientesClinicas?.map(pm => pm.paciente) || [])
+          ];
+        }
+      } catch (e) {
+        error = e;
+      }
+      if (error) {
+        console.error('[ACOMPANHAMENTO] Erro ao buscar pacientes:', error);
+      } else {
+        console.log('[ACOMPANHAMENTO] Pacientes encontrados:', data);
+      }
+      setPatients((data || []).map((p: any) => ({
+        id: p.id,
+        name: p.nome,
+        email: p.email,
+        phone: p.telefone,
+        unreadMessages: 0,
+        pendingExams: 0
+      })));
+      setLoadingPatients(false);
+    }
+    fetchPatients();
+  }, [profile]);
 
   const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
+    patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedPatient) return
-    
-    const message: Message = {
-      id: Date.now().toString(),
-      patientId: selectedPatient.id,
-      from: 'doctor',
+    // Enviar mensagem real para o Supabase
+    await sendMensagem({
+      patient_id: selectedPatient.id,
+      clinica_id: null, // ou defina conforme contexto
+      author_id: profile.id, // id real do usuário logado
+      // Garantir tipo correto para o chat
+      author_type: profile.tipo === 'medico' ? 'doctor' : profile.tipo === 'paciente' ? 'patient' : profile.tipo, // 'doctor', 'patient', 'clinic', 'staff'
       content: newMessage,
-      timestamp: new Date().toISOString(),
-      read: false
-    }
-    
-    setMessages([...messages, message])
-    setNewMessage('')
-    setIsMessageDialogOpen(false)
+      media_url: null,
+      media_type: null
+    });
+    setNewMessage('');
+    // Remover: setIsMessageDialogOpen(false); // Não fechar o chat após enviar
   }
+
+  // Abrir chat automaticamente se vier parâmetro ?chat=PATIENT_ID
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const chatPatientId = params.get('chat');
+    if (chatPatientId) {
+      const patient = patients.find(p => p.id === chatPatientId);
+      if (patient) {
+        setSelectedPatient(patient);
+        setIsMessageDialogOpen(true);
+      }
+    }
+    // eslint-disable-next-line
+  }, [location.search, patients]);
+
+  // Ao abrir o chat de um paciente, buscar mensagens reais
+  useEffect(() => {
+    if (isMessageDialogOpen && selectedPatient) {
+      fetchMensagens(selectedPatient.id);
+      markAsRead(selectedPatient.id);
+    }
+  }, [isMessageDialogOpen, selectedPatient]);
+
+  // Carregar mensagens de todos os pacientes para a aba "Mensagens"
+  useEffect(() => {
+    if (patients.length > 0) {
+      // Buscar mensagens de todos os pacientes
+      patients.forEach(patient => {
+        fetchMensagens(patient.id);
+      });
+    }
+  }, [patients]);
 
   const getPatientMessages = (patientId: string) => {
     return messages.filter(m => m.patientId === patientId)
@@ -315,6 +229,89 @@ export default function AcompanhamentoPacientes() {
       case 'pending': return 'Pendente'
       default: return 'Desconhecido'
     }
+  }
+
+  // Hook para anexos médicos do paciente
+  function useAnexosMedicos(pacienteId?: string) {
+    const [arquivos, setArquivos] = useState<any[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Listar arquivos do paciente
+    const fetchArquivos = async () => {
+      if (!pacienteId) return;
+      const { data, error } = await supabase
+        .from('anexos_medicos')
+        .select('*')
+        .eq('paciente_id', pacienteId)
+        .order('data_upload', { ascending: false });
+      if (error) setError(error.message);
+      setArquivos(data || []);
+    };
+
+    // Upload de arquivo
+    const uploadArquivo = async (file: File) => {
+      if (!pacienteId) return;
+      setUploading(true);
+      setError(null);
+      // Limites
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (file.size > maxSize) {
+        setError('Arquivo muito grande (máx 10MB)');
+        setUploading(false);
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        setError('Tipo de arquivo não permitido');
+        setUploading(false);
+        return;
+      }
+      // Path organizado
+      const path = `paciente_${pacienteId}/${Date.now()}_${file.name}`;
+      // Upload para bucket
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('anexos-medicos')
+        .upload(path, file, { upsert: false });
+      if (storageError) {
+        setError(storageError.message);
+        setUploading(false);
+        return;
+      }
+      // URL pública
+      const { data: publicUrlData } = supabase.storage.from('anexos-medicos').getPublicUrl(path);
+      const url = publicUrlData?.publicUrl || '';
+      // Salvar metadados na tabela
+      const { error: dbError } = await supabase
+        .from('anexos_medicos')
+        .insert({
+          paciente_id: pacienteId,
+          nome_arquivo: file.name,
+          tipo_arquivo: file.type,
+          tamanho_bytes: file.size,
+          url_storage: url,
+          categoria: 'outros',
+          data_upload: new Date().toISOString(),
+          medico_id: profile?.id || '',
+        });
+      if (dbError) setError(dbError.message);
+      setUploading(false);
+      fetchArquivos();
+    };
+
+    // Excluir arquivo
+    const excluirArquivo = async (arquivo: any) => {
+      // Remove do storage
+      const path = arquivo.url_storage.split('/anexos-medicos/')[1];
+      await supabase.storage.from('anexos-medicos').remove([path]);
+      // Remove da tabela
+      await supabase.from('anexos_medicos').delete().eq('id', arquivo.id);
+      fetchArquivos();
+    };
+
+    useEffect(() => { fetchArquivos(); }, [pacienteId]);
+
+    return { arquivos, uploading, error, uploadArquivo, excluirArquivo, fetchArquivos };
   }
 
   return (
@@ -448,16 +445,19 @@ export default function AcompanhamentoPacientes() {
         <TabsContent value="messages" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Conversas com Pacientes</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                Conversas com Pacientes
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {(() => {
-                  // Agrupar mensagens por paciente
+                  // Agrupar mensagens por paciente usando o array mensagens do hook
                   const patientConversations = patients.map(patient => {
-                    const patientMessages = messages.filter(m => m.patientId === patient.id)
+                    const patientMessages = mensagens.filter(m => m.patient_id === patient.id)
                     const lastMessage = patientMessages[patientMessages.length - 1]
-                    const unreadCount = patientMessages.filter(m => !m.read && m.from === 'patient').length
+                    const unreadCount = patientMessages.filter(m => !m.read && m.author_type === 'patient').length
                     
                     return {
                       patient,
@@ -471,58 +471,107 @@ export default function AcompanhamentoPacientes() {
                       if (!a.lastMessage && !b.lastMessage) return 0
                       if (!a.lastMessage) return 1
                       if (!b.lastMessage) return -1
-                      return new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime()
+                      return new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
                     })
 
-                  return patientConversations.map((conversation) => (
-                    <div key={conversation.patient.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-medium text-lg">{conversation.patient.name}</span>
-                            {conversation.unreadCount > 0 && (
-                              <Badge variant="destructive" className="text-xs">
-                                {conversation.unreadCount} nova{conversation.unreadCount > 1 ? 's' : ''}
-                              </Badge>
+                  return patientConversations.length > 0 ? (
+                    patientConversations.map((conversation) => (
+                      <div key={conversation.patient.id} className="border rounded-xl p-4 hover:bg-muted/30 transition-all duration-200 hover:shadow-sm">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            {/* Cabeçalho da conversa */}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                <User className="h-5 w-5 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-semibold text-lg truncate">{conversation.patient.name}</h3>
+                                  {conversation.unreadCount > 0 && (
+                                    <Badge variant="destructive" className="text-xs px-2 py-1">
+                                      {conversation.unreadCount} nova{conversation.unreadCount > 1 ? 's' : ''}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Badge variant="outline" className="text-xs">
+                                    {conversation.messageCount} mensagem{conversation.messageCount > 1 ? 'ns' : ''}
+                                  </Badge>
+                                  <span>•</span>
+                                  <span>{conversation.patient.email}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Última mensagem */}
+                            {conversation.lastMessage && (
+                              <div className="bg-muted/20 rounded-lg p-3 border-l-4 border-l-primary/20">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant={conversation.lastMessage.author_type === 'patient' ? 'secondary' : 'default'}
+                                      className="text-xs"
+                                    >
+                                      {conversation.lastMessage.author_type === 'patient' ? '👤 Paciente' : 
+                                       conversation.lastMessage.author_type === 'doctor' ? '👨‍⚕️ Médico' :
+                                       conversation.lastMessage.author_type === 'clinic' ? '🏥 Clínica' : '👥 Staff'}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(conversation.lastMessage.created_at).toLocaleString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                                <p className="text-sm text-foreground leading-relaxed">
+                                  {conversation.lastMessage.content || '[Anexo]'}
+                                </p>
+                              </div>
                             )}
-                            <Badge variant="outline" className="text-xs">
-                              {conversation.messageCount} mensagem{conversation.messageCount > 1 ? 'ns' : ''}
-                            </Badge>
                           </div>
                           
-                          {conversation.lastMessage && (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Badge variant={conversation.lastMessage.from === 'patient' ? 'outline' : 'default'}>
-                                  {conversation.lastMessage.from === 'patient' ? 'Paciente' : 'Médico'}
-                                </Badge>
-                                <span className="text-sm text-muted-foreground">
-                                  {new Date(conversation.lastMessage.timestamp).toLocaleString('pt-BR')}
-                                </span>
-                              </div>
-                              <p className="text-sm text-muted-foreground bg-muted/30 p-2 rounded">
-                                {conversation.lastMessage.content}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPatient(conversation.patient)
-                              setIsMessageDialogOpen(true)
-                            }}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            Ver Conversa
-                          </Button>
+                          {/* Botão de ação */}
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPatient(conversation.patient)
+                                setIsMessageDialogOpen(true)
+                              }}
+                              className="hover:bg-primary hover:text-primary-foreground transition-colors"
+                            >
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Ver Conversa
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPatient(conversation.patient)
+                                setIsPatientDetailsOpen(true)
+                              }}
+                            >
+                              <User className="h-4 w-4 mr-2" />
+                              Ver Detalhes
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageCircle className="h-8 w-8 opacity-50" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-2">Nenhuma conversa encontrada</h3>
+                      <p className="text-sm">Inicie conversas enviando mensagens para os pacientes</p>
                     </div>
-                  ))
+                  )
                 })()}
               </div>
             </CardContent>
@@ -687,54 +736,134 @@ export default function AcompanhamentoPacientes() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="max-h-80 overflow-y-auto space-y-3 p-4 bg-muted/20 rounded-lg">
-              {selectedPatient && getPatientMessages(selectedPatient.id)
-                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-                .map((message) => (
-                <div key={message.id} className={`flex ${message.from === 'doctor' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs p-3 rounded-lg text-sm shadow-sm ${
-                    message.from === 'doctor' 
-                      ? 'bg-blue-500 text-white' 
-                      : 'bg-white text-gray-900 border'
-                  }`}>
-                    <div className="mb-1">
-                      <span className="text-xs opacity-70">
-                        {message.from === 'doctor' ? 'Você' : selectedPatient.name}
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <div className="mt-2 text-xs opacity-70">
-                      {new Date(message.timestamp).toLocaleString('pt-BR')}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {selectedPatient && getPatientMessages(selectedPatient.id).length === 0 && (
-                <div className="text-center text-muted-foreground py-8">
-                  <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhuma mensagem ainda</p>
-                  <p className="text-sm">Inicie uma conversa enviando uma mensagem</p>
-                </div>
-              )}
+            <div className="mb-2">
+              <div className="font-semibold text-lg">{selectedPatient?.name}</div>
+              <div className="text-sm text-muted-foreground">{selectedPatient?.email} | {selectedPatient?.phone}</div>
+              <div className="text-xs mt-1">
+                <Badge variant={selectedPatient?.status === 'active' ? 'default' : 'secondary'}>
+                  {selectedPatient?.status === 'active' ? 'Ativo' : 'Inativo'}
+                </Badge>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Textarea 
-                placeholder="Digite sua mensagem..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="flex-1"
-                rows={3}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
-                }}
-              />
-              <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            {selectedPatient && anexosMedicos && (
+              <UITabs defaultValue="mensagens" className="space-y-2">
+                <UITabsList>
+                  <UITabsTrigger value="mensagens">Mensagens</UITabsTrigger>
+                  <UITabsTrigger value="exames">Exames</UITabsTrigger>
+                  <UITabsTrigger value="arquivos">Arquivos</UITabsTrigger>
+                </UITabsList>
+                <UITabsContent value="mensagens">
+                    <div className="max-h-80 overflow-y-auto space-y-3 p-4 bg-muted/20 rounded-lg">
+                      {selectedPatient && mensagens.filter(m => m.patient_id === selectedPatient.id)
+                        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                        .map((message) => {
+                          // Usar o nome do autor que já vem do profile (com Dr./Dra. incluído)
+                          const remetente = message.author_id === profile?.id ? 'Você' : (message.author_nome || 'Usuário');
+                          return (
+                            <div key={message.id} className={`flex ${message.author_id === profile?.id ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-xs p-3 rounded-lg text-sm shadow-sm ${
+                                message.author_id === profile?.id
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-white text-gray-900 border'
+                              }`}>
+                                <div className="mb-1">
+                                  <span className="text-xs opacity-70">{remetente}</span>
+                                </div>
+                                <p className="whitespace-pre-wrap">{message.content}</p>
+                                <div className="mt-2 text-xs opacity-70">
+                                  {new Date(message.created_at).toLocaleString('pt-BR')}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {selectedPatient && mensagens.filter(m => m.patient_id === selectedPatient.id).length === 0 && (
+                        <div className="text-center text-muted-foreground py-8">
+                          <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>Nenhuma mensagem ainda</p>
+                          <p className="text-sm">Inicie uma conversa enviando uma mensagem</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Textarea 
+                        placeholder="Digite sua mensagem..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className="flex-1"
+                        rows={3}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendMessage()
+                          }
+                        }}
+                      />
+                      <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </UITabsContent>
+                  <UITabsContent value="exames">
+                    <div className="max-h-80 overflow-y-auto space-y-3 p-4 bg-muted/20 rounded-lg">
+                      {selectedPatient && exams.filter(e => e.patientId === selectedPatient.id)
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((exam) => (
+                          <div key={exam.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                            <div className="flex-1">
+                              <p className="font-medium">{exam.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(exam.date).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <Badge variant={exam.status === 'completed' ? 'default' : 'secondary'}>
+                              {getStatusText(exam.status)}
+                            </Badge>
+                          </div>
+                        ))}
+                      {selectedPatient && exams.filter(e => e.patientId === selectedPatient.id).length === 0 && (
+                        <div className="text-center text-muted-foreground py-8">
+                          <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>Nenhum exame solicitado</p>
+                        </div>
+                      )}
+                    </div>
+                  </UITabsContent>
+                  <UITabsContent value="arquivos">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,application/pdf"
+                          style={{ display: 'none' }}
+                          id="upload-arquivo-input"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) anexosMedicos.uploadArquivo(file);
+                          }}
+                        />
+                        <Button variant="outline" onClick={() => document.getElementById('upload-arquivo-input')?.click()} disabled={anexosMedicos.uploading}>
+                          {anexosMedicos.uploading ? 'Enviando...' : 'Fazer Upload'}
+                        </Button>
+                        {anexosMedicos.error && <span className="text-sm text-red-500">{anexosMedicos.error}</span>}
+                      </div>
+                      <div className="space-y-2">
+                        {anexosMedicos.arquivos.length === 0 && <span className="text-sm text-muted-foreground">Nenhum arquivo enviado</span>}
+                        {anexosMedicos.arquivos.map(arquivo => (
+                          <div key={arquivo.id} className="flex items-center gap-3 border rounded p-2 bg-muted/20">
+                            {getFileIcon(arquivo.nome_arquivo)}
+                            <a href={arquivo.url_storage} target="_blank" rel="noopener noreferrer" className="flex-1 truncate hover:underline">
+                              {arquivo.nome_arquivo}
+                            </a>
+                            <span className="text-xs text-muted-foreground">{(arquivo.tamanho_bytes/1024/1024).toFixed(2)} MB</span>
+                            <Button size="sm" variant="outline" onClick={() => anexosMedicos.excluirArquivo(arquivo)}>Excluir</Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </UITabsContent>
+                </UITabs>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -773,6 +902,163 @@ export default function AcompanhamentoPacientes() {
                 Solicitar
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para detalhes do paciente */}
+      <Dialog open={isPatientDetailsOpen} onOpenChange={setIsPatientDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Detalhes do Paciente: {selectedPatient?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Informações básicas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Informações Pessoais</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Nome Completo</Label>
+                    <p className="font-medium">{selectedPatient?.name}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                    <p className="font-medium">{selectedPatient?.email}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Telefone</Label>
+                    <p className="font-medium">{selectedPatient?.phone}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                    <Badge variant={selectedPatient?.status === 'active' ? 'default' : 'secondary'}>
+                      {selectedPatient?.status === 'active' ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Estatísticas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Estatísticas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-muted/20 rounded-lg">
+                    <div className="text-2xl font-bold text-primary">{mensagens.filter(m => m.patient_id === selectedPatient?.id).length}</div>
+                    <div className="text-sm text-muted-foreground">Mensagens</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/20 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600">{mensagens.filter(m => m.patient_id === selectedPatient?.id && !m.read && m.author_type === 'patient').length}</div>
+                    <div className="text-sm text-muted-foreground">Não Lidas</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/20 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600">{anexosMedicos?.arquivos?.length || 0}</div>
+                    <div className="text-sm text-muted-foreground">Arquivos</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted/20 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600">{exams.filter(e => e.patientId === selectedPatient?.id).length}</div>
+                    <div className="text-sm text-muted-foreground">Exames</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Últimas mensagens */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Últimas Mensagens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {mensagens
+                    .filter(m => m.patient_id === selectedPatient?.id)
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .slice(0, 5)
+                    .map((message) => (
+                      <div key={message.id} className="flex items-start gap-3 p-3 bg-muted/20 rounded-lg">
+                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                          {message.author_type === 'patient' ? '👤' : message.author_type === 'doctor' ? '👨‍⚕️' : '🏥'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">
+                              {message.author_nome || 'Usuário'}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {message.author_type === 'patient' ? 'Paciente' : 
+                               message.author_type === 'doctor' ? 'Médico' : 'Clínica'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(message.created_at).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {message.content || '[Anexo]'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  {mensagens.filter(m => m.patient_id === selectedPatient?.id).length === 0 && (
+                    <div className="text-center text-muted-foreground py-4">
+                      <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Nenhuma mensagem ainda</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ações rápidas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-3">
+                  <Button 
+                    onClick={() => {
+                      setIsPatientDetailsOpen(false)
+                      setIsMessageDialogOpen(true)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Enviar Mensagem
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsPatientDetailsOpen(false)
+                      setIsRequestExamDialogOpen(true)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Solicitar Exame
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsPatientDetailsOpen(false)
+                      navigate(`/prontuario/${selectedPatient?.id}`)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Ver Prontuário
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </DialogContent>
       </Dialog>

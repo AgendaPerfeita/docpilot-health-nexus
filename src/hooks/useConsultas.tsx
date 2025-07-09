@@ -45,6 +45,11 @@ export const useConsultas = () => {
         `)
         .order('data_consulta', { ascending: true });
 
+      // Se for staff, filtrar por clinica_id
+      if (profile.tipo === 'staff' && profile.clinica_id) {
+        query = query.eq('clinica_id', profile.clinica_id);
+      }
+
       if (data) {
         const startDate = new Date(data);
         const endDate = new Date(data);

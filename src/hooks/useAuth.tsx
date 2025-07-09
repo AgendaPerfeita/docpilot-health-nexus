@@ -7,7 +7,7 @@ export interface UserProfile {
   user_id: string;
   email: string;
   nome: string;
-  tipo: 'medico' | 'paciente' | 'clinica' | 'hospital';
+  tipo: 'medico' | 'paciente' | 'clinica' | 'hospital' | 'staff';
   documento: string; // Agora obrigatório
   telefone?: string;
   especialidade?: string;
@@ -22,6 +22,7 @@ export interface UserProfile {
   permite_atendimento_individual?: boolean;
   permite_ia?: boolean;
   permite_relatorios_avancados?: boolean;
+  clinica_id?: string; // Vínculo staff-clínica
 }
 
 interface AuthContextType {
@@ -88,7 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('📡 Fetching profile...');
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, email, nome, tipo, documento, telefone, especialidade, crm, endereco, cidade, estado, cep, avatar_url, ativo, plano_medico, permite_atendimento_individual, permite_ia, permite_relatorios_avancados')
+        .select('id, user_id, email, nome, tipo, documento, telefone, especialidade, crm, endereco, cidade, estado, cep, avatar_url, ativo, plano_medico, permite_atendimento_individual, permite_ia, permite_relatorios_avancados, clinica_id')
         .eq('user_id', userId)
         .single();
 

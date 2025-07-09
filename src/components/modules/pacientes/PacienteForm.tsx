@@ -17,6 +17,7 @@ interface PacienteFormProps {
 }
 
 export const PacienteForm = ({ paciente, onCancel, onSuccess }: PacienteFormProps) => {
+  console.log('Paciente recebido no PacienteForm:', paciente);
   const { criarPaciente, atualizarPaciente } = usePacientes();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);

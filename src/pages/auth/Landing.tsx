@@ -86,51 +86,61 @@ const Landing = () => {
 
   const plans = [
     {
-      name: "Doctor",
-      price: "R$ 79",
+      name: "🩺 Plantonista",
+      price: "R$ 69",
       period: "/mês",
-      description: "Para médicos autônomos",
+      description: "Para médicos de plantão que precisam de agilidade e apoio clínico com IA",
       features: [
-        "Prontuário eletrônico completo",
-        "IA médica integrada",
-        "Agenda inteligente",
-        "Até 500 pacientes",
-        "Relatórios básicos",
-        "Suporte por email"
+        "Modo rápido de atendimento (sem cadastro completo de paciente)",
+        "Anamnese inteligente com IA (histórico, sintomas, sinais vitais)",
+        "Geração automática de diagnósticos, CID e conduta",
+        "Sugestões de exames e medicamentos baseadas no caso",
+        "Acesso rápido aos últimos atendimentos realizados",
+        "Sem limite de requisições mensais",
+        "Acesso direto via web",
+        "Suporte por e-mail"
       ],
-      popular: false
+      popular: false,
+      ideal: "Ideal para plantões em UPA, pronto-socorro, emergência ou triagens rápidas."
     },
     {
-      name: "Clinic",
-      price: "R$ 199",
+      name: "👨‍⚕️ Médico",
+      price: "R$ 99",
       period: "/mês",
-      description: "Para clínicas (até 5 médicos)",
+      description: "Para médicos autônomos, de consultório ou multi-clínicas que querem mais produtividade e inteligência clínica",
       features: [
-        "Tudo do plano Doctor",
-        "Gestão de múltiplos médicos",
-        "WhatsApp API integrado",
-        "Pacientes ilimitados",
-        "Relatórios avançados",
-        "Dashboard financeiro",
+        "Prontuário eletrônico completo com IA integrada",
+        "IA clínica (anamnese, CID, conduta, exames e medicações)",
+        "Agenda inteligente e unificada por clínica/local de atendimento",
+        "Histórico completo de todos os atendimentos do paciente",
+        "Chat com pacientes com push notification (sem WhatsApp)",
+        "Prescrição digital estruturada",
+        "Relatórios clínicos e produtividade individual",
+        "Acesso a todos os locais de trabalho vinculados",
+        "Integração com fluxo de atendimento da clínica (sem duplicidade)",
+        "Suporte por e-mail"
+      ],
+      popular: true,
+      ideal: "Ideal para médicos que querem centralizar tudo em um único sistema, com ganho de tempo e segurança."
+    },
+    {
+      name: "🏥 Clínica",
+      price: "R$ 179",
+      period: "/mês",
+      description: "Para clínicas que buscam gestão eficiente, controle financeiro e inteligência estratégica",
+      features: [
+        "Tudo do plano Médico",
+        "Cadastro de até 5 médicos (free, sem IA ou relatórios)",
+        "Gestão de agenda por médico e por local de trabalho",
+        "Chat com pacientes e entre médicos da equipe",
+        "Dashboard financeiro com controle de fluxo de caixa",
+        "Controle de comissões por médico e período",
+        "BI clínico e financeiro completo com relatórios avançados",
+        "Exportação e geração automática de relatórios (PDF)",
         "Suporte prioritário"
       ],
-      popular: true
-    },
-    {
-      name: "Hospital",
-      price: "R$ 499",
-      period: "/mês",
-      description: "Para hospitais e grandes clínicas",
-      features: [
-        "Tudo do plano Clinic",
-        "Médicos ilimitados",
-        "Gestão hospitalar completa",
-        "BI avançado",
-        "API personalizada",
-        "Suporte 24/7",
-        "Treinamento incluído"
-      ],
-      popular: false
+      popular: false,
+      ideal: "Ideal para clínicas que querem escalar com controle total e decisões baseadas em dados reais."
     }
   ];
 
@@ -275,7 +285,7 @@ const Landing = () => {
                 )}
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
+                  <CardDescription className="text-sm leading-relaxed">{plan.description}</CardDescription>
                   <div className="mt-4">
                     <span className="text-4xl font-bold text-primary">{plan.price}</span>
                     <span className="text-muted-foreground">{plan.period}</span>
@@ -284,12 +294,19 @@ const Landing = () => {
                 <CardContent className="space-y-4">
                   <ul className="space-y-3">
                     {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center">
-                        <Check className="h-4 w-4 text-primary mr-3 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
+                      <li key={featureIndex} className="flex items-start">
+                        <Check className="h-4 w-4 text-primary mr-3 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm leading-relaxed">{feature}</span>
                       </li>
                     ))}
                   </ul>
+                  {plan.ideal && (
+                    <div className="mt-6 p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground italic leading-relaxed">
+                        {plan.ideal}
+                      </p>
+                    </div>
+                  )}
                   <Link to="/register" className="block">
                     <Button className="w-full mt-6" variant={plan.popular ? "default" : "outline"}>
                       Começar Agora

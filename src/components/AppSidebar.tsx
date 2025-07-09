@@ -212,6 +212,14 @@ export function AppSidebar() {
         visibleGroups.sistema = groupedItems.sistema;
         break
 
+      case 'staff':
+        visibleGroups.principal = groupedItems.principal;
+        visibleGroups.clinico = groupedItems.clinico.filter(item => ['CRM', 'Agenda', 'Acompanhamento Pacientes'].includes(item.title));
+        visibleGroups.clinica = groupedItems.clinica.filter(item => item.title === 'Gestão de Médicos');
+        visibleGroups.financeiro = groupedItems.financeiro.filter(item => ['Fluxo de Caixa', 'Comissões'].includes(item.title));
+        // Não exibe relatorios, sistema, hospital, etc
+        break;
+
       default:
         return {}
     }

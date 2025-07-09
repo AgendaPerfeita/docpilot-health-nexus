@@ -102,6 +102,15 @@ export const useProntuarios = () => {
       .single();
 
     if (error) throw error;
+
+    // Atualizar responsavel_id do paciente para o médico que atendeu
+    if (prontuarioData.paciente_id) {
+      await supabase
+        .from('pacientes')
+        .update({ responsavel_id: profile.id })
+        .eq('id', prontuarioData.paciente_id);
+    }
+
     await fetchProntuarios();
     return data;
   };

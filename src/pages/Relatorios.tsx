@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { PermissionGuard } from "@/components/PermissionGuard"
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReportData {
   type: string
@@ -85,12 +86,17 @@ const analyticsData = {
 }
 
 export default function Relatorios() {
+  const { profile, loadingProfile } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('mensal')
   const [selectedReport, setSelectedReport] = useState('todos')
   const [dateRange, setDateRange] = useState({
     start: '2024-01-01',
     end: '2024-01-31'
   })
+
+  if (loadingProfile || !profile) {
+    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando perfil...</div>;
+  }
 
   const filteredReports = availableReports.filter(report => 
     selectedReport === 'todos' || report.type === selectedReport
@@ -297,48 +303,57 @@ export default function Relatorios() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Google</span>
+                    <span className="text-sm">Facebook</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full w-2/3"></div>
+                        <div className="bg-blue-600 h-2 rounded-full w-1/4"></div>
                       </div>
-                      <span className="text-sm font-medium">32%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Indicação</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full w-1/2"></div>
-                      </div>
-                      <span className="text-sm font-medium">28%</span>
+                      <span className="text-sm font-medium">22%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Instagram</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full w-1/3"></div>
+                        <div className="bg-pink-500 h-2 rounded-full w-1/5"></div>
                       </div>
                       <span className="text-sm font-medium">18%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Facebook</span>
+                    <span className="text-sm">Indicação</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-orange-500 h-2 rounded-full w-1/4"></div>
+                        <div className="bg-green-500 h-2 rounded-full w-1/4"></div>
+                      </div>
+                      <span className="text-sm font-medium">22%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Google</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div className="bg-yellow-500 h-2 rounded-full w-1/6"></div>
+                      </div>
+                      <span className="text-sm font-medium">14%</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Marketplace</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 bg-muted rounded-full h-2">
+                        <div className="bg-purple-500 h-2 rounded-full w-1/8"></div>
                       </div>
                       <span className="text-sm font-medium">12%</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Outros</span>
+                    <span className="text-sm">WhatsApp</span>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-gray-500 h-2 rounded-full w-1/6"></div>
+                        <div className="bg-green-700 h-2 rounded-full w-1/8"></div>
                       </div>
-                      <span className="text-sm font-medium">10%</span>
+                      <span className="text-sm font-medium">12%</span>
                     </div>
                   </div>
                 </div>

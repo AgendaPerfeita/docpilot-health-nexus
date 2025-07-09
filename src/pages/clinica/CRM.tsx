@@ -2,11 +2,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { PacientesList } from "@/components/modules/pacientes/PacientesList"
 import { PacienteForm } from "@/components/modules/pacientes/PacienteForm"
-import { useState } from "react"
+import { usePacientes } from "@/hooks/usePacientes";
+import { useEffect, useState } from "react"
 import { Users, UserPlus, TrendingUp, DollarSign, Activity, Target } from "lucide-react"
 
 const CRM = () => {
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(false);
+  const [editingPaciente, setEditingPaciente] = useState(null);
+  const { buscarPacientePorId } = usePacientes();
+
+  // Função para editar paciente
+  const handleEditPaciente = async (paciente) => {
+    const pacienteAtualizado = await buscarPacientePorId(paciente.id);
+    setEditingPaciente(pacienteAtualizado);
+    setShowForm(true);
+  };
 
   const stats = [
     {
@@ -95,17 +105,21 @@ const CRM = () => {
         {showForm ? (
           <Card>
             <CardHeader>
-              <CardTitle>Cadastrar Novo Paciente</CardTitle>
+              <CardTitle>{editingPaciente ? "Editar Paciente" : "Cadastrar Novo Paciente"}</CardTitle>
               <CardDescription>
                 Preencha as informações do paciente
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PacienteForm onCancel={() => setShowForm(false)} />
+              <PacienteForm 
+                paciente={editingPaciente}
+                onCancel={() => { setShowForm(false); setEditingPaciente(null); }}
+                onSuccess={() => { setShowForm(false); setEditingPaciente(null); }}
+              />
             </CardContent>
           </Card>
         ) : (
-          <PacientesList />
+          <PacientesList onEdit={handleEditPaciente} onNew={() => { setShowForm(true); setEditingPaciente(null); }} />
         )}
       </div>
     </div>

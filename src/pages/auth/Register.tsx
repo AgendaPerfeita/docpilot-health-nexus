@@ -17,7 +17,7 @@ const Register = () => {
     email: "",
     telefone: "",
     documento: "",
-    tipo: "" as "medico" | "paciente" | "clinica" | "hospital" | "",
+    tipo: "" as "plantonista" | "medico" | "paciente" | "clinica" | "",
     especialidade: "",
     crm: "",
     password: "",
@@ -99,7 +99,7 @@ const Register = () => {
     }
   };
 
-  const isMedico = formData.tipo === "medico";
+  const isMedico = formData.tipo === "medico" || formData.tipo === "plantonista";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
@@ -144,10 +144,10 @@ const Register = () => {
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="medico">Médico</SelectItem>
-                      <SelectItem value="paciente">Paciente</SelectItem>
-                      <SelectItem value="clinica">Clínica</SelectItem>
-                      <SelectItem value="hospital">Hospital</SelectItem>
+                      <SelectItem value="clinica">🏥 Clínica</SelectItem>
+                      <SelectItem value="medico">👨‍⚕️ Médico</SelectItem>
+                      <SelectItem value="paciente">👤 Paciente</SelectItem>
+                      <SelectItem value="plantonista">🩺 Plantonista</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -181,11 +181,11 @@ const Register = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="documento">
-                  {formData.tipo === "medico" || formData.tipo === "paciente" ? "CPF" : formData.tipo === "clinica" ? "CNPJ" : "CPF/CNPJ"}
+                  {formData.tipo === "medico" || formData.tipo === "paciente" || formData.tipo === "plantonista" ? "CPF" : formData.tipo === "clinica" ? "CNPJ" : "CPF/CNPJ"}
                 </Label>
                 <Input
                   id="documento"
-                  placeholder={formData.tipo === "medico" || formData.tipo === "paciente" ? "000.000.000-00" : formData.tipo === "clinica" ? "00.000.000/0000-00" : "Documento"}
+                  placeholder={formData.tipo === "medico" || formData.tipo === "paciente" || formData.tipo === "plantonista" ? "000.000.000-00" : formData.tipo === "clinica" ? "00.000.000/0000-00" : "Documento"}
                   value={formData.documento}
                   onChange={(e) => handleInputChange("documento", e.target.value)}
                   required

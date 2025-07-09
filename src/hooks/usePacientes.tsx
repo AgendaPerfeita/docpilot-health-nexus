@@ -17,7 +17,6 @@ export interface Paciente {
   convenio?: string;
   numero_convenio?: string;
   origem?: string;
-  responsavel_id: string;
   created_at: string;
   updated_at: string;
   antecedentes_clinicos?: string;
@@ -26,6 +25,9 @@ export interface Paciente {
   antecedentes_habitos?: string;
   antecedentes_alergias?: string;
   medicamentos_em_uso?: any;
+  ticket_medio?: number;
+  total_consultas?: number;
+  total_gasto?: number;
 }
 
 export const usePacientes = () => {
@@ -34,61 +36,167 @@ export const usePacientes = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchPacientes = async () => {
+    console.log('fetchPacientes called. Profile:', profile);
     if (!profile?.id) {
-      console.log('usePacientes - No profile ID, returning');
+      console.log('fetchPacientes: profile.id ausente, abortando');
       setLoading(false);
       return;
     }
-    
-    console.log('usePacientes - Fetching pacientes for profile:', profile.id, 'tipo:', profile.tipo);
     setLoading(true);
     try {
-      // Verificar se o usuário está autenticado
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('usePacientes - Current auth user:', user?.id);
-      
+      console.log('fetchPacientes: Current auth user:', user?.id);
       if (!user) {
-        console.error('usePacientes - No authenticated user found');
+        console.error('fetchPacientes: No authenticated user found');
+        setPacientes([]);
+        return;
+      }
+      let pacienteIds: string[] = [];
+
+      if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
+        // Buscar IDs dos pacientes da clínica
+        const clinicaId = profile.tipo === 'clinica' ? profile.id : profile.clinica_id;
+        console.log('fetchPacientes: buscando pacientes da clínica', clinicaId);
+        
+        const { data: vinculos, error: errorVinculos } = await supabase
+          .from('paciente_clinica')
+          .select('paciente_id')
+          .eq('clinica_id', clinicaId);
+        
+        if (errorVinculos) {
+          console.error('fetchPacientes: Erro ao buscar vínculos da clínica:', errorVinculos);
+          throw errorVinculos;
+        }
+        
+        pacienteIds = vinculos?.map(v => v.paciente_id) || [];
+        console.log('fetchPacientes: IDs de pacientes da clínica encontrados:', pacienteIds.length);
+
+      } else if (profile.tipo === 'medico') {
+        // Buscar IDs dos pacientes do médico
+        console.log('fetchPacientes: buscando pacientes do médico', profile.id);
+        
+        const { data: vinculos, error: errorVinculos } = await supabase
+          .from('paciente_medico')
+          .select('paciente_id')
+          .eq('medico_id', profile.id);
+        
+        if (errorVinculos) {
+          console.error('fetchPacientes: Erro ao buscar vínculos do médico:', errorVinculos);
+          throw errorVinculos;
+        }
+        
+        pacienteIds = vinculos?.map(v => v.paciente_id) || [];
+        console.log('fetchPacientes: IDs de pacientes do médico encontrados:', pacienteIds.length);
+      }
+
+      // Se não há pacientes vinculados, retornar array vazio
+      if (pacienteIds.length === 0) {
+        console.log('fetchPacientes: Nenhum paciente encontrado');
         setPacientes([]);
         return;
       }
 
-      const { data, error } = await supabase
+      // Buscar dados dos pacientes
+      const { data: pacientesData, error: errorPacientes } = await supabase
         .from('pacientes')
         .select('*')
+        .in('id', pacienteIds)
         .order('nome');
 
-      if (error) {
-        console.error('usePacientes - Database error:', error);
-        throw error;
+      if (errorPacientes) {
+        console.error('fetchPacientes: Erro ao buscar dados dos pacientes:', errorPacientes);
+        throw errorPacientes;
       }
-      
-      console.log('usePacientes - Fetched data count:', data?.length || 0);
-      console.log('usePacientes - Fetched pacientes:', data);
-      setPacientes(data || []);
+
+      console.log('fetchPacientes: Total de pacientes encontrados:', pacientesData?.length || 0);
+      console.log('fetchPacientes: Pacientes:', pacientesData);
+      setPacientes(pacientesData || []);
     } catch (error) {
-      console.error('usePacientes - Error fetching pacientes:', error);
+      console.error('fetchPacientes: Error fetching pacientes:', error);
       setPacientes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const criarPaciente = async (pacienteData: Omit<Paciente, 'id' | 'created_at' | 'updated_at' | 'responsavel_id'>) => {
+  const criarPaciente = async (pacienteData: Omit<Paciente, 'id' | 'created_at' | 'updated_at'>) => {
     if (!profile) throw new Error('Usuário não autenticado');
 
-    const { data, error } = await supabase
+    console.log('🔍 criarPaciente - Profile:', profile);
+    console.log('🔍 criarPaciente - PacienteData recebido:', pacienteData);
+
+    // Tratar campos vazios para evitar erros no banco
+    const dadosParaInserir = {
+      ...pacienteData,
+      data_nascimento: pacienteData.data_nascimento && pacienteData.data_nascimento.trim() !== '' 
+        ? pacienteData.data_nascimento 
+        : null,
+      email: pacienteData.email && pacienteData.email.trim() !== '' 
+        ? pacienteData.email 
+        : null,
+      telefone: pacienteData.telefone && pacienteData.telefone.trim() !== '' 
+        ? pacienteData.telefone 
+        : null,
+      cpf: pacienteData.cpf && pacienteData.cpf.trim() !== '' 
+        ? pacienteData.cpf 
+        : null
+    };
+
+    console.log('🔍 criarPaciente - Dados para inserir:', dadosParaInserir);
+
+    // Criar o paciente (sem campos de vínculo antigos)
+    const { data: paciente, error: pacienteError } = await supabase
       .from('pacientes')
-      .insert({
-        ...pacienteData,
-        responsavel_id: profile.id
-      })
+      .insert(dadosParaInserir)
       .select()
       .single();
 
-    if (error) throw error;
+    console.log('🔍 criarPaciente - Resultado da inserção:', { paciente, error: pacienteError });
+
+    if (pacienteError) {
+      console.error('❌ criarPaciente - Erro na inserção:', pacienteError);
+      throw pacienteError;
+    }
+
+    console.log('✅ criarPaciente - Paciente criado com sucesso:', paciente);
+
+    // Criar vínculo usando as tabelas de vínculo
+    if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
+      const clinicaId = profile.tipo === 'clinica' ? profile.id : profile.clinica_id;
+      console.log('🔍 criarPaciente - Criando vínculo com clínica:', clinicaId);
+      
+      const { error: vinculoError } = await supabase
+        .from('paciente_clinica')
+        .insert({ 
+          paciente_id: paciente.id, 
+          clinica_id: clinicaId 
+        });
+      
+      if (vinculoError) {
+        console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoError);
+        throw vinculoError;
+      }
+      
+    } else if (profile.tipo === 'medico') {
+      console.log('🔍 criarPaciente - Criando vínculo com médico:', profile.id);
+      
+      const { error: vinculoError } = await supabase
+        .from('paciente_medico')
+        .insert({ 
+          paciente_id: paciente.id, 
+          medico_id: profile.id,
+          clinica_id: profile.clinica_id || profile.id
+        });
+      
+      if (vinculoError) {
+        console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
+        throw vinculoError;
+      }
+    }
+
+    console.log('✅ criarPaciente - Vínculo criado com sucesso');
     await fetchPacientes();
-    return data;
+    return paciente;
   };
 
   const atualizarPaciente = async (id: string, pacienteData: any) => {

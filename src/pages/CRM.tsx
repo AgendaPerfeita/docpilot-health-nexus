@@ -345,6 +345,10 @@ export default function CRM() {
                       <div>{selectedPatient.endereco}</div>
                     </div>
                     <div>
+                      <span className="text-muted-foreground">Bairro:</span>
+                      <div>{selectedPatient.bairro || 'Não informado'}</div>
+                    </div>
+                    <div>
                       <span className="text-muted-foreground">Cidade:</span>
                       <div>{selectedPatient.cidade || 'Não informado'}</div>
                     </div>
