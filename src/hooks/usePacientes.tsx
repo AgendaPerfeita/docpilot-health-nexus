@@ -34,6 +34,7 @@ export const usePacientes = () => {
   const { profile } = useAuth();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchPacientes = async () => {
     console.log('fetchPacientes called. Profile:', profile);
@@ -144,59 +145,129 @@ export const usePacientes = () => {
 
     console.log('🔍 criarPaciente - Dados para inserir:', dadosParaInserir);
 
-    // Criar o paciente (sem campos de vínculo antigos)
-    const { data: paciente, error: pacienteError } = await supabase
-      .from('pacientes')
-      .insert(dadosParaInserir)
-      .select()
-      .single();
+
+
+        // Criar o paciente usando função RPC para contornar problemas de políticas
+    const { data: paciente, error: pacienteError } = await supabase.rpc('insert_paciente', {
+      nome_param: dadosParaInserir.nome,
+      email_param: dadosParaInserir.email || null,
+      telefone_param: dadosParaInserir.telefone || null,
+      cpf_param: dadosParaInserir.cpf || null,
+      data_nascimento_param: dadosParaInserir.data_nascimento || null,
+      endereco_param: dadosParaInserir.endereco || null,
+      bairro_param: dadosParaInserir.bairro || null,
+      cidade_param: dadosParaInserir.cidade || null,
+      estado_param: dadosParaInserir.estado || null,
+      cep_param: dadosParaInserir.cep || null,
+      convenio_param: dadosParaInserir.convenio || null,
+      numero_convenio_param: dadosParaInserir.numero_convenio || null,
+      origem_param: dadosParaInserir.origem || 'Indicação'
+    });
 
     console.log('🔍 criarPaciente - Resultado da inserção:', { paciente, error: pacienteError });
 
     if (pacienteError) {
       console.error('❌ criarPaciente - Erro na inserção:', pacienteError);
+      
+      // Tratar erro de CPF duplicado de forma mais amigável
+      if (pacienteError.code === '23505' && pacienteError.message.includes('cpf')) {
+        throw new Error(`Paciente com CPF ${dadosParaInserir.cpf} já está cadastrado no sistema.`);
+      }
+      
+      // Tratar erro de email duplicado de forma mais amigável
+      if (pacienteError.code === '23505' && pacienteError.message.includes('email')) {
+        throw new Error(`Paciente com email ${dadosParaInserir.email} já está cadastrado no sistema.`);
+      }
+      
       throw pacienteError;
     }
 
-    console.log('✅ criarPaciente - Paciente criado com sucesso:', paciente);
+    // A função RPC retorna um array, precisamos pegar o primeiro elemento
+    const pacienteCriado = Array.isArray(paciente) ? paciente[0] : paciente;
+    
+    if (!pacienteCriado || !pacienteCriado.id) {
+      console.error('❌ criarPaciente - Paciente criado não tem ID válido:', pacienteCriado);
+      throw new Error('Erro ao criar paciente: ID não encontrado');
+    }
+
+    console.log('✅ criarPaciente - Paciente criado com sucesso:', pacienteCriado);
 
     // Criar vínculo usando as tabelas de vínculo
     if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
       const clinicaId = profile.tipo === 'clinica' ? profile.id : profile.clinica_id;
       console.log('🔍 criarPaciente - Criando vínculo com clínica:', clinicaId);
       
-      const { error: vinculoError } = await supabase
+      // Verificar se o vínculo já existe
+      const { data: vinculoExistente } = await supabase
         .from('paciente_clinica')
-        .insert({ 
-          paciente_id: paciente.id, 
-          clinica_id: clinicaId 
-        });
+        .select('id')
+        .eq('paciente_id', pacienteCriado.id)
+        .eq('clinica_id', clinicaId)
+        .single();
       
-      if (vinculoError) {
-        console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoError);
-        throw vinculoError;
+      if (!vinculoExistente) {
+        const { error: vinculoError } = await supabase
+          .from('paciente_clinica')
+          .insert({ 
+            paciente_id: pacienteCriado.id, 
+            clinica_id: clinicaId 
+          });
+        
+        if (vinculoError) {
+          console.error('❌ criarPaciente - Erro ao criar vínculo clínica:', vinculoError);
+          throw vinculoError;
+        }
+        console.log('✅ criarPaciente - Vínculo com clínica criado');
+      } else {
+        console.log('✅ criarPaciente - Vínculo com clínica já existe');
       }
       
     } else if (profile.tipo === 'medico') {
       console.log('🔍 criarPaciente - Criando vínculo com médico:', profile.id);
       
-      const { error: vinculoError } = await supabase
+      // Verificar se o vínculo já existe
+      const { data: vinculoExistente } = await supabase
         .from('paciente_medico')
-        .insert({ 
-          paciente_id: paciente.id, 
-          medico_id: profile.id,
-          clinica_id: profile.clinica_id || profile.id
-        });
+        .select('id')
+        .eq('paciente_id', pacienteCriado.id)
+        .eq('medico_id', profile.id)
+        .eq('clinica_id', profile.clinica_id || profile.id)
+        .single();
       
-      if (vinculoError) {
-        console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
-        throw vinculoError;
+      if (!vinculoExistente) {
+        const { error: vinculoError } = await supabase
+          .from('paciente_medico')
+          .insert({ 
+            paciente_id: pacienteCriado.id, 
+            medico_id: profile.id,
+            clinica_id: profile.clinica_id || profile.id
+          });
+        
+        if (vinculoError) {
+          console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
+          throw vinculoError;
+        }
+        console.log('✅ criarPaciente - Vínculo com médico criado');
+      } else {
+        console.log('✅ criarPaciente - Vínculo com médico já existe');
       }
     }
 
     console.log('✅ criarPaciente - Vínculo criado com sucesso');
+    
+    // Forçar atualização da lista de pacientes
+    console.log('🔄 criarPaciente - Atualizando lista de pacientes...');
     await fetchPacientes();
-    return paciente;
+    console.log('✅ criarPaciente - Lista de pacientes atualizada');
+    
+    // Forçar re-render dos componentes que usam este hook
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Verificar se a lista foi atualizada
+    console.log('🔍 criarPaciente - Estado atual dos pacientes:', pacientes.length);
+    
+    // Retornar o paciente criado
+    return pacienteCriado;
   };
 
   const atualizarPaciente = async (id: string, pacienteData: any) => {
@@ -276,14 +347,16 @@ export const usePacientes = () => {
   useEffect(() => {
     if (profile?.id) {
       console.log('usePacientes - useEffect triggered with profile ID:', profile.id);
-      // Só fazer fetch se não temos pacientes carregados
-      if (pacientes.length === 0) {
-        fetchPacientes();
-      } else {
-        console.log('usePacientes - Pacientes already loaded, skipping fetch');
-      }
+      fetchPacientes();
     }
-  }, [profile?.id]);
+  }, [profile?.id, refreshTrigger]);
+
+  // Adicionar um useEffect para forçar atualização quando necessário
+  useEffect(() => {
+    if (profile?.id && pacientes.length > 0) {
+      console.log('usePacientes - Pacientes carregados:', pacientes.length);
+    }
+  }, [pacientes.length, profile?.id]);
 
   return {
     pacientes,
@@ -294,6 +367,7 @@ export const usePacientes = () => {
     buscarPacientes,
     buscarPacientePorId,
     buscarPacientePorIdSemRLS,
-    refetch: fetchPacientes
+    refetch: fetchPacientes,
+    refreshTrigger
   };
 };

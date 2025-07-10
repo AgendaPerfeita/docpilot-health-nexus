@@ -12,7 +12,7 @@ import { PacienteForm } from "@/components/modules/pacientes/PacienteForm"
 import { useToast } from "@/hooks/use-toast"
 
 export default function CRM() {
-  const { pacientes, loading } = usePacientes()
+  const { pacientes, loading, refetch } = usePacientes();
   const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -383,11 +383,12 @@ export default function CRM() {
               paciente={selectedPatient}
               onCancel={() => setIsEditDialogOpen(false)}
               onSuccess={() => {
-                setIsEditDialogOpen(false)
+                setIsEditDialogOpen(false);
+                refetch();
                 toast({
                   title: "Sucesso",
                   description: "Paciente atualizado com sucesso!"
-                })
+                });
               }}
             />
           )}

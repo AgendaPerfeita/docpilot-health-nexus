@@ -19,6 +19,8 @@ import { PacienteSelectorModal } from "@/components/prontuario/PacienteSelectorM
 
 const Dashboard = () => {
   const { profile } = useAuth();
+  
+
 
   // Adicionando logs para depuração do plano
   console.log('[DASHBOARD] Renderizando Dashboard. Profile:', profile);

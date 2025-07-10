@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { User, FileText, Calendar, Upload, Download, MessageCircle, Send, FileImage, File, Plus, Search, Phone, Mail, Clock, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -75,6 +75,67 @@ export default function AcompanhamentoPacientes() {
   const navigate = useNavigate();
   // CORREÇÃO: chamar o hook no topo do componente, não dentro de useMemo
   const anexosMedicos = useAnexosMedicos(selectedPatient?.id);
+  const [previewArquivo, setPreviewArquivo] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [errorPreview, setErrorPreview] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [naturalWidth, setNaturalWidth] = useState<number | null>(null);
+  const [naturalHeight, setNaturalHeight] = useState<number | null>(null);
+  const mensagensContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Função utilitária para extrair o path relativo do storage
+  const getStoragePath = (url_storage: string) => {
+    if (!url_storage) return '';
+    if (url_storage.startsWith('http')) {
+      const idx = url_storage.indexOf('/anexos-medicos/');
+      if (idx !== -1) {
+        return url_storage.substring(idx + '/anexos-medicos/'.length);
+      }
+      return '';
+    }
+    return url_storage;
+  };
+
+  // Função para abrir o preview
+  const handlePreviewArquivo = async (arquivo: any) => {
+    setPreviewArquivo(arquivo);
+    setLoadingPreview(true);
+    setErrorPreview(null);
+    setPreviewUrl(null);
+    setZoom(1);
+    // Extrai o path relativo do arquivo de forma segura
+    const path = getStoragePath(arquivo.url_storage);
+    try {
+      const { data, error } = await supabase.storage
+        .from('anexos-medicos')
+        .createSignedUrl(path, 60); // 60 segundos
+      if (error || !data?.signedUrl) {
+        setErrorPreview('Não foi possível gerar o link seguro para visualização.');
+        setLoadingPreview(false);
+        return;
+      }
+      setPreviewUrl(data.signedUrl);
+    } catch (e) {
+      setErrorPreview('Erro ao gerar preview.');
+    }
+    setLoadingPreview(false);
+  };
+
+  const handleDownload = async () => {
+    if (!previewUrl) return;
+    const response = await fetch(previewUrl);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = previewArquivo.nome_arquivo;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
   // Buscar pacientes reais do novo modelo multi-clínica/multi-médico
   useEffect(() => {
@@ -126,7 +187,8 @@ export default function AcompanhamentoPacientes() {
         email: p.email,
         phone: p.telefone,
         unreadMessages: 0,
-        pendingExams: 0
+        pendingExams: 0,
+        status: 'active', // valor padrão
       })));
       setLoadingPatients(false);
     }
@@ -146,7 +208,11 @@ export default function AcompanhamentoPacientes() {
       clinica_id: null, // ou defina conforme contexto
       author_id: profile.id, // id real do usuário logado
       // Garantir tipo correto para o chat
-      author_type: profile.tipo === 'medico' ? 'doctor' : profile.tipo === 'paciente' ? 'patient' : profile.tipo, // 'doctor', 'patient', 'clinic', 'staff'
+      author_type: profile.tipo === 'medico' ? 'doctor'
+        : profile.tipo === 'paciente' ? 'patient'
+        : profile.tipo === 'clinica' ? 'clinic'
+        : profile.tipo === 'staff' ? 'staff'
+        : 'clinic', // fallback seguro
       content: newMessage,
       media_url: null,
       media_type: null
@@ -269,6 +335,7 @@ export default function AcompanhamentoPacientes() {
       }
       // Path organizado
       const path = `paciente_${pacienteId}/${Date.now()}_${file.name}`;
+      console.log('Tentando upload para bucket:', path, file);
       // Upload para bucket
       const { data: storageData, error: storageError } = await supabase.storage
         .from('anexos-medicos')
@@ -282,18 +349,24 @@ export default function AcompanhamentoPacientes() {
       const { data: publicUrlData } = supabase.storage.from('anexos-medicos').getPublicUrl(path);
       const url = publicUrlData?.publicUrl || '';
       // Salvar metadados na tabela
+      const insertData = {
+        paciente_id: pacienteId,
+        nome_arquivo: file.name,
+        tipo_arquivo: file.type,
+        tamanho_bytes: file.size,
+        url_storage: url,
+        categoria: 'outros',
+        data_upload: new Date().toISOString(),
+        ...(profile?.tipo === 'medico' && { medico_id: profile.id }),
+        ...(profile?.tipo === 'staff' && { staff_id: profile.id }),
+        ...(profile?.tipo === 'clinica' && { clinica_id: profile.id }),
+        ...(profile?.tipo === 'paciente' && { paciente_upload_id: profile.id }),
+      };
+      console.log('profile:', profile);
+      console.log('insertData:', insertData);
       const { error: dbError } = await supabase
         .from('anexos_medicos')
-        .insert({
-          paciente_id: pacienteId,
-          nome_arquivo: file.name,
-          tipo_arquivo: file.type,
-          tamanho_bytes: file.size,
-          url_storage: url,
-          categoria: 'outros',
-          data_upload: new Date().toISOString(),
-          medico_id: profile?.id || '',
-        });
+        .insert(insertData);
       if (dbError) setError(dbError.message);
       setUploading(false);
       fetchArquivos();
@@ -313,6 +386,23 @@ export default function AcompanhamentoPacientes() {
 
     return { arquivos, uploading, error, uploadArquivo, excluirArquivo, fetchArquivos };
   }
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    if (
+      isMessageDialogOpen &&
+      mensagensContainerRef.current &&
+      selectedPatient
+    ) {
+      const mensagensPaciente = mensagens.filter(m => m.patient_id === selectedPatient.id);
+      if (mensagensPaciente.length > 0) {
+        timeout = setTimeout(() => {
+          mensagensContainerRef.current!.scrollTop = mensagensContainerRef.current!.scrollHeight;
+        }, 400); // ajuste o tempo conforme necessário
+      }
+    }
+    return () => clearTimeout(timeout);
+  }, [isMessageDialogOpen, mensagens, selectedPatient]);
 
   return (
     <div className="space-y-6">
@@ -753,7 +843,11 @@ export default function AcompanhamentoPacientes() {
                   <UITabsTrigger value="arquivos">Arquivos</UITabsTrigger>
                 </UITabsList>
                 <UITabsContent value="mensagens">
-                    <div className="max-h-80 overflow-y-auto space-y-3 p-4 bg-muted/20 rounded-lg">
+                    <div
+                      ref={mensagensContainerRef}
+                      className="max-h-80 overflow-y-auto space-y-3 p-4 bg-muted/20 rounded-lg"
+                      style={{ position: 'relative' }}
+                    >
                       {selectedPatient && mensagens.filter(m => m.patient_id === selectedPatient.id)
                         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
                         .map((message) => {
@@ -770,6 +864,24 @@ export default function AcompanhamentoPacientes() {
                                   <span className="text-xs opacity-70">{remetente}</span>
                                 </div>
                                 <p className="whitespace-pre-wrap">{message.content}</p>
+                                {message.media_url && message.media_type && (
+                                  anexosMedicos.arquivos.some(
+                                    a => a.url_storage === message.media_url || a.url_storage.endsWith(message.media_url)
+                                  ) ? (
+                                    <ChatMediaPreview 
+                                      path={message.media_url} 
+                                      nome={message.content.split(': ')[1]?.split('.')[0] || 'anexo'} 
+                                      tipo={message.media_type} 
+                                      onPreview={arquivo => handlePreviewArquivo({
+                                        nome_arquivo: arquivo.nome_arquivo || message.content.split(': ')[1]?.split('.')[0] || 'anexo',
+                                        tipo_arquivo: arquivo.tipo_arquivo || message.media_type,
+                                        url_storage: arquivo.url_storage || message.media_url,
+                                      })}
+                                    />
+                                  ) : (
+                                    <div className="text-xs text-red-500 mt-2">Anexo removido</div>
+                                  )
+                                )}
                                 <div className="mt-2 text-xs opacity-70">
                                   {new Date(message.created_at).toLocaleString('pt-BR')}
                                 </div>
@@ -852,11 +964,41 @@ export default function AcompanhamentoPacientes() {
                         {anexosMedicos.arquivos.map(arquivo => (
                           <div key={arquivo.id} className="flex items-center gap-3 border rounded p-2 bg-muted/20">
                             {getFileIcon(arquivo.nome_arquivo)}
-                            <a href={arquivo.url_storage} target="_blank" rel="noopener noreferrer" className="flex-1 truncate hover:underline">
+                            <span
+                              className="flex-1 truncate hover:underline cursor-pointer text-blue-700"
+                              onClick={() => handlePreviewArquivo(arquivo)}
+                              title="Visualizar arquivo"
+                            >
                               {arquivo.nome_arquivo}
-                            </a>
+                            </span>
                             <span className="text-xs text-muted-foreground">{(arquivo.tamanho_bytes/1024/1024).toFixed(2)} MB</span>
                             <Button size="sm" variant="outline" onClick={() => anexosMedicos.excluirArquivo(arquivo)}>Excluir</Button>
+                            <Button size="sm" variant="ghost" title="Enviar na conversa" onClick={async () => {
+                              // Salvar apenas o path relativo do arquivo no media_url
+                              let path = arquivo.url_storage;
+                              // Se for URL completo, extrai o path relativo
+                              if (path.startsWith('http')) {
+                                const idx = path.indexOf('/anexos-medicos/');
+                                if (idx !== -1) {
+                                  path = path.substring(idx + '/anexos-medicos/'.length);
+                                }
+                              }
+                              await sendMensagem({
+                                patient_id: selectedPatient.id,
+                                clinica_id: null,
+                                author_id: profile.id,
+                                author_type: profile.tipo === 'medico' ? 'doctor'
+                                  : profile.tipo === 'paciente' ? 'patient'
+                                  : profile.tipo === 'clinica' ? 'clinic'
+                                  : profile.tipo === 'staff' ? 'staff'
+                                  : 'clinic',
+                                content: `Anexamos um arquivo:\n${arquivo.nome_arquivo}.\nVocê pode visualizar aqui na conversa ou na aba Arquivos.`,
+                                media_url: path, // path relativo do storage
+                                media_type: arquivo.tipo_arquivo,
+                              });
+                            }}>
+                              <Send className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -1049,7 +1191,7 @@ export default function AcompanhamentoPacientes() {
                     variant="outline"
                     onClick={() => {
                       setIsPatientDetailsOpen(false)
-                      navigate(`/prontuario/${selectedPatient?.id}`)
+                      navigate(`/prontuario/paciente/${selectedPatient?.id}`)
                     }}
                     className="flex items-center gap-2"
                   >
@@ -1062,6 +1204,134 @@ export default function AcompanhamentoPacientes() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de preview de arquivo */}
+      {previewArquivo && (
+        <Dialog open={!!previewArquivo} onOpenChange={() => { setPreviewArquivo(null); setPreviewUrl(null); setErrorPreview(null); }}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Preview: {previewArquivo.nome_arquivo}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {loadingPreview && <div>Carregando preview...</div>}
+              {errorPreview && <div className="text-red-500">{errorPreview || 'Anexo não disponível ou removido'}</div>}
+              {previewUrl && (
+                <div className="flex flex-col items-center">
+                  {previewArquivo.tipo_arquivo.startsWith('image/') ? (
+                    <div className="flex flex-col items-center w-full">
+                      <div className="flex gap-2 mb-2">
+                        <Button size="sm" variant="outline" onClick={() => setZoom(z => Math.max(0.2, z - 0.2))}>-</Button>
+                        <span className="text-xs">Zoom: {(zoom * 100).toFixed(0)}%</span>
+                        <Button size="sm" variant="outline" onClick={() => setZoom(z => Math.min(5, z + 0.2))}>+</Button>
+                        <Button size="sm" variant="outline" onClick={() => setZoom(1)}>Resetar</Button>
+                      </div>
+                      <div
+                        style={{
+                          overflow: 'auto',
+                          border: '1px solid #eee',
+                          maxHeight: '70vh',
+                          maxWidth: '100%',
+                          width: '100%',
+                          position: 'relative',
+                          background: '#fafbfc',
+                        }}
+                      >
+                        <img
+                          src={previewUrl}
+                          alt={previewArquivo.nome_arquivo}
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '70vh',
+                            width: 'auto',
+                            height: 'auto',
+                            display: 'block',
+                            transform: `scale(${zoom})`,
+                            transformOrigin: 'top left',
+                            transition: 'transform 0.2s',
+                          }}
+                          className="rounded shadow select-none pointer-events-none"
+                          draggable={false}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-2">Use os botões de zoom e o scroll para ver detalhes</span>
+                    </div>
+                  ) : previewArquivo.tipo_arquivo === 'application/pdf' ? (
+                    <div className="flex flex-col items-center w-full">
+                      <iframe src={previewUrl} title="PDF Preview" className="w-full h-[70vh] border rounded" />
+                      <Button
+                        className="mt-4"
+                        onClick={() => window.open(previewUrl, '_blank')}
+                      >
+                        Abrir PDF em nova aba
+                      </Button>
+                    </div>
+                  ) : (
+                    <div>Preview não suportado para este tipo de arquivo.</div>
+                  )}
+                  <Button
+                    className="mt-4"
+                    onClick={handleDownload}
+                  >
+                    Baixar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
+} 
+
+function ChatMediaPreview({ path, nome, tipo, onPreview }: { path: string, nome: string, tipo: string, onPreview: (file: any) => void }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!path) return;
+    setSignedUrl(null);
+    setError(null);
+    supabase.storage.from('anexos-medicos').createSignedUrl(path, 60)
+      .then(({ data, error }) => {
+        if (error || !data?.signedUrl) {
+          setError('Anexo não disponível ou removido');
+        } else {
+          setSignedUrl(data.signedUrl);
+        }
+      });
+  }, [path]);
+
+  if (error) return <div className="text-xs text-red-500 mt-2">{error}</div>;
+  if (!signedUrl) return <div className="text-xs text-muted-foreground mt-2">Carregando anexo...</div>;
+  if (tipo.startsWith('image/')) {
+    return (
+      <img
+        src={signedUrl}
+        alt={nome}
+        className="mt-2 max-w-[120px] max-h-[120px] rounded cursor-pointer border"
+        onClick={() => onPreview({
+          nome_arquivo: nome,
+          tipo_arquivo: tipo,
+          url_storage: path,
+        })}
+      />
+    );
+  }
+  if (tipo === 'application/pdf') {
+    return (
+      <div
+        className="mt-2 flex items-center gap-2 cursor-pointer text-blue-700 hover:underline"
+        onClick={() => onPreview({
+          nome_arquivo: nome,
+          tipo_arquivo: tipo,
+          url_storage: path,
+        })}
+      >
+        <FileText className="h-5 w-5" />
+        <span>Visualizar PDF</span>
+      </div>
+    );
+  }
+  return null;
 } 

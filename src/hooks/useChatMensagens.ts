@@ -12,6 +12,7 @@ export interface ChatMensagem {
   content: string | null;
   media_url?: string | null;
   media_type?: string | null;
+  media_storage_path?: string; // path real do arquivo no storage
   read: boolean;
   read_at?: string | null;
   created_at: string;
@@ -44,7 +45,11 @@ export function useChatMensagens() {
       author_nome: msg.author?.nome || 'Usuário'
     }));
     
-    setMensagens(mensagensComNome);
+    // Remover mensagens antigas desse paciente e adicionar as novas
+    setMensagens((prev) => [
+      ...prev.filter(m => m.patient_id !== patientId),
+      ...mensagensComNome
+    ]);
     return mensagensComNome;
   }
 
