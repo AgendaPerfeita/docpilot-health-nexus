@@ -145,9 +145,7 @@ export const usePacientes = () => {
 
     console.log('🔍 criarPaciente - Dados para inserir:', dadosParaInserir);
 
-
-
-        // Criar o paciente usando função RPC para contornar problemas de políticas
+    // Chamada da função RPC sem genéricos, cast manual depois
     const { data: paciente, error: pacienteError } = await supabase.rpc('insert_paciente', {
       nome_param: dadosParaInserir.nome,
       email_param: dadosParaInserir.email || null,
@@ -183,7 +181,8 @@ export const usePacientes = () => {
     }
 
     // A função RPC retorna um array, precisamos pegar o primeiro elemento
-    const pacienteCriado = Array.isArray(paciente) ? paciente[0] : paciente;
+    const pacienteArray = paciente as Paciente[];
+    const pacienteCriado: Paciente | undefined = Array.isArray(pacienteArray) && typeof pacienteArray[0] === 'object' ? pacienteArray[0] : undefined;
     
     if (!pacienteCriado || !pacienteCriado.id) {
       console.error('❌ criarPaciente - Paciente criado não tem ID válido:', pacienteCriado);
@@ -221,53 +220,11 @@ export const usePacientes = () => {
       } else {
         console.log('✅ criarPaciente - Vínculo com clínica já existe');
       }
-      
-    } else if (profile.tipo === 'medico') {
-      console.log('🔍 criarPaciente - Criando vínculo com médico:', profile.id);
-      
-      // Verificar se o vínculo já existe
-      const { data: vinculoExistente } = await supabase
-        .from('paciente_medico')
-        .select('id')
-        .eq('paciente_id', pacienteCriado.id)
-        .eq('medico_id', profile.id)
-        .eq('clinica_id', profile.clinica_id || profile.id)
-        .single();
-      
-      if (!vinculoExistente) {
-        const { error: vinculoError } = await supabase
-          .from('paciente_medico')
-          .insert({ 
-            paciente_id: pacienteCriado.id, 
-            medico_id: profile.id,
-            clinica_id: profile.clinica_id || profile.id
-          });
-        
-        if (vinculoError) {
-          console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
-          throw vinculoError;
-        }
-        console.log('✅ criarPaciente - Vínculo com médico criado');
-      } else {
-        console.log('✅ criarPaciente - Vínculo com médico já existe');
-      }
     }
-
-    console.log('✅ criarPaciente - Vínculo criado com sucesso');
-    
-    // Forçar atualização da lista de pacientes
-    console.log('🔄 criarPaciente - Atualizando lista de pacientes...');
+      
+    console.log('✅ criarPaciente - Vínculos criados com sucesso');
     await fetchPacientes();
-    console.log('✅ criarPaciente - Lista de pacientes atualizada');
-    
-    // Forçar re-render dos componentes que usam este hook
-    setRefreshTrigger(prev => prev + 1);
-    
-    // Verificar se a lista foi atualizada
-    console.log('🔍 criarPaciente - Estado atual dos pacientes:', pacientes.length);
-    
-    // Retornar o paciente criado
-    return pacienteCriado;
+    return paciente;
   };
 
   const atualizarPaciente = async (id: string, pacienteData: any) => {

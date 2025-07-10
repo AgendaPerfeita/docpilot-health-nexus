@@ -186,6 +186,7 @@ export default function AcompanhamentoPacientes() {
         name: p.nome,
         email: p.email,
         phone: p.telefone,
+        status: 'active' as const,
         unreadMessages: 0,
         pendingExams: 0,
         status: 'active', // valor padrão

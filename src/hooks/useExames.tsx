@@ -72,10 +72,7 @@ export const useExames = () => {
         .eq('medico_id', profile.id)
         .order('data_solicitacao', { ascending: false });
 
-      // Se for staff, filtrar por clinica_id
-      if (profile.tipo === 'staff' && profile.clinica_id) {
-        query = query.eq('clinica_id', profile.clinica_id);
-      }
+      // Políticas RLS já controlam o acesso baseado no perfil
 
       if (pacienteId) {
         query = query.eq('paciente_id', pacienteId);
