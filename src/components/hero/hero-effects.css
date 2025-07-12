@@ -1,0 +1,173 @@
+/* Efeitos especiais para o Hero Section */
+
+/* Gradiente animado no texto */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.hero-title {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Efeito de brilho nos botões */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 8s infinite;
+}
+
+/* Efeito de partículas flutuantes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+.floating-particle {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Efeito de borda luminosa */
+@keyframes border-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.4); }
+}
+
+.glow-border {
+  animation: border-glow 6s ease-in-out infinite;
+}
+
+/* Efeito de texto digitado */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 3s steps(40, end);
+}
+
+/* Efeito de fade in escalonado */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* Efeito de hover 3D nos botões */
+.button-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease;
+}
+
+.button-3d:hover {
+  transform: translateY(-2px) rotateX(5deg);
+}
+
+/* Efeito de grid interativo */
+.grid-pattern {
+  background-size: 50px 50px;
+  transition: all 0.3s ease;
+}
+
+.grid-pattern:hover {
+  background-size: 40px 40px;
+  opacity: 0.8;
+}
+
+/* Efeito de scroll suave */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Efeito de blur no background */
+.backdrop-blur-dynamic {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Efeito de gradiente animado no background */
+@keyframes background-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animated-gradient {
+  background-size: 400% 400%;
+  animation: background-shift 15s ease infinite;
+}
+
+/* Efeito de partículas de luz */
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Efeito de hover nos stats */
+.stat-card {
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.8);
+}
+
+/* Efeito de loading progressivo */
+@keyframes progress-load {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.progress-bar {
+  animation: progress-load 2s ease-out forwards;
+}
+
+/* Efeito de texto com sombra dinâmica */
+.text-shadow-dynamic {
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+  transition: text-shadow 0.3s ease;
+}
+
+.text-shadow-dynamic:hover {
+  text-shadow: 0 0 30px rgba(96, 165, 250, 0.8);
+} 

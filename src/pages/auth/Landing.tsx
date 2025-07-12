@@ -26,9 +26,12 @@ import {
   Check
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import HeroSection from "@/components/hero/HeroSection";
+import PlanosCarousel from './PlanosCarousel';
 
 const Landing = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   const testimonials = [
     {
@@ -82,6 +85,14 @@ const Landing = () => {
       title: "Segurança Total",
       description: "Conformidade com LGPD e criptografia de ponta a ponta"
     }
+  ];
+
+  // Mockups de placeholder para cada feature
+  const featureMockups = [
+    'https://placehold.co/1200x600/3b82f6/ffffff?text=Mockup+1',
+    'https://placehold.co/1200x600/6366f1/ffffff?text=Mockup+2',
+    'https://placehold.co/1200x600/06b6d4/ffffff?text=Mockup+3',
+    // Adicione mais se tiver mais features
   ];
 
   const plans = [
@@ -145,177 +156,70 @@ const Landing = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Stethoscope className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-primary">SmartDoc</span>
-          </div>
-          
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-sm font-medium hover:text-primary transition-colors">
-              Recursos
-            </a>
-            <a href="#plans" className="text-sm font-medium hover:text-primary transition-colors">
-              Planos
-            </a>
-            <a href="#testimonials" className="text-sm font-medium hover:text-primary transition-colors">
-              Depoimentos
-            </a>
-          </nav>
-
-          <div className="flex items-center space-x-4">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Entrar
-              </Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm">
-                Começar Grátis
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-20 pb-12 text-center">
-        <div className="max-w-4xl mx-auto">
-          <Badge variant="secondary" className="mb-6">
-            🚀 Revolucione sua prática médica
-          </Badge>
-          
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-            O futuro da medicina é 
-            <span className="text-primary block">inteligente</span>
-          </h1>
-          
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Plataforma completa com IA médica avançada, prontuário eletrônico, 
-            WhatsApp integrado e relatórios inteligentes para médicos e clínicas.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link to="/register">
-              <Button size="lg" className="text-lg px-8 py-3">
-                Começar Teste Grátis
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-              <Phone className="mr-2 h-5 w-5" />
-              Agendar Demo
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-primary">5000+</div>
-              <div className="text-sm text-muted-foreground">Médicos Ativos</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary">98%</div>
-              <div className="text-sm text-muted-foreground">Satisfação</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary">50M+</div>
-              <div className="text-sm text-muted-foreground">Consultas</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary">24/7</div>
-              <div className="text-sm text-muted-foreground">Suporte</div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen">
+      {/* Novo Hero Section Futurista */}
+      <HeroSection />
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4">
+      <section id="features" className="relative py-24 bg-gradient-to-br from-blue-50 via-white to-blue-100 w-screen overflow-x-hidden">
+        {/* Background mockup dinâmico */}
+        {hoveredFeature !== null && (
+          <img
+            src={featureMockups[hoveredFeature]}
+            alt="mockup"
+            className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 z-0"
+            style={{ filter: 'blur(2px)' }}
+          />
+        )}
+        {/* Overlay para garantir contraste */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white/80 to-blue-100/80 z-10 pointer-events-none" />
+        <div className="relative z-20 max-w-[1600px] mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-blue-900 mb-4 drop-shadow-lg">
               Recursos Revolucionários
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl text-blue-700 max-w-2xl mx-auto">
               Tecnologia de ponta para transformar sua prática médica
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {features.map((feature, index) => (
-              <Card key={index} className="h-full hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary mb-4">
+              <div
+                key={index}
+                onMouseEnter={() => setHoveredFeature(index)}
+                onMouseLeave={() => setHoveredFeature(null)}
+                className="relative bg-white/90 rounded-3xl shadow-2xl p-10 flex flex-col items-center justify-center overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
+              >
+                <div className="relative z-20 flex flex-col items-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-lg text-white text-3xl">
                     {feature.icon}
                   </div>
-                  <CardTitle className="text-xl">{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
+                  <h3 className="text-2xl font-bold text-blue-900 mb-2">{feature.title}</h3>
+                  <p className="text-blue-700 text-center text-lg transition-opacity duration-300">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Plans Section */}
-      <section id="plans" className="py-20">
+      <section id="plans" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a8a] mb-4">
               Planos para cada necessidade
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl text-[#2563eb] max-w-2xl mx-auto">
               Escolha o plano ideal para você ou sua clínica
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan, index) => (
-              <Card key={index} className={`relative h-full ${plan.popular ? 'border-primary shadow-lg scale-105' : ''}`}>
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    Mais Popular
-                  </Badge>
-                )}
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription className="text-sm leading-relaxed">{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold text-primary">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-start">
-                        <Check className="h-4 w-4 text-primary mr-3 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm leading-relaxed">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {plan.ideal && (
-                    <div className="mt-6 p-3 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground italic leading-relaxed">
-                        {plan.ideal}
-                      </p>
-                    </div>
-                  )}
-                  <Link to="/register" className="block">
-                    <Button className="w-full mt-6" variant={plan.popular ? "default" : "outline"}>
-                      Começar Agora
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        </div>
+        {/* Carrossel 3D de planos fora do container */}
+        <div className="w-screen overflow-x-hidden">
+          <PlanosCarousel />
         </div>
       </section>
 
@@ -434,13 +338,15 @@ const Landing = () => {
                 <li><a href="#" className="hover:text-primary transition-colors">Central de Ajuda</a></li>
                 <li><a href="#" className="hover:text-primary transition-colors">Documentação</a></li>
                 <li><a href="#" className="hover:text-primary transition-colors">Status</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Privacidade</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Comunidade</a></li>
               </ul>
             </div>
           </div>
           
-          <div className="border-t border-border mt-12 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 SmartDoc. Todos os direitos reservados.</p>
+          <div className="border-t border-border mt-8 pt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              © 2024 SmartDoc. Todos os direitos reservados.
+            </p>
           </div>
         </div>
       </footer>
