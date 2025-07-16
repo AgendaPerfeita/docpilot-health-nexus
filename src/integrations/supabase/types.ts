@@ -17,14 +17,18 @@ export type Database = {
       anexos_medicos: {
         Row: {
           categoria: string
+          clinica_id: string | null
           created_at: string
           data_upload: string
           descricao: string | null
+          enviado_no_chat: boolean
           id: string
           medico_id: string
           nome_arquivo: string
           paciente_id: string
+          paciente_upload_id: string | null
           prontuario_id: string | null
+          staff_id: string | null
           subcategoria: string | null
           tamanho_bytes: number | null
           tipo_arquivo: string
@@ -32,14 +36,18 @@ export type Database = {
         }
         Insert: {
           categoria: string
+          clinica_id?: string | null
           created_at?: string
           data_upload?: string
           descricao?: string | null
+          enviado_no_chat?: boolean
           id?: string
           medico_id: string
           nome_arquivo: string
           paciente_id: string
+          paciente_upload_id?: string | null
           prontuario_id?: string | null
+          staff_id?: string | null
           subcategoria?: string | null
           tamanho_bytes?: number | null
           tipo_arquivo: string
@@ -47,14 +55,18 @@ export type Database = {
         }
         Update: {
           categoria?: string
+          clinica_id?: string | null
           created_at?: string
           data_upload?: string
           descricao?: string | null
+          enviado_no_chat?: boolean
           id?: string
           medico_id?: string
           nome_arquivo?: string
           paciente_id?: string
+          paciente_upload_id?: string | null
           prontuario_id?: string | null
+          staff_id?: string | null
           subcategoria?: string | null
           tamanho_bytes?: number | null
           tipo_arquivo?: string
@@ -1139,6 +1151,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_insert_paciente: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       criar_vinculo_paciente_clinica: {
         Args: { paciente_id_param: string; clinica_id_param: string }
         Returns: undefined
@@ -1150,6 +1166,49 @@ export type Database = {
           clinica_id_param: string
         }
         Returns: undefined
+      }
+      debug_auth_context: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          current_user_id: string
+          profile_exists: boolean
+          profile_tipo: string
+          profile_ativo: boolean
+          profile_id: string
+          profile_nome: string
+        }[]
+      }
+      debug_insert_policy: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          auth_uid: string
+          profile_exists: boolean
+          profile_tipo: string
+          profile_ativo: boolean
+          tipo_allowed: boolean
+          insert_allowed: boolean
+          policy_condition_result: boolean
+        }[]
+      }
+      debug_paciente_access: {
+        Args: { paciente_id_param: string }
+        Returns: {
+          can_access: boolean
+          reason: string
+          via_medico: boolean
+          via_clinica: boolean
+          via_clinica_medico: boolean
+        }[]
+      }
+      debug_pacientes_policies: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          policy_name: string
+          policy_cmd: string
+          policy_roles: string[]
+          policy_qual: string
+          policy_with_check: string
+        }[]
       }
       get_paciente_ids_clinica: {
         Args: { clinica_id_param: string }
@@ -1219,9 +1278,48 @@ export type Database = {
           total_gasto: number
         }[]
       }
+      insert_paciente: {
+        Args: {
+          nome_param: string
+          email_param?: string
+          telefone_param?: string
+          cpf_param?: string
+          data_nascimento_param?: string
+          endereco_param?: string
+          bairro_param?: string
+          cidade_param?: string
+          estado_param?: string
+          cep_param?: string
+          convenio_param?: string
+          numero_convenio_param?: string
+          origem_param?: string
+        }
+        Returns: {
+          id: string
+          nome: string
+          email: string
+          telefone: string
+          cpf: string
+          data_nascimento: string
+          endereco: string
+          bairro: string
+          cidade: string
+          estado: string
+          cep: string
+          convenio: string
+          numero_convenio: string
+          origem: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       medico_tem_permissao: {
         Args: { medico_id: string; permissao: string }
         Returns: boolean
+      }
+      reenable_pacientes_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

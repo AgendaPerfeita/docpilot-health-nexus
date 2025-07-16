@@ -188,8 +188,7 @@ export default function AcompanhamentoPacientes() {
         phone: p.telefone,
         status: 'active' as const,
         unreadMessages: 0,
-        pendingExams: 0,
-        status: 'active', // valor padrão
+        pendingExams: 0
       })));
       setLoadingPatients(false);
     }

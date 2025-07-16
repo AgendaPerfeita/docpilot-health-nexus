@@ -191,7 +191,7 @@ export const usePacientes = () => {
 
     console.log('✅ criarPaciente - Paciente criado com sucesso:', pacienteCriado);
 
-    // Criar vínculo usando as tabelas de vínculo
+    // Criar vínculos usando as tabelas de vínculo
     if (profile.tipo === 'clinica' || profile.tipo === 'staff') {
       const clinicaId = profile.tipo === 'clinica' ? profile.id : profile.clinica_id;
       console.log('🔍 criarPaciente - Criando vínculo com clínica:', clinicaId);
@@ -219,6 +219,36 @@ export const usePacientes = () => {
         console.log('✅ criarPaciente - Vínculo com clínica criado');
       } else {
         console.log('✅ criarPaciente - Vínculo com clínica já existe');
+      }
+    } else if (profile.tipo === 'medico') {
+      // Criar vínculo médico-paciente
+      const clinicaId = profile.clinica_id || profile.id; // Se médico não tem clínica, usar próprio ID
+      console.log('🔍 criarPaciente - Criando vínculo médico-paciente:', profile.id, clinicaId);
+      
+      // Verificar se o vínculo já existe
+      const { data: vinculoExistente } = await supabase
+        .from('paciente_medico')
+        .select('id')
+        .eq('paciente_id', pacienteCriado.id)
+        .eq('medico_id', profile.id)
+        .single();
+      
+      if (!vinculoExistente) {
+        const { error: vinculoError } = await supabase
+          .from('paciente_medico')
+          .insert({ 
+            paciente_id: pacienteCriado.id, 
+            medico_id: profile.id,
+            clinica_id: clinicaId
+          });
+        
+        if (vinculoError) {
+          console.error('❌ criarPaciente - Erro ao criar vínculo médico:', vinculoError);
+          throw vinculoError;
+        }
+        console.log('✅ criarPaciente - Vínculo médico-paciente criado');
+      } else {
+        console.log('✅ criarPaciente - Vínculo médico-paciente já existe');
       }
     }
       
