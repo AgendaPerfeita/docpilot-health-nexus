@@ -63,8 +63,14 @@ import BIAvancado from "./pages/BIAvancado";
 // Acompanhamento
 import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
+// Plantonista
+import PlantonistaIndex from "./pages/plantonista/index";
+import GestaoFinanceira from "./pages/plantonista/GestaoFinanceira";
+import LocaisTrabalho from "./pages/plantonista/LocaisTrabalho";
+
 // Shared components
 import { PermissionGuard } from "./components/PermissionGuard";
+import { PlantonistaProvider } from './hooks/usePlantonista';
 
 const queryClient = new QueryClient();
 
@@ -143,12 +149,24 @@ function App() {
                     {/* Acompanhamento */}
                     <Route path="/acompanhamento-pacientes" element={<AcompanhamentoPacientes />} />
 
-                     {/* Plantonista - Rotas simplificadas */}
-                    <Route path="/plantonista" element={<div>Plantonista em desenvolvimento</div>} />
+                     {/* Plantonista - ENVOLVER COM PROVIDER */}
+                    <Route path="/plantonista" element={
+                      <PlantonistaProvider>
+                        <PlantonistaIndex />
+                      </PlantonistaProvider>
+                    } />
                     <Route path="/plantonista/atendimento" element={<div>Atendimento em desenvolvimento</div>} />
-                    <Route path="/plantonista/financeiro" element={<div>Financeiro em desenvolvimento</div>} />
+                    <Route path="/plantonista/financeiro" element={
+                      <PlantonistaProvider>
+                        <GestaoFinanceira />
+                      </PlantonistaProvider>
+                    } />
                     <Route path="/plantonista/historico" element={<div>Histórico em desenvolvimento</div>} />
-                    <Route path="/plantonista/locais" element={<div>Locais em desenvolvimento</div>} />
+                    <Route path="/plantonista/locais" element={
+                      <PlantonistaProvider>
+                        <LocaisTrabalho />
+                      </PlantonistaProvider>
+                    } />
 
                     {/* Rotas de teste para debug */}
                     <Route path="/teste-clinica" element={<div>Teste Clínica</div>} />
