@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, Clock, DollarSign, FileText, MapPin, Plus, TrendingUp, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePlantonista } from '@/hooks/usePlantonista';
-import { PlantonistaSessao, PlantonistaAtendimento } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
+
+type PlantonistaSessao = Tables<'plantonista_sessoes'>;
+type PlantonistaAtendimento = Tables<'plantonista_atendimentos'>;
 
 export default function PlantonistaDashboard() {
   const navigate = useNavigate();

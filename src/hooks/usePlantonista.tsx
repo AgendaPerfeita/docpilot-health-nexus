@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import {
-  PlantonistaSessao, 
-  PlantonistaAtendimento,
-  InsertPlantonistaSessao,
-  InsertPlantonistaAtendimento
-} from '@/integrations/supabase/types';
+import { Tables, TablesInsert } from '@/integrations/supabase/types';
+
+type PlantonistaSessao = Tables<'plantonista_sessoes'>;
+type PlantonistaAtendimento = Tables<'plantonista_atendimentos'>;
+type InsertPlantonistaSessao = TablesInsert<'plantonista_sessoes'>;
+type InsertPlantonistaAtendimento = TablesInsert<'plantonista_atendimentos'>;
 
 const PlantonistaContext = createContext<any>(null);
 
@@ -131,10 +131,10 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   const atualizarAtendimento = async (atendimentoId: string, dados: Partial<PlantonistaAtendimento>) => {
     try {
       setLoading(true);
-      // Garantir que exame_fisico, anamnese, conduta_inicial sejam objetos se enviados
+      // Garantir que anamnese, conduta_inicial sejam objetos se enviados
       const updateData = { ...dados };
-      if (typeof updateData.exame_fisico === 'string') {
-        updateData.exame_fisico = { texto: updateData.exame_fisico };
+      if (typeof updateData.exame_fisico_estruturado === 'string') {
+        updateData.exame_fisico_estruturado = updateData.exame_fisico_estruturado;
       }
       if (typeof updateData.anamnese === 'string') {
         updateData.anamnese = { texto: updateData.anamnese };

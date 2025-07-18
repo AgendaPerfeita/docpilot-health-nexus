@@ -843,6 +843,128 @@ export type Database = {
         }
         Relationships: []
       }
+      plantonista_atendimentos: {
+        Row: {
+          alergias: string | null
+          anamnese: Json | null
+          comorbidades: string | null
+          conduta_final: string | null
+          conduta_inicial: Json | null
+          created_at: string | null
+          descricao: string | null
+          diagnostico_final: string | null
+          evolucao: string | null
+          exame_fisico_estruturado: string | null
+          habitos: string | null
+          id: string
+          medicamentos_uso: string | null
+          medico_id: string
+          paciente_idade: number | null
+          paciente_nome: string | null
+          paciente_sexo: string | null
+          queixa_principal: string | null
+          reavaliacao_agendada: string | null
+          resultados_exames: Json | null
+          sessao_id: string
+          sinais_vitais: Json | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alergias?: string | null
+          anamnese?: Json | null
+          comorbidades?: string | null
+          conduta_final?: string | null
+          conduta_inicial?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          diagnostico_final?: string | null
+          evolucao?: string | null
+          exame_fisico_estruturado?: string | null
+          habitos?: string | null
+          id?: string
+          medicamentos_uso?: string | null
+          medico_id: string
+          paciente_idade?: number | null
+          paciente_nome?: string | null
+          paciente_sexo?: string | null
+          queixa_principal?: string | null
+          reavaliacao_agendada?: string | null
+          resultados_exames?: Json | null
+          sessao_id: string
+          sinais_vitais?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alergias?: string | null
+          anamnese?: Json | null
+          comorbidades?: string | null
+          conduta_final?: string | null
+          conduta_inicial?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          diagnostico_final?: string | null
+          evolucao?: string | null
+          exame_fisico_estruturado?: string | null
+          habitos?: string | null
+          id?: string
+          medicamentos_uso?: string | null
+          medico_id?: string
+          paciente_idade?: number | null
+          paciente_nome?: string | null
+          paciente_sexo?: string | null
+          queixa_principal?: string | null
+          reavaliacao_agendada?: string | null
+          resultados_exames?: Json | null
+          sessao_id?: string
+          sinais_vitais?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_atendimentos_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_sessoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_sessoes: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          id: string
+          local_trabalho: string
+          medico_id: string
+          status: string | null
+          turno: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          local_trabalho: string
+          medico_id: string
+          status?: string | null
+          turno: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          local_trabalho?: string
+          medico_id?: string
+          status?: string | null
+          turno?: string
+        }
+        Relationships: []
+      }
       prescricoes: {
         Row: {
           created_at: string
@@ -1146,41 +1268,6 @@ export type Database = {
         }
         Relationships: []
       }
-      plantonista_sessoes: {
-        Row: {
-          id: string;
-          medico_id: string;
-          local_trabalho: string;
-          turno: string;
-          data_inicio: string;
-          data_fim?: string;
-          status: 'ativa' | 'finalizada';
-          created_at: string;
-        };
-        Insert: {
-          medico_id: string;
-          local_trabalho: string;
-          turno: string;
-          data_fim?: string;
-          status?: 'ativa' | 'finalizada';
-        };
-        Update: {
-          medico_id?: string;
-          local_trabalho?: string;
-          turno?: string;
-          data_fim?: string;
-          status?: 'ativa' | 'finalizada';
-        };
-        Relationships: [
-          {
-            foreignKeyName: "plantonista_sessoes_medico_id_fkey";
-            columns: ["medico_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
     }
     Views: {
       [_ in never]: never
@@ -1358,7 +1445,13 @@ export type Database = {
       }
     }
     Enums: {
-      user_type: "medico" | "paciente" | "clinica" | "hospital" | "staff"
+      user_type:
+        | "medico"
+        | "paciente"
+        | "clinica"
+        | "hospital"
+        | "staff"
+        | "plantonista"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1486,83 +1579,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_type: ["medico", "paciente", "clinica", "hospital", "staff"],
+      user_type: [
+        "medico",
+        "paciente",
+        "clinica",
+        "hospital",
+        "staff",
+        "plantonista",
+      ],
     },
   },
 } as const
-
-// Tipos para Plantonista
-export interface PlantonistaSessao {
-  id: string;
-  medico_id: string;
-  local_trabalho: string;
-  turno: string;
-  data_inicio: string;
-  data_fim?: string;
-  status: 'ativa' | 'finalizada';
-  created_at: string;
-}
-
-export interface PlantonistaAtendimento {
-  id: string;
-  sessao_id: string;
-  medico_id: string;
-  paciente_nome?: string;
-  paciente_idade?: number;
-  paciente_sexo?: 'M' | 'F';
-  queixa_principal?: string;
-  descricao?: string;
-  anamnese?: any; // JSONB
-  exame_fisico?: any; // JSONB
-  exame_fisico_estruturado?: string; // Campo estruturado para IA
-  conduta_inicial?: any; // JSONB
-  reavaliacao_agendada?: string;
-  evolucao?: string;
-  resultados_exames?: any; // JSONB
-  sinais_vitais?: any; // JSONB
-  conduta_final?: string;
-  diagnostico_final?: string;
-  status: 'primeiro_atendimento' | 'em_andamento' | 'reavaliacao' | 'reavaliado' | 'finalizado';
-  created_at: string;
-  updated_at: string;
-  // Campo auxiliar para frontend: histórico de reavaliações
-  reavaliacoes?: Array<{
-    id?: string;
-    created_at?: string;
-    evolucao?: string;
-    resultados_exames?: string;
-    sinais_vitais?: any;
-    conduta_final?: string;
-    diagnostico_final?: string;
-  }>;
-}
-
-// Tipos para inserção (sem campos automáticos)
-export interface InsertPlantonistaSessao {
-  medico_id: string;
-  local_trabalho: string;
-  turno: string;
-  data_fim?: string;
-  status?: 'ativa' | 'finalizada';
-}
-
-export interface InsertPlantonistaAtendimento {
-  sessao_id: string;
-  medico_id: string;
-  paciente_nome?: string;
-  paciente_idade?: number;
-  paciente_sexo?: 'M' | 'F';
-  queixa_principal?: string;
-  descricao?: string;
-  anamnese?: any; // JSONB
-  exame_fisico?: any; // JSONB
-  exame_fisico_estruturado?: string; // Campo estruturado para IA
-  conduta_inicial?: any; // JSONB
-  reavaliacao_agendada?: string;
-  evolucao?: string;
-  resultados_exames?: any;
-  sinais_vitais?: any;
-  conduta_final?: string;
-  diagnostico_final?: string;
-  status?: 'primeiro_atendimento' | 'reavaliado' | 'finalizado';
-}

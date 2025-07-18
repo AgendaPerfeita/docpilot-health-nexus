@@ -303,7 +303,7 @@ const Historico: React.FC = () => {
                           <Badge variant="default">
                             {sessao.atendimentos} atendimentos
                           </Badge>
-                          <Badge variant={sessao.status === 'finalizada' ? 'default' : sessao.status}>
+                          <Badge variant={sessao.status === 'finalizada' ? 'default' : 'secondary'}>
                             {sessao.status}
                           </Badge>
                           <Button size="sm" variant="outline">

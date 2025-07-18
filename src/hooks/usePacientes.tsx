@@ -91,40 +91,30 @@ export const usePacientes = () => {
       setLoading(false);
       return [];
     }
-  }, [profile]);
+  }, [profile?.id]);
 
   // Polling curto após evento realtime
   const pollingAfterRealtime = useCallback(() => {
-    if (pollingActiveRef.current) return; // já está rodando
+    if (pollingActiveRef.current) return;
     pollingActiveRef.current = true;
     let attempts = 0;
-    const maxAttempts = 6; // 6 * 500ms = 3s
-    let lastPacientesIds: string = pacientes.map(p => p.id).join(',');
-    console.log('[Polling] Iniciando polling após evento realtime. Lista atual:', lastPacientesIds, `(length: ${pacientes.length})`);
+    const maxAttempts = 6;
+    
     const poll = async () => {
       attempts++;
       const newPacientes = await fetchPacientes(true);
-      const newIds = (newPacientes || []).map(p => p.id).join(',');
-      console.log(`[Polling] Attempt ${attempts}: ${newIds} (length: ${(newPacientes || []).length})`);
-      if (newIds !== lastPacientesIds || (newPacientes || []).length !== pacientes.length) {
-        console.log('[Polling] Lista mudou! Parando polling.');
-        pollingActiveRef.current = false;
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        pollingRef.current = null;
-        return;
-      }
+      
       if (attempts >= maxAttempts) {
-        console.log('[Polling] Atingiu o máximo de tentativas. Parando polling.');
         pollingActiveRef.current = false;
         if (pollingRef.current) clearInterval(pollingRef.current);
         pollingRef.current = null;
         return;
       }
     };
+    
     pollingRef.current = setInterval(poll, 500);
-    // Executa o primeiro imediatamente
     poll();
-  }, [fetchPacientes, pacientes]);
+  }, [fetchPacientes]);
 
   const forceRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
@@ -284,23 +274,25 @@ export const usePacientes = () => {
       fetchPacientes();
       isInitializedRef.current = true;
     }
-  }, [profile?.id, refreshTrigger, fetchPacientes]);
+  }, [profile?.id, refreshTrigger]);
 
   useEffect(() => {
-    console.log('[Realtime] useEffect de assinatura executado para profile:', profile?.id);
     if (!profile?.id) return;
+    
     if (realtimeChannelRef.current) {
       supabase.removeChannel(realtimeChannelRef.current);
       realtimeChannelRef.current = null;
     }
+    
     const channel = supabase.channel('realtime-pacientes', {
       config: {
         broadcast: { self: false },
         presence: { key: profile.id },
       },
     });
+    
     const tables = ['pacientes', 'paciente_clinica', 'paciente_medico'];
-    console.log('[Realtime] Canal realtime-pacientes criado e assinando tabelas:', tables);
+    
     tables.forEach((table) => {
       channel.on(
         'postgres_changes',
@@ -309,16 +301,15 @@ export const usePacientes = () => {
           schema: 'public',
           table,
         },
-        (payload) => {
-          console.log('[Realtime] Evento recebido:', payload);
-          if (['INSERT', 'UPDATE', 'DELETE'].includes(payload.eventType)) {
-            pollingAfterRealtime();
-          }
+        () => {
+          forceRefresh();
         }
       );
     });
+    
     channel.subscribe();
     realtimeChannelRef.current = channel;
+    
     return () => {
       if (realtimeChannelRef.current) {
         supabase.removeChannel(realtimeChannelRef.current);
@@ -330,7 +321,7 @@ export const usePacientes = () => {
       }
       pollingActiveRef.current = false;
     };
-  }, [profile?.id, pollingAfterRealtime]);
+  }, [profile?.id]);
 
   return {
     pacientes,
