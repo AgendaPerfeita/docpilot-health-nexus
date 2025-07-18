@@ -64,7 +64,7 @@ import BIAvancado from "./pages/BIAvancado";
 import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
 // Plantonista
-import PlantonistaIndex from "./pages/plantonista/Index";
+import PlantonistaIndex from "./pages/plantonista/index";
 import AtendimentoAtivo from "./pages/plantonista/AtendimentoAtivo";
 import GestaoFinanceira from "./pages/plantonista/GestaoFinanceira";
 import Historico from "./pages/plantonista/Historico";
