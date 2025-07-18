@@ -36,6 +36,8 @@ const Index = () => {
     case 'clinica':
     case 'hospital':
       return <Navigate to="/dashboard" replace />;
+    case 'plantonista':
+      return <Navigate to="/plantonista" replace />;
     default:
       return <Navigate to="/landing" replace />;
   }

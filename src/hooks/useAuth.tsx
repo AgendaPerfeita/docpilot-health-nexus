@@ -7,7 +7,7 @@ export interface UserProfile {
   user_id: string;
   email: string;
   nome: string;
-  tipo: 'medico' | 'paciente' | 'clinica' | 'hospital' | 'staff';
+  tipo: 'medico' | 'paciente' | 'clinica' | 'hospital' | 'staff' | 'plantonista';
   documento: string; // Agora obrigatório
   telefone?: string;
   especialidade?: string;

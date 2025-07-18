@@ -16,7 +16,10 @@ import {
   UserPlus,
   Send,
   Building2,
-  Activity
+  Activity,
+  Clock,
+  History,
+  MapPin
 } from "lucide-react"
 
 import {
@@ -130,6 +133,30 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
     url: "/acompanhamento-pacientes",
     icon: MessageSquare,
     group: "clinico"
+  },
+  {
+    title: "Plantão Ativo",
+    url: "/plantonista/atendimento",
+    icon: Clock,
+    group: "plantonista"
+  },
+  {
+    title: "Gestão de Plantões",
+    url: "/plantonista/financeiro",
+    icon: DollarSign,
+    group: "plantonista"
+  },
+  {
+    title: "Histórico de Plantões",
+    url: "/plantonista/historico",
+    icon: History,
+    group: "plantonista"
+  },
+  {
+    title: "Locais de Trabalho (Plantão)",
+    url: "/plantonista/locais",
+    icon: MapPin,
+    group: "plantonista"
   }
 ]
 
@@ -141,7 +168,8 @@ const groupedItems = {
   hospital: menuItems.filter(item => item.group === "hospital"),
   financeiro: menuItems.filter(item => item.group === "financeiro"),
   relatorios: menuItems.filter(item => item.group === "relatorios"),
-  sistema: menuItems.filter(item => item.group === "sistema")
+  sistema: menuItems.filter(item => item.group === "sistema"),
+  plantonista: menuItems.filter(item => item.group === "plantonista")
 }
 
 export function AppSidebar() {
@@ -184,6 +212,11 @@ export function AppSidebar() {
         
         visibleGroups.sistema = groupedItems.sistema;
         break
+
+      case 'plantonista':
+        visibleGroups.plantonista = groupedItems.plantonista;
+        visibleGroups.sistema = groupedItems.sistema;
+        break;
 
       case 'paciente':
         visibleGroups.paciente = [
@@ -238,7 +271,8 @@ export function AppSidebar() {
     financeiro: "Financeiro",
     relatorios: "Relatórios",
     sistema: "Sistema",
-    paciente: "Paciente"
+    paciente: "Paciente",
+    plantonista: "Plantonista"
   }
 
   return (

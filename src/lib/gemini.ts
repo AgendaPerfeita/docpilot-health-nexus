@@ -283,3 +283,79 @@ export async function obterPosologiasSugeridas(medicamento: string): Promise<str
     return []
   }
 }
+
+// Função específica para análise médica do plantonista
+export async function analyzePlantonistaData(patientData: any, symptoms: string, vitalSigns: any, physicalExam: any, additionalData: any) {
+  const prompt = `
+    Como assistente médico especializado em emergência e plantão, analise os dados completos do paciente e forneça uma avaliação clínica direta e prática:
+
+    DADOS DEMOGRÁFICOS:
+    - Nome: ${patientData.name}
+    - Idade: ${patientData.age || 'N/A'}
+    - Sexo: ${patientData.gender || 'N/A'}
+    - Peso: ${vitalSigns.peso}kg
+    - Altura: ${vitalSigns.altura}cm
+
+    ANTECEDENTES:
+    - Medicamentos em Uso: ${additionalData.medicamentos_uso || 'Nenhum'}
+    - Alergias: ${additionalData.alergias || 'Nenhuma'}
+    - Hábitos: ${additionalData.habitos || 'Não informado'}
+    - Antecedentes Familiares: ${additionalData.antecedentes_familiares || 'Não informado'}
+
+    SINAIS VITAIS:
+    - PA: ${vitalSigns.pa_sistolica}/${vitalSigns.pa_diastolica} mmHg
+    - FC: ${vitalSigns.fc} bpm
+    - Temperatura: ${vitalSigns.temp}°C
+    - FR: ${vitalSigns.fr} irpm
+    - Saturação O2: ${vitalSigns.sat_o2}%
+
+    CARACTERIZAÇÃO DA DOR:
+    ${additionalData.caracterizacao_dor || 'Não informado'}
+
+    SINTOMAS ASSOCIADOS:
+    - Tosse: ${additionalData.sintomas_associados?.tosse ? 'SIM' : 'NÃO'}
+    - Dispneia: ${additionalData.sintomas_associados?.dispneia ? 'SIM' : 'NÃO'}
+    - Sudorese: ${additionalData.sintomas_associados?.sudorese ? 'SIM' : 'NÃO'}
+    - Náuseas: ${additionalData.sintomas_associados?.nauseas ? 'SIM' : 'NÃO'}
+    - Outros: ${additionalData.sintomas_associados?.outros || 'Nenhum'}
+
+    EXAME FÍSICO ESTRUTURADO:
+    ${additionalData.exame_fisico_estruturado || 'Não informado'}
+
+    QUEIXA PRINCIPAL: ${symptoms}
+    ANAMNESE: ${additionalData.anamnese || 'Não informado'}
+
+    Forneça análise estruturada EXATAMENTE neste formato:
+
+    **DIAGNÓSTICOS DIFERENCIAIS:**
+    - [Liste 3-4 diagnósticos principais em ordem de probabilidade]
+
+    **EXAMES NECESSÁRIOS:**
+    - [Liste exames prioritários ou "Não necessário"]
+
+    **MEDICAÇÕES IMEDIATAS (hospital):**
+    - [Medicamentos para dar no hospital com doses ajustadas]
+
+    **MEDICAÇÕES PARA CASA:**
+    - [Medicamentos para prescrever ou "Não aplicável" se internação]
+
+    **JUSTIFICATIVA:**
+    - [Explicação da decisão baseada nos dados]
+
+    **DECISÃO:**
+    - [Internar ou Liberar]
+
+    **CID-10 SUGERIDO:**
+    - [Códigos CID-10 apropriados]
+
+    IMPORTANTE: 
+    - Seja direto e prático
+    - Calcule doses automaticamente quando possível
+    - Se faltam dados para calcular dose (ex: função renal), forneça a fórmula
+    - Decisão deve ser baseada na gravidade dos sintomas
+    - Use sempre hífens (-) para listagens
+    - Responda em português brasileiro
+  `
+
+  return callGeminiAPI(prompt)
+}
