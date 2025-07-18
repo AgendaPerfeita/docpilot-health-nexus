@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Tables, TablesInsert } from '@/integrations/supabase/types';
-
-type PlantonistaSessao = Tables<'plantonista_sessoes'>;
-type PlantonistaAtendimento = Tables<'plantonista_atendimentos'>;
-type InsertPlantonistaSessao = TablesInsert<'plantonista_sessoes'>;
-type InsertPlantonistaAtendimento = TablesInsert<'plantonista_atendimentos'>;
+import {
+  PlantonistaSessao, 
+  PlantonistaAtendimento,
+  InsertPlantonistaSessao,
+  InsertPlantonistaAtendimento
+} from '@/integrations/supabase/types';
 
 const PlantonistaContext = createContext<any>(null);
 
@@ -19,46 +19,34 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   const buscarSessoes = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const { data, error } = await supabase
         .from('plantonista_sessoes')
         .select('*')
-        .eq('medico_id', user.id)
-        .order('created_at', { ascending: false });
-
+        .order('data_inicio', { ascending: false });
       if (error) throw error;
       setSessoes(data || []);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar sessões');
     } finally {
       setLoading(false);
     }
   };
 
-  // Buscar atendimentos
-  const buscarAtendimentos = async (sessaoId?: string) => {
+  // Buscar atendimentos de uma sessão
+  const buscarAtendimentos = async (sessaoId: string) => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      let query = supabase
+      console.log('DEBUG buscarAtendimentos - sessaoId:', sessaoId);
+      const { data, error } = await supabase
         .from('plantonista_atendimentos')
         .select('*')
-        .eq('medico_id', user.id)
+        .eq('sessao_id', sessaoId)
         .order('created_at', { ascending: false });
-
-      if (sessaoId) {
-        query = query.eq('sessao_id', sessaoId);
-      }
-
-      const { data, error } = await query;
+      console.log('DEBUG buscarAtendimentos - data:', data, 'error:', error);
       if (error) throw error;
       setAtendimentos(data || []);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar atendimentos');
     } finally {
       setLoading(false);
     }
@@ -68,24 +56,17 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   const criarSessao = async (dados: InsertPlantonistaSessao) => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const { data, error } = await supabase
         .from('plantonista_sessoes')
-        .insert({
-          ...dados,
-          medico_id: user.id
-        })
+        .insert([dados])
         .select()
         .single();
-
       if (error) throw error;
       setSessoes(prev => [data, ...prev]);
       return data;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao criar sessão');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -95,22 +76,23 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   const finalizarSessao = async (sessaoId: string) => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('plantonista_sessoes')
-        .update({
+        .update({ 
           status: 'finalizada',
           data_fim: new Date().toISOString()
         })
-        .eq('id', sessaoId)
-        .select()
-        .single();
-
+        .eq('id', sessaoId);
       if (error) throw error;
-      setSessoes(prev => prev.map(s => s.id === sessaoId ? data : s));
-      return data;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+      setSessoes(prev => 
+        prev.map(s => 
+          s.id === sessaoId 
+            ? { ...s, status: 'finalizada', data_fim: new Date().toISOString() }
+            : s
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao finalizar sessão');
     } finally {
       setLoading(false);
     }
@@ -120,69 +102,60 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   const criarAtendimento = async (dados: InsertPlantonistaAtendimento) => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const { data, error } = await supabase
         .from('plantonista_atendimentos')
-        .insert({
-          ...dados,
-          medico_id: user.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setAtendimentos(prev => [data, ...prev]);
-      return data;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+        .insert([dados])
+        .select(); // Removido .single() para garantir retorno de array
+      console.log('DEBUG criarAtendimento - data retornado do insert:', data);
+      if (error) {
+        console.error('Supabase error:', error);
+        if (error.message) console.error('Supabase error.message:', error.message);
+        if (error.details) console.error('Supabase error.details:', error.details);
+        if (error.hint) console.error('Supabase error.hint:', error.hint);
+        throw error;
+      }
+      if (data && data.length > 0) {
+        setAtendimentos(prev => [data[0], ...prev]);
+        return data[0];
+      }
+      return null;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao criar atendimento');
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Atualizar atendimento
+  // Atualizar atendimento (reavaliação)
   const atualizarAtendimento = async (atendimentoId: string, dados: Partial<PlantonistaAtendimento>) => {
     try {
       setLoading(true);
-      
-      // Garantir que campos JSON sejam tratados corretamente
+      // Garantir que exame_fisico, anamnese, conduta_inicial sejam objetos se enviados
       const updateData = { ...dados };
-      if (typeof updateData.exame_fisico_estruturado === 'string') {
-        updateData.exame_fisico_estruturado = updateData.exame_fisico_estruturado;
+      if (typeof updateData.exame_fisico === 'string') {
+        updateData.exame_fisico = { texto: updateData.exame_fisico };
       }
-      
-      if (typeof updateData.anamnese === 'object' && updateData.anamnese !== null) {
-        updateData.anamnese = updateData.anamnese;
+      if (typeof updateData.anamnese === 'string') {
+        updateData.anamnese = { texto: updateData.anamnese };
       }
-      
-      if (typeof updateData.conduta_inicial === 'object' && updateData.conduta_inicial !== null) {
-        updateData.conduta_inicial = updateData.conduta_inicial;
+      if (typeof updateData.conduta_inicial === 'string') {
+        updateData.conduta_inicial = { texto: updateData.conduta_inicial };
       }
-      
-      if (typeof updateData.sinais_vitais === 'object' && updateData.sinais_vitais !== null) {
-        updateData.sinais_vitais = updateData.sinais_vitais;
-      }
-      
-      if (typeof updateData.resultados_exames === 'object' && updateData.resultados_exames !== null) {
-        updateData.resultados_exames = updateData.resultados_exames;
-      }
-
       const { data, error } = await supabase
         .from('plantonista_atendimentos')
         .update(updateData)
         .eq('id', atendimentoId)
         .select()
         .single();
-
       if (error) throw error;
-      setAtendimentos(prev => prev.map(a => a.id === atendimentoId ? data : a));
+      setAtendimentos(prev =>
+        prev.map(a => a.id === atendimentoId ? data : a)
+      );
       return data;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar atendimento');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -191,46 +164,40 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
   // Buscar sessão ativa
   const buscarSessaoAtiva = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
+      setLoading(true);
       const { data, error } = await supabase
         .from('plantonista_sessoes')
         .select('*')
-        .eq('medico_id', user.id)
         .eq('status', 'ativa')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
+        .single();
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
       return data;
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar sessão ativa');
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Buscar atendimento ativo
-  const buscarAtendimentoAtivo = async () => {
+  // Buscar reavaliações pendentes
+  const buscarReavaliacoesPendentes = async (sessaoId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
+      setLoading(true);
       const { data, error } = await supabase
         .from('plantonista_atendimentos')
         .select('*')
-        .eq('medico_id', user.id)
-        .in('status', ['primeiro_atendimento', 'em_acompanhamento'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+        .eq('sessao_id', sessaoId)
+        .not('reavaliacao_agendada', 'is', null)
+        .eq('status', 'primeiro_atendimento')
+        .order('created_at', { ascending: true });
       if (error) throw error;
-      return data;
-    } catch (error: any) {
-      setError(error.message);
-      return null;
+      return data || [];
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar reavaliações');
+      return;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -247,8 +214,8 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
       criarAtendimento,
       atualizarAtendimento,
       buscarSessaoAtiva,
-      buscarAtendimentoAtivo,
-      setError
+      buscarReavaliacoesPendentes,
+      limparErro: () => setError(null)
     }}>
       {children}
     </PlantonistaContext.Provider>
@@ -259,4 +226,4 @@ export const usePlantonista = () => {
   const context = useContext(PlantonistaContext);
   if (!context) throw new Error('usePlantonista must be used within a PlantonistaProvider');
   return context;
-};
+}; 

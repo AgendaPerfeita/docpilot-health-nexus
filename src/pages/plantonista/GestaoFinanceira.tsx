@@ -1,332 +1,362 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Calendar, 
-  Clock, 
+import {
+  DollarSign,
+  TrendingUp,
+  Calendar,
   Building,
-  FileText,
+  CreditCard,
+  Receipt,
+  PieChart,
+  BarChart3,
   Download,
+  Plus,
   Filter
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface RegistroFinanceiro {
-  id: string;
-  data: string;
-  local: string;
-  turno: string;
-  horas: number;
-  valorHora: number;
-  total: number;
-  status: 'pendente' | 'pago';
-  observacoes?: string;
-}
+const GestaoFinanceira: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('resumo');
 
-export default function GestaoFinanceira() {
-  const [periodo, setPeriodo] = useState('mes_atual');
-  const [statusFiltro, setStatusFiltro] = useState('todos');
+  // Dados mockados para demonstração
+  const resumoFinanceiro = {
+    mesAtual: 'Janeiro 2024',
+    total: 1650,
+    pago: 120,
+    pendente: 450,
+    plantoesFixos: 2,
+    plantoesAvulsos: 3,
+    totalPlantões: 5
+  };
 
-  const registros: RegistroFinanceiro[] = [
-    {
-      id: '1',
-      data: '2024-01-15',
-      local: 'Hospital Santa Casa',
-      turno: 'Noturno',
-      horas: 12,
-      valorHora: 120,
-      total: 1440,
-      status: 'pago',
-      observacoes: 'Plantão de emergência'
-    },
-    {
-      id: '2',
-      data: '2024-01-16',
-      local: 'Clínica São José',
-      turno: 'Diurno',
-      horas: 8,
-      valorHora: 100,
-      total: 800,
-      status: 'pendente',
-      observacoes: 'Atendimento ambulatorial'
-    },
-    {
-      id: '3',
-      data: '2024-01-17',
-      local: 'Hospital Santa Casa',
-      turno: 'Noturno',
-      horas: 12,
-      valorHora: 120,
-      total: 1440,
-      status: 'pago'
-    },
-    {
-      id: '4',
-      data: '2024-01-18',
-      local: 'UPA Central',
-      turno: 'Diurno',
-      horas: 6,
-      valorHora: 110,
-      total: 660,
-      status: 'pendente'
-    }
+  const plantoes = [
+    { id: 1, local: 'Hospital ABC', data: '15/224', turno: 'Noite', valor: 350, status: 'pago', tipo: 'fixo' },
+    { id: 2, local: 'Hospital XYZ', data: '20/224', turno: 'Dia', valor: 400, status: 'pendente', tipo: 'avulso' },
+    { id: 3, local: 'Hospital ABC', data: '25/224', turno: 'Noite', valor: 350, status: 'pago', tipo: 'fixo' },
+    { id: 4, local: 'Clínica Central', data: '28/224', turno: 'Dia', valor: 300, status: 'pendente', tipo: 'avulso' }
   ];
 
-  const registrosFiltrados = registros.filter(registro => {
-    if (statusFiltro === 'todos') return true;
-    return registro.status === statusFiltro;
-  });
-
-  // Cálculos financeiros
-  const totalGeral = registros.reduce((acc, reg) => acc + reg.total, 0);
-  const totalPago = registros.filter(r => r.status === 'pago').reduce((acc, reg) => acc + reg.total, 0);
-  const totalPendente = registros.filter(r => r.status === 'pendente').reduce((acc, reg) => acc + reg.total, 0);
-  const horasTrabalhadas = registros.reduce((acc, reg) => acc + reg.horas, 0);
-
-  const estatisticas = [
-    {
-      titulo: "Faturamento Total",
-      valor: `R$ ${totalGeral.toFixed(2)}`,
-      descricao: "Este mês",
-      icone: DollarSign,
-      cor: "text-green-600"
-    },
-    {
-      titulo: "Recebido",
-      valor: `R$ ${totalPago.toFixed(2)}`,
-      descricao: "Pagamentos confirmados",
-      icone: TrendingUp,
-      cor: "text-blue-600"
-    },
-    {
-      titulo: "Pendente",
-      valor: `R$ ${totalPendente.toFixed(2)}`,
-      descricao: "Aguardando pagamento",
-      icone: Clock,
-      cor: "text-orange-600"
-    },
-    {
-      titulo: "Horas Trabalhadas",
-      valor: `${horasTrabalhadas}h`,
-      descricao: "Total no período",
-      icone: Calendar,
-      cor: "text-purple-600"
-    }
+  const receitasPorMes = [
+    { mes: 'Jan', valor: 1650 },
+    { mes: 'Fev', valor: 180 },
+    { mes: 'Mar', valor: 1400 },
+    { mes: 'Abr', valor: 2000 },
+    { mes: 'Mai', valor: 1750 },
+    { mes: 'Jun', valor: 1900 }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               💰 Gestão Financeira
             </h1>
             <p className="text-gray-600">
-              Controle de ganhos e pagamentos dos plantões
+              Controle financeiro e relatórios de plantões
             </p>
           </div>
 
-          <div className="flex space-x-3">
+          {/* Ações Rápidas */}
+          <div className="flex space-x-2">
             <Button variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
             <Button>
-              <FileText className="h-4 w-4 mr-2" />
-              Relatório
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Plantão
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {estatisticas.map((stat, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.titulo}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.valor}</p>
-                    <p className="text-sm text-gray-500">{stat.descricao}</p>
-                  </div>
-                  <stat.icone className={`h-8 w-8 ${stat.cor}`} />
+      {/* Cards de Resumo */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Ganhos do Mês */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Ganhos (Mês)</p>
+                  <p className="text-2xl font-bold text-green-600">R$ {resumoFinanceiro.total}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Filter className="h-5 w-5 mr-2" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Período</label>
-                <Select value={periodo} onValueChange={setPeriodo}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mes_atual">Mês Atual</SelectItem>
-                    <SelectItem value="mes_anterior">Mês Anterior</SelectItem>
-                    <SelectItem value="ultimo_trimestre">Último Trimestre</SelectItem>
-                    <SelectItem value="ano_atual">Ano Atual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
-                <Select value={statusFiltro} onValueChange={setStatusFiltro}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="pago">Pagos</SelectItem>
-                    <SelectItem value="pendente">Pendentes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lista de Registros */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Registros de Plantões</CardTitle>
-            <CardDescription>
-              Histórico detalhado de plantões e pagamentos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {registrosFiltrados.map((registro) => (
-                <div key={registro.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <h4 className="font-semibold flex items-center">
-                            <Building className="h-4 w-4 mr-2 text-blue-600" />
-                            {registro.local}
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {new Date(registro.data).toLocaleDateString('pt-BR')} • {registro.turno}
-                          </p>
-                        </div>
-                        
-                        <div className="text-center">
-                          <p className="text-sm font-medium">{registro.horas}h</p>
-                          <p className="text-xs text-gray-500">Horas</p>
-                        </div>
-                        
-                        <div className="text-center">
-                          <p className="text-sm font-medium">R$ {registro.valorHora}</p>
-                          <p className="text-xs text-gray-500">Por hora</p>
-                        </div>
-                        
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-green-600">
-                            R$ {registro.total.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-gray-500">Total</p>
-                        </div>
-                      </div>
-                      
-                      {registro.observacoes && (
-                        <p className="text-sm text-gray-600 mt-2 ml-6">
-                          {registro.observacoes}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="ml-4">
-                      <Badge 
-                        variant={registro.status === 'pago' ? 'default' : 'secondary'}
-                        className={registro.status === 'pago' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}
-                      >
-                        {registro.status === 'pago' ? 'Pago' : 'Pendente'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Resumo Mensal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumo por Local</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Array.from(new Set(registros.map(r => r.local))).map(local => {
-                  const registrosLocal = registros.filter(r => r.local === local);
-                  const totalLocal = registrosLocal.reduce((acc, r) => acc + r.total, 0);
-                  const horasLocal = registrosLocal.reduce((acc, r) => acc + r.horas, 0);
-                  
-                  return (
-                    <div key={local} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                      <div>
-                        <p className="font-medium">{local}</p>
-                        <p className="text-sm text-gray-600">{horasLocal}h trabalhadas</p>
-                      </div>
-                      <p className="font-bold text-green-600">R$ {totalLocal.toFixed(2)}</p>
-                    </div>
-                  );
-                })}
+                <DollarSign className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Meta Mensal</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          {/* Pago */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Progresso da Meta</span>
-                    <span className="text-sm text-gray-600">R$ {totalGeral.toFixed(2)} / R$ 8.000,00</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full" 
-                      style={{ width: `${Math.min((totalGeral / 8000) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {((totalGeral / 8000) * 100).toFixed(1)}% da meta alcançada
-                  </p>
+                  <p className="text-sm font-medium text-gray-600">Pago</p>
+                  <p className="text-2xl font-bold text-blue-600">R$ {resumoFinanceiro.pago}</p>
                 </div>
-                
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-gray-600">
-                    Faltam <span className="font-medium">R$ {Math.max(8000 - totalGeral, 0).toFixed(2)}</span> para atingir a meta
-                  </p>
+                <CreditCard className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pendente */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pendente</p>
+                  <p className="text-2xl font-bold text-orange-600">R$ {resumoFinanceiro.pendente}</p>
                 </div>
+                <Receipt className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total de Plantões */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total de Plantões</p>
+                  <p className="text-2xl font-bold text-purple-600">{resumoFinanceiro.totalPlantões}</p>
+                </div>
+                <Calendar className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Abas Principais */}
+      <div className="max-w-7xl mx-auto">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
+            <TabsTrigger
+              value="resumo"
+              className="flex items-center space-x-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700"
+            >
+              <PieChart className="h-4 w-4" />
+              <span>Resumo</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="plantoes"
+              className="flex items-center space-x-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
+            >
+              <Calendar className="h-4 w-4" />
+              <span>Plantões</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="relatorios"
+              className="flex items-center space-x-2 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Relatórios</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="configuracoes"
+              className="flex items-center space-x-2 data-[state=active]:bg-gray-50 data-[state=active]:text-gray-700"
+            >
+              <Building className="h-4 w-4" />
+              <span>Configurações</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Conteúdo das Abas */}
+          <div className="mt-6">
+            {/* Aba - Resumo */}
+            <TabsContent value="resumo" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfico de Receitas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Receitas dos Últimos 6Meses</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {receitasPorMes.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{item.mes}</span>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-32 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-green-500 h-2"
+                                style={{ width: `${(item.valor / 2000) * 100}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-sm font-semibold">R$ {item.valor}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Estatísticas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Estatísticas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Plantões Fixos</p>
+                        <p className="text-lg font-bold text-blue-600">{resumoFinanceiro.plantoesFixos}</p>
+                      </div>
+                      <Calendar className="h-6 w-6 text-blue-500" />
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Plantões Avulsos</p>
+                        <p className="text-lg font-bold text-green-600">{resumoFinanceiro.plantoesAvulsos}</p>
+                      </div>
+                      <TrendingUp className="h-6 w-6 text-green-500" />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium text-orange-800">Taxa de Pagamento</p>
+                        <p className="text-lg font-bold text-orange-600">
+                          {Math.round((resumoFinanceiro.pago / resumoFinanceiro.total) * 100)}%
+                        </p>
+                      </div>
+                      <CreditCard className="h-6 w-6 text-orange-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Aba - Plantões */}
+            <TabsContent value="plantoes" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Histórico de Plantões</CardTitle>
+                    <div className="flex space-x-2">
+                      <Select>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Filtrar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos</SelectItem>
+                          <SelectItem value="pagos">Pagos</SelectItem>
+                          <SelectItem value="pendentes">Pendentes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" size="sm">
+                        <Filter className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {plantoes.map((plantao) => (
+                      <div key={plantao.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex flex-col">
+                            <h3 className="font-semibold text-gray-900">{plantao.local}</h3>
+                            <p className="text-sm text-gray-600">
+                              {plantao.data} - {plantao.turno}
+                            </p>
+                            <Badge variant={plantao.tipo === 'fixo' ? 'default' : 'secondary'}>
+                              {plantao.tipo}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-bold text-gray-900">
+                            R$ {plantao.valor}
+                          </span>
+                          <Badge 
+                            variant={plantao.status === 'pago' ? 'default' : 'destructive'}
+                          >
+                            {plantao.status}
+                          </Badge>
+                          <Button size="sm" variant="outline">
+                            Detalhes
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Aba - Relatórios */}
+            <TabsContent value="relatorios" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Relatório Mensal</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 mb-4">
+                      Gere relatórios detalhados de seus plantões e receitas.
+                    </p>
+                    <Button className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar Relatório
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Relatório Anual</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 mb-4">
+                      Visão geral do ano com comparações e tendências.
+                    </p>
+                    <Button className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar Relatório
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Aba - Configurações */}
+            <TabsContent value="configuracoes" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configurações Financeiras</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="valor-fixo">Valor Plantão Fixo</Label>
+                      <Input id="valor-fixo" type="number" placeholder="R$ 0,00" />
+                    </div>
+                    <div>
+                      <Label htmlFor="valor-avulso">Valor Plantão Avulso</Label>
+                      <Input id="valor-avulso" type="number" placeholder="R$ 0,00" />
+                    </div>
+                  </div>
+                  <Button>Salvar Configurações</Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </div>
   );
-}
+};
+
+export default GestaoFinanceira; 

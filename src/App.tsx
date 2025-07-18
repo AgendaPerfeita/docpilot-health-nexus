@@ -64,8 +64,10 @@ import BIAvancado from "./pages/BIAvancado";
 import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
 // Plantonista
-import PlantonistaIndex from "./pages/plantonista/index";
+import PlantonistaIndex from "./pages/plantonista/Index";
+import AtendimentoAtivo from "./pages/plantonista/AtendimentoAtivo";
 import GestaoFinanceira from "./pages/plantonista/GestaoFinanceira";
+import Historico from "./pages/plantonista/Historico";
 import LocaisTrabalho from "./pages/plantonista/LocaisTrabalho";
 
 // Shared components
@@ -149,19 +151,27 @@ function App() {
                     {/* Acompanhamento */}
                     <Route path="/acompanhamento-pacientes" element={<AcompanhamentoPacientes />} />
 
-                     {/* Plantonista - ENVOLVER COM PROVIDER */}
+                    {/* Plantonista - ENVOLVER COM PROVIDER */}
                     <Route path="/plantonista" element={
                       <PlantonistaProvider>
                         <PlantonistaIndex />
                       </PlantonistaProvider>
                     } />
-                    <Route path="/plantonista/atendimento" element={<div>Atendimento em desenvolvimento</div>} />
+                    <Route path="/plantonista/atendimento" element={
+                      <PlantonistaProvider>
+                        <AtendimentoAtivo />
+                      </PlantonistaProvider>
+                    } />
                     <Route path="/plantonista/financeiro" element={
                       <PlantonistaProvider>
                         <GestaoFinanceira />
                       </PlantonistaProvider>
                     } />
-                    <Route path="/plantonista/historico" element={<div>Histórico em desenvolvimento</div>} />
+                    <Route path="/plantonista/historico" element={
+                      <PlantonistaProvider>
+                        <Historico />
+                      </PlantonistaProvider>
+                    } />
                     <Route path="/plantonista/locais" element={
                       <PlantonistaProvider>
                         <LocaisTrabalho />
