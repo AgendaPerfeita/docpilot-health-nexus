@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin,
   Plus,
   Edit,
@@ -20,308 +20,284 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { usePlantoesFinanceiro } from '@/hooks/usePlantoesFinanceiro';
+
+const tiposLocal = [
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'clinica', label: 'Clínica' },
+  { value: 'upa', label: 'UPA' },
+  { value: 'ubs', label: 'UBS' },
+  { value: 'outro', label: 'Outro' }
+];
+
+// Funções utilitárias para moeda
+function formatarMoedaBR(valor: string | number) {
+  if (valor === '' || valor === null || valor === undefined) return '';
+  const num = typeof valor === 'number' ? valor : Number(valor) / 100;
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function desformatarMoedaBR(valor: string) {
+  if (!valor) return '';
+  return valor.replace(/\D/g, '');
+}
 
 const LocaisTrabalho: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('locais');
+  const { profile } = useAuth();
+  const [locais, setLocais] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    nome: '',
+    tipo: 'clinica',
+    endereco: '',
+    telefone: '',
+    email: '',
+    regra: 'fixo', // 'fixo' ou 'faixa'
+    faixas: [{ atendimentos: '', valor: '' }],
+    status: 'ativo'
+  });
+  const [contabilidade, setContabilidade] = useState<'todas_semanas' | 'media_mensal'>('todas_semanas');
+  const [salvando, setSalvando] = useState(false);
 
-  // Dados mockados para demonstração
-  const estatisticas = {
-    totalLocais: 4,
-    locaisAtivos: 3,
-    plantoesMes: 12,
-    avaliacaoMedia: 4.6
+  // Buscar locais do usuário
+  const fetchLocais = async () => {
+    if (!profile) return;
+    const { data } = await supabase.from('plantonista_locais_trabalho').select('*').eq('medico_id', profile.id);
+    setLocais(data || []);
   };
+  useEffect(() => {
+    fetchLocais();
+  }, [profile]);
 
-  const locaisTrabalho = [
-    {
-      id: 1,
-      nome: 'Hospital ABC',
-      tipo: 'Hospital',
-      endereco: 'Rua das Flores, 123, Centro',
-      telefone: '(11)99999999',
-      email: 'contato@hospitalabc.com',
-      horarios: '24h',
-      valorPlantao: 350,
-      status: 'ativo',
-      avaliacao: 40.8,
-      plantoesMes: 4
-    },
-    {
-      id: 2,
-      nome: 'Hospital XYZ',
-      tipo: 'Hospital',
-      endereco: 'Av. Principal, 456 - Jardins, São Paulo',
-      telefone: '(11)88888888',
-      email: 'rh@hospitalxyz.com',
-      horarios: '24h',
-      valorPlantao: 400,
-      status: 'ativo',
-      avaliacao: 40.5,
-      plantoesMes: 3
-    },
-    {
-      id: 3,
-      nome: 'Clínica Central',
-      tipo: 'Clínica',
-      endereco: 'Rua do Comércio, 789, Vila Nova, São Paulo',
-      telefone: '(11)77777777',
-      email: 'plantao@clinicacentral.com',
-      horarios: '8h às 18',
-      valorPlantao: 300,
-      status: 'ativo',
-      avaliacao: 40.7,
-      plantoesMes: 2
-    },
-    {
-      id: 4,
-      nome: 'Pronto Socorro Municipal',
-      tipo: 'UPA',
-      endereco: 'Rua da Saúde, 321, São Paulo',
-      telefone: '(11)66666666',
-      email: 'plantao@psmunicipal.com',
-      horarios: '24h',
-      valorPlantao: 280,
-      status: 'inativo',
-      avaliacao: 40.2,
-      plantoesMes: 0
+  // Função para salvar local
+  async function handleSalvar(e: React.FormEvent) {
+    e.preventDefault();
+    setSalvando(true);
+    try {
+      let payload: any = {
+        ...form,
+        medico_id: profile.id,
+        regra: form.regra as 'fixo' | 'faixa',
+        faixas: form.regra === 'faixa'
+          ? form.faixas.map(fx => ({
+              ...fx,
+              valor: String((Number(desformatarMoedaBR(fx.valor) || 0) / 100)),
+              atendimentos: String(fx.atendimentos || '')
+            }))
+           : [{ atendimentos: '0', valor: String((Number(desformatarMoedaBR(form.faixas[0]?.valor || '0')) / 100)) }],
+      };
+      if (form.regra === 'faixa') {
+        payload.contabilidade = contabilidade;
+      }
+      // Remover campos não existentes na tabela
+      if (form.regra === 'faixa') {
+        payload = { ...payload, contabilidade };
+      }
+      // Não envie contabilidade se não for faixa
+      console.log('Payload enviado para Supabase:', payload);
+      if (editId) {
+        await supabase.from('plantonista_locais_trabalho').update(payload).eq('id', editId);
+      } else {
+        await supabase.from('plantonista_locais_trabalho').insert(payload);
+      }
+      await fetchLocais();
+      setModalOpen(false);
+      setEditId(null);
+      setForm({ nome: '', tipo: 'clinica', endereco: '', telefone: '', email: '', regra: 'fixo', faixas: [{ atendimentos: '', valor: '' }], status: 'ativo' });
+    } finally {
+      setSalvando(false);
     }
-  ];
+  }
+
+  // Função para editar local
+  function handleEditar(local: any) {
+    setEditId(local.id);
+    setForm({
+      nome: local.nome,
+      tipo: local.tipo,
+      endereco: local.endereco || '',
+      telefone: local.telefone || '',
+      email: local.email || '',
+      regra: local.regra || 'fixo',
+      faixas: local.faixas || [{ atendimentos: '', valor: '' }],
+      status: local.status || 'ativo'
+    });
+    setContabilidade(local.contabilidade || 'todas_semanas');
+    setModalOpen(true);
+  }
+
+  // Função para calcular valor do plantão e plantões/mês
+  function getValorEPlantoes(local: any) {
+    // Aqui você pode integrar com o hook usePlantoesFinanceiro para buscar os plantões do mês e calcular o valor conforme a regra
+    // Exemplo simplificado:
+    // const { plantoesFixos, plantoesCoringa } = usePlantoesFinanceiro(mesAtual, anoAtual);
+    // Filtrar plantões deste local e mês, somar valores, etc.
+    return { valor: '...', plantoesMes: '...' };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-7xl mx-auto mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🏢 Locais de Trabalho
-            </h1>
-            <p className="text-gray-600">
-              Gestão de locais onde você atua como plantonista
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">🏢 Locais de Trabalho</h1>
+            <p className="text-gray-600">Gestão de locais onde você atua como plantonista</p>
           </div>
-
-          {/* Ações Rápidas */}
-          <div className="flex space-x-2">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Local
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Cards de Resumo */}
-      <div className="max-w-7xl mx-auto mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total de Locais */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { setEditId(null); setForm({ nome: '', tipo: 'clinica', endereco: '', telefone: '', email: '', regra: 'fixo', faixas: [{ atendimentos: '', valor: '' }], status: 'ativo' }); }}>Novo Local</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editId ? 'Editar Local' : 'Novo Local'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSalvar} className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total de Locais</p>
-                  <p className="text-2xl font-bold text-purple-600">{estatisticas.totalLocais}</p>
+                  <Label>Nome do Local</Label>
+                  <Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} required />
                 </div>
-                <Building className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Locais Ativos */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Locais Ativos</p>
-                  <p className="text-2xl font-bold text-green-600">{estatisticas.locaisAtivos}</p>
+                  <Label>Tipo</Label>
+                  <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v }))}>
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposLocal.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <MapPin className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Plantões no Mês */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Plantões no Mês</p>
-                  <p className="text-2xl font-bold text-blue-600">{estatisticas.plantoesMes}</p>
+                  <Label>Endereço (opcional)</Label>
+                  <Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} />
                 </div>
-                <Clock className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Avaliação Média */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avaliação Média</p>
-                  <p className="text-2xl font-bold text-orange-600">{estatisticas.avaliacaoMedia}/5</p>
+                  <Label>Telefone (opcional)</Label>
+                  <Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} />
                 </div>
-                <Star className="h-8 w-8 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Abas Principais */}
-      <div className="max-w-7xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-white shadow-sm">
-            <TabsTrigger
-              value="locais"
-              className="flex items-center space-x-2 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
-            >
-              <Building className="h-4 w-4" />
-              <span>Meus Locais</span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="configuracoes"
-              className="flex items-center space-x-2 data-[state=active]:bg-gray-50 data-[state=active]:text-gray-700"
-            >
-              <Settings className="h-4 w-4" />
-              <span>Configurações</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Conteúdo das Abas */}
-          <div className="mt-6">
-            {/* Aba - Locais */}
-            <TabsContent value="locais" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {locaisTrabalho.map((local) => (
-                  <Card key={local.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center space-x-2">
-                            <Building className="h-5 w-5 text-purple-500" />
-                            <span>{local.nome}</span>
-                          </CardTitle>
-                          <p className="text-sm text-gray-600">{local.tipo}</p>
+                <div>
+                  <Label>Email (opcional)</Label>
+                  <Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Regra de Cálculo do Valor do Plantão</Label>
+                  <Select value={form.regra} onValueChange={v => setForm(f => ({ ...f, regra: v }))}>
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixo">Valor fixo mensal</SelectItem>
+                      <SelectItem value="faixa">Por faixa de atendimentos semanais</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.regra === 'faixa' && (
+                  <div className="space-y-2">
+                    <Label>Faixas de atendimentos por semana (ex: 30 = R$3.000, 60 = R$5.000)</Label>
+                    {form.faixas.map((faixa, i) => (
+                      <div key={i} className="flex gap-2 mb-1 items-center">
+                        <Input type="number" placeholder="Atendimentos" value={faixa.atendimentos} onChange={e => setForm(f => ({ ...f, faixas: f.faixas.map((fx, j) => j === i ? { ...fx, atendimentos: e.target.value } : fx) }))} required />
+                        <div className="flex items-center">
+                          <span className="text-gray-500 mr-1">R$</span>
+                          <Input
+                            inputMode="numeric"
+                            placeholder="Valor mensal"
+                            value={formatarMoedaBR(faixa.valor)}
+                            onChange={e => {
+                              const raw = e.target.value.replace(/\D/g, '');
+                              setForm(f => ({
+                                ...f,
+                                faixas: f.faixas.map((fx, j) => j === i ? { ...fx, valor: raw } : fx)
+                              }));
+                            }}
+                            required
+                            min={0}
+                          />
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge
-                            variant={local.status === 'ativo' ? 'default' : 'secondary'}
-                          >
-                            {local.status}
-                          </Badge>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                            <span className="text-sm font-medium">{local.avaliacao}</span>
-                          </div>
-                        </div>
+                        <Button type="button" variant="outline" onClick={() => setForm(f => ({ ...f, faixas: f.faixas.filter((_, j) => j !== i) }))}>Remover</Button>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{local.endereco}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{local.telefone}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{local.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">{local.horarios}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between pt-2 border-t">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Valor Plantão</p>
-                          <p className="text-lg font-bold text-green-600">{local.valorPlantao}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Plantões/Mês</p>
-                          <p className="text-lg font-bold text-blue-600">{local.plantoesMes}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex space-x-2 pt-2">
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Edit className="h-4 w-4 mr-1" />
-                          Editar
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Globe className="h-4 w-4 mr-1" />
-                          Ver Detalhes
-                        </Button>
-                        {local.status === 'inativo' && (
-                          <Button size="sm" variant="destructive" className="flex-1">
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Remover
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            {/* Aba - Configurações */}
-            <TabsContent value="configuracoes" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Configurações de Locais</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="notificacoes">Notificações de Plantões</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                    ))}
+                    <Button type="button" variant="outline" onClick={() => setForm(f => ({ ...f, faixas: [...f.faixas, { atendimentos: '', valor: '' }] }))}>Adicionar Faixa</Button>
+                    <div className="mt-2">
+                      <Label>Como a meta é avaliada?</Label>
+                      <Select value={contabilidade} onValueChange={v => setContabilidade(v as 'todas_semanas' | 'media_mensal')}>
+                        <SelectTrigger className="w-full mt-1">
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="todos">Todos os locais</SelectItem>
-                          <SelectItem value="ativos">Apenas ativos</SelectItem>
-                          <SelectItem value="nenhum">Desativar</SelectItem>
+                          <SelectItem value="todas_semanas">Preciso atingir a meta em todas as semanas do mês</SelectItem>
+                          <SelectItem value="media_mensal">A média semanal no mês deve atingir a meta</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="preferencia">Preferência de Local</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="mais-proximo">Mais próximo</SelectItem>
-                          <SelectItem value="melhor-valor">Melhor valor</SelectItem>
-                          <SelectItem value="mais-plantoes">Mais plantões</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {contabilidade === 'todas_semanas'
+                          ? 'Se em alguma semana não atingir a meta, o valor mensal será ajustado para a menor faixa atingida.'
+                          : 'O total de atendimentos do mês dividido pelo número de semanas deve ser igual ou maior que a meta.'}
+                      </div>
                     </div>
                   </div>
-
+                )}
+                {form.regra === 'fixo' && (
                   <div>
-                    <Label htmlFor="observacoes">Observações Gerais</Label>
-                    <Textarea
-                      id="observacoes"
-                      placeholder="Observações sobre seus locais de trabalho..."
-                      rows={3}
-                    />
+                    <Label>Valor fixo mensal (R$)</Label>
+                    <div className="flex items-center">
+                      <span className="text-gray-500 mr-1">R$</span>
+                      <Input
+                        inputMode="numeric"
+                        value={formatarMoedaBR(form.faixas[0]?.valor || '')}
+                        onChange={e => {
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setForm(f => ({ ...f, faixas: [{ atendimentos: '', valor: raw }] }));
+                        }}
+                        required
+                        min={0}
+                      />
+                    </div>
                   </div>
-
-                  <Button>Salvar Configurações</Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </Tabs>
+                )}
+                <div className="flex gap-2 justify-end mt-4">
+                  <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit" disabled={salvando}>{editId ? 'Salvar Alterações' : 'Cadastrar Local'}</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+      {/* Cards de Locais */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {locais.map(local => {
+          const { valor, plantoesMes } = getValorEPlantoes(local);
+          return (
+            <div key={local.id} className="bg-white rounded-lg shadow p-6 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{local.nome}</h2>
+                  <span className="text-sm text-gray-600">{tiposLocal.find(t => t.value === local.tipo)?.label || local.tipo}</span>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded ${local.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600'}`}>{local.status}</span>
+              </div>
+              <div className="text-sm text-gray-700">{local.endereco}</div>
+              <div className="text-sm text-gray-700">{local.telefone}</div>
+              <div className="text-sm text-gray-700">{local.email}</div>
+              <div className="mt-2">
+                <div className="font-semibold text-gray-800">Valor Plantão</div>
+                <div className="text-lg font-bold text-blue-700">{valor && !isNaN(Number(valor)) ? Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : valor}</div>
+              </div>
+              <div className="mt-1">
+                <div className="font-semibold text-gray-800">Plantões/Mês</div>
+                <div className="text-lg font-bold text-indigo-700">{plantoesMes}</div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button size="sm" variant="outline" onClick={() => handleEditar(local)}>Editar</Button>
+                {/* <Button size="sm" variant="outline">Ver Detalhes</Button> */}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

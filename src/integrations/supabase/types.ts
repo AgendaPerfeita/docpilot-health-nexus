@@ -1181,6 +1181,213 @@ export type Database = {
           }
         ];
       };
+      plantonista_plantao_fixo_realizado: {
+        Row: {
+          id: string;
+          escala_fixa_id: string;
+          data: string;
+          valor: number;
+          status_pagamento: string;
+          data_pagamento_prevista: string;
+          data_pagamento_efetiva: string | null;
+          foi_passado: boolean;
+          substituto_id: string | null;
+          substituto_nome: string | null;
+          justificativa_passagem: string | null;
+          created_at: string;
+          updated_at: string;
+          local_id: string;
+        };
+        Insert: {
+          id?: string;
+          escala_fixa_id: string;
+          data: string;
+          valor: number;
+          status_pagamento?: string;
+          data_pagamento_prevista: string;
+          data_pagamento_efetiva?: string | null;
+          foi_passado?: boolean;
+          substituto_id?: string | null;
+          substituto_nome?: string | null;
+          justificativa_passagem?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          local_id: string;
+        };
+        Update: {
+          id?: string;
+          escala_fixa_id?: string;
+          data?: string;
+          valor?: number;
+          status_pagamento?: string;
+          data_pagamento_prevista?: string;
+          data_pagamento_efetiva?: string | null;
+          foi_passado?: boolean;
+          substituto_id?: string | null;
+          substituto_nome?: string | null;
+          justificativa_passagem?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          local_id?: string;
+        };
+        Relationships: [];
+      };
+      plantonista_plantao_coringa: {
+        Row: {
+          id: string;
+          medico_id: string;
+          data: string;
+          horario_inicio: string;
+          horario_fim: string;
+          valor: number;
+          status_pagamento: string;
+          data_pagamento_prevista: string;
+          data_pagamento_efetiva: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          medico_id: string;
+          data: string;
+          horario_inicio: string;
+          horario_fim: string;
+          valor: number;
+          status_pagamento?: string;
+          data_pagamento_prevista: string;
+          data_pagamento_efetiva?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          medico_id?: string;
+          data?: string;
+          horario_inicio?: string;
+          horario_fim?: string;
+          valor?: number;
+          status_pagamento?: string;
+          data_pagamento_prevista?: string;
+          data_pagamento_efetiva?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      plantonista_escala_fixa: {
+        Row: {
+          id: string;
+          medico_id: string;
+          dia_semana: number;
+          valor_mensal: number;
+          horario_inicio: string;
+          horario_fim: string;
+          carga_horaria: string;
+          data_pagamento: number;
+          local_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          medico_id: string;
+          dia_semana: number;
+          valor_mensal: number;
+          horario_inicio: string;
+          horario_fim: string;
+          carga_horaria: string;
+          data_pagamento: number;
+          local_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          medico_id?: string;
+          dia_semana?: number;
+          valor_mensal?: number;
+          horario_inicio?: string;
+          horario_fim?: string;
+          carga_horaria?: string;
+          data_pagamento?: number;
+          local_id?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      plantonista_locais_trabalho: {
+        Row: {
+          id: string;
+          medico_id: string;
+          nome: string;
+          tipo: string;
+          endereco: string | null;
+          telefone: string | null;
+          email: string | null;
+          regra: 'fixo' | 'faixa';
+          faixas: { atendimentos: string; valor: string }[] | null;
+          contabilidade: 'todas_semanas' | 'media_mensal' | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          medico_id: string;
+          nome: string;
+          tipo: string;
+          endereco?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          regra: 'fixo' | 'faixa';
+          faixas?: { atendimentos: string; valor: string }[] | null;
+          contabilidade?: 'todas_semanas' | 'media_mensal' | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          medico_id?: string;
+          nome?: string;
+          tipo?: string;
+          endereco?: string | null;
+          telefone?: string | null;
+          email?: string | null;
+          regra?: 'fixo' | 'faixa';
+          faixas?: { atendimentos: string; valor: string }[] | null;
+          contabilidade?: 'todas_semanas' | 'media_mensal' | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      plantonista_escala_fixa_cancelamentos: {
+        Row: {
+          id: string;
+          escala_fixa_id: string;
+          data_cancelamento: string;
+          motivo: string;
+          usuario_id: string;
+        };
+        Insert: {
+          id?: string;
+          escala_fixa_id: string;
+          data_cancelamento?: string;
+          motivo: string;
+          usuario_id: string;
+        };
+        Update: {
+          id?: string;
+          escala_fixa_id?: string;
+          data_cancelamento?: string;
+          motivo?: string;
+          usuario_id?: string;
+        };
+        Relationships: [];
+      };
     }
     Views: {
       [_ in never]: never

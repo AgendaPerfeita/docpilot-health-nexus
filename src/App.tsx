@@ -69,6 +69,7 @@ import AtendimentoAtivo from "./pages/plantonista/AtendimentoAtivo";
 import GestaoFinanceira from "./pages/plantonista/GestaoFinanceira";
 import Historico from "./pages/plantonista/Historico";
 import LocaisTrabalho from "./pages/plantonista/LocaisTrabalho";
+import AgendaPlantonista from "./pages/plantonista/Agenda";
 
 // Shared components
 import { PermissionGuard } from "./components/PermissionGuard";
@@ -175,6 +176,11 @@ function App() {
                     <Route path="/plantonista/locais" element={
                       <PlantonistaProvider>
                         <LocaisTrabalho />
+                      </PlantonistaProvider>
+                    } />
+                    <Route path="/plantonista/agenda" element={
+                      <PlantonistaProvider>
+                        <AgendaPlantonista />
                       </PlantonistaProvider>
                     } />
 

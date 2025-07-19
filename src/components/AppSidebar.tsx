@@ -157,6 +157,12 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
     url: "/plantonista/locais",
     icon: MapPin,
     group: "plantonista"
+  },
+  {
+    title: "Agenda",
+    url: "/plantonista/agenda",
+    icon: Calendar,
+    group: "plantonista"
   }
 ]
 
