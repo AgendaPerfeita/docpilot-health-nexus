@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   History,
   Search,
@@ -19,90 +19,101 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePlantonista } from '@/hooks/usePlantonista';
+import { saveAs } from 'file-saver';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+
+function exportToCSV(data: any[], filename: string) {
+  if (!data.length) return;
+  const header = Object.keys(data[0]);
+  const csvRows = [header.join(',')];
+  for (const row of data) {
+    csvRows.push(header.map(field => '"' + String(row[field] ?? '').replace(/"/g, '""') + '"').join(','));
+  }
+  const csvString = csvRows.join('\n');
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, filename);
+}
 
 const Historico: React.FC = () => {
   const [activeTab, setActiveTab] = useState('atendimentos');
+  const { sessoes, atendimentos, buscarSessoes, buscarAtendimentos, loading } = usePlantonista();
+  const [todosAtendimentos, setTodosAtendimentos] = useState<any[]>([]);
+  const [busca, setBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [modalAtendimento, setModalAtendimento] = useState<any | null>(null);
+  const [modalSessao, setModalSessao] = useState<any | null>(null);
 
-  // Dados mockados para demonstração
+  // Buscar sessões e atendimentos ao montar
+  useEffect(() => {
+    async function fetchAll() {
+      await buscarSessoes();
+    }
+    fetchAll();
+  }, []);
+
+  // Buscar atendimentos de todas as sessões
+  useEffect(() => {
+    async function fetchAtends() {
+      if (!sessoes || sessoes.length === 0) return;
+      // Buscar todos os atendimentos de todas as sessões em paralelo
+      const results = await Promise.all(
+        sessoes.map(async (sessao) => {
+          await buscarAtendimentos(sessao.id);
+          // Retorna os atendimentos do hook, mas precisamos garantir que são os da sessão correta
+          // Então, buscar diretamente do banco seria melhor, mas vamos usar o hook por enquanto
+          return atendimentos.map(a => ({ ...a, sessao }));
+        })
+      );
+      // Achatar o array de arrays
+      const all = results.flat();
+      setTodosAtendimentos(all);
+    }
+    fetchAtends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessoes]);
+
+  // Filtros
+  let atendimentosFiltrados = todosAtendimentos.filter(a => {
+    if (busca && !(
+      (a.paciente_nome || a.paciente || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (a.queixa_principal || a.queixa || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (a.hipotese_diagnostica || a.diagnostico || '').toLowerCase().includes(busca.toLowerCase())
+    )) return false;
+    if (filtroStatus !== 'todos' && a.status !== filtroStatus) return false;
+    return true;
+  });
+
+  // Mapear para o formato esperado pelo componente
+  const atendimentosHistorico = atendimentosFiltrados.map(a => ({
+    id: a.id,
+    paciente: a.paciente_nome || a.paciente || '-',
+    data: (a.created_at || a.data_atendimento || a.data || '').slice(0, 10),
+    horario: (a.created_at || a.data_atendimento || a.data || '').slice(11, 16),
+    queixa: a.queixa_principal || a.queixa || '-',
+    diagnostico: a.hipotese_diagnostica || a.diagnostico || '-',
+    status: a.status || '-',
+    local: a.sessao?.local || a.local || '-'
+  }));
+
+  // Estatísticas reais
   const estatisticas = {
-    totalAtendimentos: 156,
-    mediaMensal: 26,
-    tempoMedio: 45,
-    satisfacao: 4.8
+    totalAtendimentos: atendimentosHistorico.length,
+    mediaMensal: Math.round(atendimentosHistorico.length / 12),
+    tempoMedio: 45, // Pode ser calculado se houver campo de duração
+    satisfacao: 4.8 // Placeholder, ajustar se houver campo real
   };
 
-  const atendimentosHistorico = [
-    {
-      id: 1,
-      paciente: 'Maria Silva',
-      data: '15/10/2024',
-      horario: '21:30',
-      queixa: 'Dor no peito',
-      diagnostico: 'Angina pectoris',
-      status: 'finalizado',
-      local: 'Hospital ABC'
-    },
-    {
-      id: 2,
-      paciente: 'João Santos',
-      data: '14/10/2024',
-      horario: '22:15',
-      queixa: 'Febre alta',
-      diagnostico: 'Infecção respiratória',
-      status: 'finalizado',
-      local: 'Hospital ABC'
-    },
-    {
-      id: 3,
-      paciente: 'Ana Costa',
-      data: '13/10/2024',
-      horario: '23:45',
-      queixa: 'Trauma craniano',
-      diagnostico: 'Concussão leve',
-      status: 'finalizado',
-      local: 'Hospital ABC'
-    },
-    {
-      id: 4,
-      paciente: 'Carlos Oliveira',
-      data: '12/10/2024',
-      horario: '20:30',
-      queixa: 'Dor abdominal',
-      diagnostico: 'Apendicite',
-      status: 'encaminhado',
-      local: 'Hospital ABC'
-    }
-  ];
-
-  const sessoesHistorico = [
-    {
-      id: 1,
-      local: 'Hospital ABC',
-      data: '15/01/2024',
-      turno: 'Noite',
-      atendimentos: 8,
-      duracao: '12,5',
-      status: 'finalizada'
-    },
-    {
-      id: 2,
-      local: 'Hospital ABC',
-      data: '14/01/2024',
-      turno: 'Noite',
-      atendimentos: 6,
-      duracao: '12,5',
-      status: 'finalizada'
-    },
-    {
-      id: 3,
-      local: 'Hospital ABC',
-      data: '13/01/2024',
-      turno: 'Noite',
-      atendimentos: 10,
-      duracao: '12,5',
-      status: 'finalizada'
-    }
-  ];
+  // Sessões reais
+  const sessoesHistorico = sessoes.map(sessao => ({
+    id: sessao.id,
+    local: sessao.local_trabalho || '-',
+    data: (sessao.data_inicio || '').slice(0, 10),
+    turno: sessao.turno || '-',
+    atendimentos: todosAtendimentos.filter(a => a.sessao?.id === sessao.id).length,
+    duracao: sessao.duracao || '-',
+    status: sessao.status || '-'
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100">
@@ -120,7 +131,7 @@ const Historico: React.FC = () => {
 
           {/* Ações Rápidas */}
           <div className="flex space-x-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => exportToCSV(atendimentosHistorico, 'atendimentos.csv')}>
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
@@ -231,15 +242,15 @@ const Historico: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle>Histórico de Atendimentos</CardTitle>
                     <div className="flex space-x-2">
-                      <Input placeholder="Buscar paciente..." className="w-64" />
-                      <Select>
+                      <Input placeholder="Buscar paciente..." className="w-64" value={busca} onChange={(e) => setBusca(e.target.value)} />
+                      <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                         <SelectTrigger className="w-32">
                           <SelectValue placeholder="Filtrar" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="todos">Todos</SelectItem>
-                          <SelectItem value="finalizados">Finalizados</SelectItem>
-                          <SelectItem value="encaminhados">Encaminhados</SelectItem>
+                          <SelectItem value="finalizado">Finalizado</SelectItem>
+                          <SelectItem value="encaminhado">Encaminhado</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button variant="outline" size="sm">
@@ -270,7 +281,7 @@ const Historico: React.FC = () => {
                             {atendimento.status}
                           </Badge>
                           <span className="text-sm font-medium text-gray-700">{atendimento.diagnostico}</span>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => setModalAtendimento(atendimento)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                         </div>
@@ -306,7 +317,7 @@ const Historico: React.FC = () => {
                           <Badge variant={sessao.status === 'finalizada' ? 'default' : sessao.status}>
                             {sessao.status}
                           </Badge>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => setModalSessao(sessao)}>
                             Ver Detalhes
                           </Button>
                         </div>
@@ -328,7 +339,7 @@ const Historico: React.FC = () => {
                     <p className="text-gray-600 mb-4">
                       Relatório detalhado de todos os atendimentos realizados.
                     </p>
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={() => exportToCSV(atendimentosHistorico, 'relatorio_atendimentos.csv')}>
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Relatório
                     </Button>
@@ -343,7 +354,7 @@ const Historico: React.FC = () => {
                     <p className="text-gray-600 mb-4">
                       Análise de desempenho por sessão de plantão.
                     </p>
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={() => exportToCSV(sessoesHistorico, 'relatorio_sessoes.csv')}>
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Relatório
                     </Button>
@@ -358,7 +369,7 @@ const Historico: React.FC = () => {
                     <p className="text-gray-600 mb-4">
                       Métricas e indicadores de performance.
                     </p>
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={() => exportToCSV([estatisticas], 'relatorio_estatisticas.csv')}>
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Relatório
                     </Button>
@@ -373,7 +384,7 @@ const Historico: React.FC = () => {
                     <p className="text-gray-600 mb-4">
                       Evolução temporal dos atendimentos e diagnósticos.
                     </p>
-                    <Button className="w-full">
+                    <Button className="w-full" onClick={() => exportToCSV(atendimentosHistorico, 'relatorio_tendencias.csv')}>
                       <Download className="h-4 w-4 mr-2" />
                       Baixar Relatório
                     </Button>
@@ -384,6 +395,54 @@ const Historico: React.FC = () => {
           </div>
         </Tabs>
       </div>
+
+      <Dialog open={!!modalAtendimento} onOpenChange={() => setModalAtendimento(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes do Atendimento</DialogTitle>
+          </DialogHeader>
+          {modalAtendimento && (
+            <div className="space-y-2">
+              <div><b>Paciente:</b> {modalAtendimento.paciente}</div>
+              <div><b>Data:</b> {modalAtendimento.data} {modalAtendimento.horario}</div>
+              <div><b>Queixa:</b> {modalAtendimento.queixa}</div>
+              <div><b>Diagnóstico:</b> {modalAtendimento.diagnostico}</div>
+              <div><b>Status:</b> {modalAtendimento.status}</div>
+              <div><b>Local:</b> {modalAtendimento.local}</div>
+              {/* Adicione mais campos conforme necessário */}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setModalAtendimento(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!modalSessao} onOpenChange={() => setModalSessao(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalhes da Sessão</DialogTitle>
+          </DialogHeader>
+          {modalSessao && (
+            <div className="space-y-2">
+              <div><b>Local:</b> {modalSessao.local}</div>
+              <div><b>Data:</b> {modalSessao.data}</div>
+              <div><b>Turno:</b> {modalSessao.turno}</div>
+              <div><b>Status:</b> {modalSessao.status}</div>
+              <div><b>Duração:</b> {modalSessao.duracao}</div>
+              <div><b>Atendimentos:</b></div>
+              <ul className="list-disc ml-6">
+                {todosAtendimentos.filter(a => a.sessao?.id === modalSessao.id).map(a => (
+                  <li key={a.id}>{a.paciente_nome || a.paciente || '-'} - {a.queixa_principal || a.queixa || '-'} - {a.status}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setModalSessao(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -36,13 +36,17 @@ const tiposLocal = [
 // Funções utilitárias para moeda
 function formatarMoedaBR(valor: string | number) {
   if (valor === '' || valor === null || valor === undefined) return '';
-  const num = typeof valor === 'number' ? valor : Number(valor) / 100;
+  const num = typeof valor === 'number' ? valor : Number(valor);
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function desformatarMoedaBR(valor: string) {
   if (!valor) return '';
   return valor.replace(/\D/g, '');
 }
+
+const now = new Date();
+const mesAtual = now.getMonth() + 1;
+const anoAtual = now.getFullYear();
 
 const LocaisTrabalho: React.FC = () => {
   const { profile } = useAuth();
@@ -61,6 +65,8 @@ const LocaisTrabalho: React.FC = () => {
   });
   const [contabilidade, setContabilidade] = useState<'todas_semanas' | 'media_mensal'>('todas_semanas');
   const [salvando, setSalvando] = useState(false);
+  const { plantoesFixos, plantoesCoringa } = usePlantoesFinanceiro(mesAtual, anoAtual);
+  const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativo' | 'inativo'>('ativo');
 
   // Buscar locais do usuário
   const fetchLocais = async () => {
@@ -84,10 +90,10 @@ const LocaisTrabalho: React.FC = () => {
         faixas: form.regra === 'faixa'
           ? form.faixas.map(fx => ({
               ...fx,
-              valor: String((Number(desformatarMoedaBR(fx.valor) || 0) / 100)),
+              valor: String(desformatarMoedaBR(fx.valor) || 0),
               atendimentos: String(fx.atendimentos || '')
             }))
-           : [{ atendimentos: '0', valor: String((Number(desformatarMoedaBR(form.faixas[0]?.valor || '0')) / 100)) }],
+           : [{ atendimentos: '0', valor: String(desformatarMoedaBR(form.faixas[0]?.valor || '0')) }],
       };
       if (form.regra === 'faixa') {
         payload.contabilidade = contabilidade;
@@ -99,11 +105,58 @@ const LocaisTrabalho: React.FC = () => {
       // Não envie contabilidade se não for faixa
       console.log('Payload enviado para Supabase:', payload);
       if (editId) {
+        // --- BLOCO DE EDIÇÃO ---
+        let valorAntigo = null;
+        // Buscar local antigo para comparar valor e faixas
+        const { data: localAntigo } = await supabase.from('plantonista_locais_trabalho').select('*').eq('id', editId).single();
+        valorAntigo = localAntigo?.faixas?.[0]?.valor || null;
+        const faixasAntigas = JSON.stringify(localAntigo?.faixas || []);
         await supabase.from('plantonista_locais_trabalho').update(payload).eq('id', editId);
+        // Se o valor foi alterado (fixo) OU faixas foram alteradas (faixa), atualizar plantões futuros
+        const valorNovo = payload.faixas[0].valor;
+        const faixasNovas = JSON.stringify(payload.faixas || []);
+        const regraNova = payload.regra;
+        const regraAntiga = localAntigo?.regra;
+        if (
+          (valorAntigo !== null && valorNovo !== valorAntigo && regraNova === 'fixo') ||
+          (regraNova === 'faixa' && (faixasAntigas !== faixasNovas || regraAntiga !== regraNova))
+        ) {
+          // Buscar escalas fixas desse local
+          const { data: escalas } = await supabase.from('plantonista_escala_fixa').select('id, valor_mensal').eq('local_id', editId);
+          if (escalas && escalas.length > 0) {
+            const hoje = new Date().toISOString().slice(0, 10);
+            // Para regra de faixa, usar a maior faixa cadastrada como valor mensal (simulação)
+            let valorFaixaMaior = 0;
+            if (regraNova === 'faixa' && payload.faixas.length > 0) {
+              valorFaixaMaior = Math.max(...payload.faixas.map((f: any) => Number(f.valor) || 0));
+            }
+            for (const escala of escalas) {
+              // Atualizar valor_mensal da escala
+              const novoValorMensal = regraNova === 'faixa' ? valorFaixaMaior : Number(valorNovo);
+              await supabase.from('plantonista_escala_fixa').update({ valor_mensal: novoValorMensal }).eq('id', escala.id);
+              // Buscar plantões futuros dessa escala
+              const { data: plantoes } = await supabase.from('plantonista_plantao_fixo_realizado').select('id, data').eq('escala_fixa_id', escala.id).gte('data', hoje);
+              if (plantoes && plantoes.length > 0) {
+                // Recalcular valor de cada plantão do mês
+                for (const plantao of plantoes) {
+                  const mesAno = plantao.data.slice(0, 7); // yyyy-mm
+                  const { data: plantoesMes } = await supabase.from('plantonista_plantao_fixo_realizado').select('id').eq('escala_fixa_id', escala.id).like('data', `${mesAno}-%`);
+                  const totalPlantoesNoMes = plantoesMes ? plantoesMes.length : 1;
+                  const valorPorPlantao = totalPlantoesNoMes > 0 ? novoValorMensal / totalPlantoesNoMes : 0;
+                  await supabase.from('plantonista_plantao_fixo_realizado').update({ valor: valorPorPlantao }).eq('id', plantao.id);
+                }
+              }
+            }
+          }
+        }
+        // Chamar recálculo automático ao salvar edição
+        await handleRecalcularPlantoesFuturos({ id: editId, ...payload });
+        await fetchLocais();
       } else {
+        // --- BLOCO DE CRIAÇÃO ---
         await supabase.from('plantonista_locais_trabalho').insert(payload);
+        await fetchLocais();
       }
-      await fetchLocais();
       setModalOpen(false);
       setEditId(null);
       setForm({ nome: '', tipo: 'clinica', endereco: '', telefone: '', email: '', regra: 'fixo', faixas: [{ atendimentos: '', valor: '' }], status: 'ativo' });
@@ -129,13 +182,93 @@ const LocaisTrabalho: React.FC = () => {
     setModalOpen(true);
   }
 
+  // Função para desativar local
+  async function handleDesativar(localId: string) {
+    await supabase.from('plantonista_locais_trabalho').update({ status: 'inativo' }).eq('id', localId);
+    await fetchLocais();
+  }
+
   // Função para calcular valor do plantão e plantões/mês
   function getValorEPlantoes(local: any) {
-    // Aqui você pode integrar com o hook usePlantoesFinanceiro para buscar os plantões do mês e calcular o valor conforme a regra
-    // Exemplo simplificado:
-    // const { plantoesFixos, plantoesCoringa } = usePlantoesFinanceiro(mesAtual, anoAtual);
-    // Filtrar plantões deste local e mês, somar valores, etc.
-    return { valor: '...', plantoesMes: '...' };
+    // Filtrar plantões fixos do local, do mês, não passados e não cancelados
+    const fixos = plantoesFixos.filter(
+      (p) =>
+        p.local_id === local.id &&
+        !p.foi_passado &&
+        p.status_pagamento !== 'cancelado'
+    );
+    // Filtrar plantões coringa do local, do mês, não cancelados
+    const coringas = plantoesCoringa.filter((p) => p.local_id === local.id && p.status_pagamento !== 'cancelado');
+    // Total de plantões
+    const plantoesMes = fixos.length + coringas.length;
+    // Soma dos valores
+    const valorTotal =
+      fixos.reduce((acc, p) => acc + (Number(p.valor) || 0), 0) +
+      coringas.reduce((acc, p) => acc + (Number(p.valor) || 0), 0);
+    // Valor médio do plantão
+    const valorMedio = plantoesMes > 0 ? valorTotal / plantoesMes : 0;
+    return {
+      valor: valorMedio,
+      plantoesMes,
+    };
+  }
+
+  // Função para recalcular valores dos plantões futuros manualmente
+  async function handleRecalcularPlantoesFuturos(local: any) {
+    const regraAtual = local.regra;
+    const faixas = local.faixas || [];
+    const valorFixo = faixas[0]?.valor || 0;
+    let valorMensal = regraAtual === 'faixa' && faixas.length > 0
+      ? Math.max(...faixas.map((f: any) => Number(f.valor) || 0))
+      : Number(valorFixo);
+    // Buscar todas as escalas do local
+    const { data: escalas } = await supabase.from('plantonista_escala_fixa').select('id').eq('local_id', local.id);
+    console.log('[Recalcular] Escalas encontradas para o local', local.id, escalas);
+    if (escalas && escalas.length > 0) {
+      const hoje = new Date().toISOString().slice(0, 10);
+      for (const escala of escalas) {
+        // Buscar todos os plantões futuros dessa escala
+        const { data: plantoesFuturos } = await supabase
+          .from('plantonista_plantao_fixo_realizado')
+          .select('id, data')
+          .eq('escala_fixa_id', escala.id)
+          .gte('data', hoje);
+        console.log(`[Recalcular] Escala ${escala.id} - Plantões futuros encontrados:`, plantoesFuturos);
+        if (plantoesFuturos && plantoesFuturos.length > 0) {
+          // Agrupar plantões futuros por mês (YYYY-MM)
+          const plantoesFuturosPorMes: Record<string, any[]> = {};
+          for (const plantao of plantoesFuturos) {
+            const mesAno = plantao.data.slice(0, 7); // yyyy-mm
+            if (!plantoesFuturosPorMes[mesAno]) plantoesFuturosPorMes[mesAno] = [];
+            plantoesFuturosPorMes[mesAno].push(plantao);
+          }
+          // Para cada mês, buscar todos os plantões do mês/escala (futuros e passados)
+          for (const mesAno in plantoesFuturosPorMes) {
+            // Buscar todos os plantões do mês/escala (usando intervalo de datas)
+            const inicioMes = `${mesAno}-01`;
+            const fimMes = `${mesAno}-31`;
+            const { data: plantoesMesTodos } = await supabase
+              .from('plantonista_plantao_fixo_realizado')
+              .select('id')
+              .eq('escala_fixa_id', escala.id)
+              .gte('data', inicioMes)
+              .lte('data', fimMes);
+            const totalPlantoesNoMes = plantoesMesTodos ? plantoesMesTodos.length : 1;
+            const valorPorPlantao = totalPlantoesNoMes > 0 ? valorMensal / totalPlantoesNoMes : 0;
+            const plantaoIdsFuturos = plantoesFuturosPorMes[mesAno].map(p => p.id);
+            console.log(`[Recalcular] Escala ${escala.id} - Mês ${mesAno} - Atualizando plantões futuros:`, plantaoIdsFuturos, 'Valor por plantão:', valorPorPlantao, 'Total plantões no mês:', totalPlantoesNoMes);
+            await supabase.from('plantonista_plantao_fixo_realizado').update({ valor: valorPorPlantao }).in('id', plantaoIdsFuturos);
+          }
+        } else {
+          console.log(`[Recalcular] Escala ${escala.id} - Nenhum plantão futuro encontrado.`);
+        }
+      }
+    } else {
+      console.log('[Recalcular] Nenhuma escala encontrada para o local', local.id);
+    }
+    // Atualizar valor_mensal das escalas do local
+    await supabase.from('plantonista_escala_fixa').update({ valor_mensal: valorMensal }).eq('local_id', local.id);
+    await fetchLocais();
   }
 
   return (
@@ -266,10 +399,25 @@ const LocaisTrabalho: React.FC = () => {
             </DialogContent>
           </Dialog>
         </div>
+        {/* Filtro de status */}
+        <div className="flex justify-end mt-4">
+          <Select value={statusFiltro} onValueChange={v => setStatusFiltro(v as 'todos' | 'ativo' | 'inativo')}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="ativo">Ativos</SelectItem>
+              <SelectItem value="inativo">Inativos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       {/* Cards de Locais */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {locais.map(local => {
+        {locais
+          .filter(local => statusFiltro === 'todos' ? true : local.status === statusFiltro)
+          .map(local => {
           const { valor, plantoesMes } = getValorEPlantoes(local);
           return (
             <div key={local.id} className="bg-white rounded-lg shadow p-6 flex flex-col gap-2">
@@ -293,7 +441,9 @@ const LocaisTrabalho: React.FC = () => {
               </div>
               <div className="flex gap-2 mt-3">
                 <Button size="sm" variant="outline" onClick={() => handleEditar(local)}>Editar</Button>
-                {/* <Button size="sm" variant="outline">Ver Detalhes</Button> */}
+                {local.status === 'ativo' && (
+                  <Button size="sm" variant="destructive" onClick={() => handleDesativar(local.id)}>Desativar</Button>
+                )}
               </div>
             </div>
           );

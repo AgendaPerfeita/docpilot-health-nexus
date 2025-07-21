@@ -5,6 +5,7 @@ import { Calendar, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCallback } from 'react';
+import { format, parseISO } from 'date-fns';
 
 const now = new Date();
 const mesAtual = now.getMonth() + 1;
@@ -55,6 +56,9 @@ const AgendaPlantonista: React.FC = () => {
 
   // Pode evoluir para visualização mensal/semanal futuramente
 
+  // Filtrar plantões coringa ativos (não cancelados)
+  const plantoesCoringaAtivos = plantoesCoringa.filter(p => p.status_pagamento !== 'cancelado');
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-4xl mx-auto py-8">
@@ -75,15 +79,15 @@ const AgendaPlantonista: React.FC = () => {
                 return (
                   <li key={p.id} className="py-2 flex items-center gap-4">
                     <Clock className="w-5 h-5 text-blue-400" />
-                    <span className="font-medium">{new Date(p.data).toLocaleDateString('pt-BR')}</span>
+                    <span className="font-medium w-24">{format(parseISO(p.data), 'dd/MM/yyyy')}</span>
+                    <span className="text-sm text-gray-500 w-48">
+                      {local ? local.nome : '--'}
+                      {escala ? ` | ${escala.horario_inicio?.slice(0,5)} - ${escala.horario_fim?.slice(0,5)}` : ''}
+                    </span>
                     <span className="text-sm text-gray-600">
                       {valor !== null ? `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'}
                     </span>
                     <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      {local ? local.nome : '--'}
-                      {escala ? ` | ${escala.horario_inicio?.slice(0,5)} - ${escala.horario_fim?.slice(0,5)}` : ''}
-                    </span>
                   </li>
                 );
               })}
@@ -95,16 +99,23 @@ const AgendaPlantonista: React.FC = () => {
             <CardTitle>Plantões Coringa</CardTitle>
           </CardHeader>
           <CardContent>
-            {plantoesCoringa.length === 0 && <p className="text-gray-500">Nenhum plantão coringa encontrado para este mês.</p>}
+            {plantoesCoringaAtivos.length === 0 && <p className="text-gray-500">Nenhum plantão coringa encontrado para este mês.</p>}
             <ul className="divide-y">
-              {plantoesCoringa.map(p => (
-                <li key={p.id} className="py-2 flex items-center gap-4">
-                  <Clock className="w-5 h-5 text-indigo-400" />
-                  <span className="font-medium">{new Date(p.data).toLocaleDateString('pt-BR')}</span>
-                  <span className="text-sm text-gray-600">R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
-                </li>
-              ))}
+              {plantoesCoringaAtivos.map(p => {
+                const local = locais.find(l => l.id === p.local_id);
+                return (
+                  <li key={p.id} className="py-2 flex items-center gap-4">
+                    <Clock className="w-5 h-5 text-indigo-400" />
+                    <span className="font-medium w-24">{format(parseISO(p.data), 'dd/MM/yyyy')}</span>
+                    <span className="text-sm text-gray-500 w-48">
+                      {local ? local.nome : '--'}
+                      {p.horario_inicio && p.horario_fim ? ` | ${p.horario_inicio.slice(0,5)} - ${p.horario_fim.slice(0,5)}` : ''}
+                    </span>
+                    <span className="text-sm text-gray-600">R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>

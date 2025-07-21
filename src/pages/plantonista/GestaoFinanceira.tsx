@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -44,7 +44,8 @@ const GestaoFinanceira: React.FC = () => {
     marcarPagoCoringa,
     passarPlantaoFixo,
     criarPlantaoCoringa,
-    getMesesAnosDisponiveis
+    getMesesAnosDisponiveis,
+    refetch // <-- Adicione refetch aqui
   } = usePlantoesFinanceiro(mesAtual, anoAtual);
 
   // Para relatório: filtro de mês/ano
@@ -56,11 +57,35 @@ const GestaoFinanceira: React.FC = () => {
     plantoesCoringa: plantoesCoringaRel
   } = usePlantoesFinanceiro(mesRelatorio, anoRelatorio);
 
-  // Gráfico de receitas dos últimos 6 meses (exemplo com dados reais se disponíveis)
-  // Aqui, para simplificação, usamos apenas o mês atual
-  const receitasPorMes = [
-    { mes: now.toLocaleString('pt-BR', { month: 'short' }), valor: (plantoesFixos.reduce((acc, p) => acc + (typeof p.valor === 'number' && !p.foi_passado ? p.valor : 0), 0) + plantoesCoringa.reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0)) }
-  ];
+  // Gráfico de receitas dos últimos 6 meses (dados reais)
+  function getUltimos6Meses() {
+    const meses = [];
+    const hoje = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push({
+        mes: d.toLocaleString('pt-BR', { month: 'short' }),
+        ano: d.getFullYear(),
+        value: d.getMonth() + 1
+      });
+    }
+    return meses;
+  }
+
+  const receitasPorMes = getUltimos6Meses().map(({ mes, ano, value }) => {
+    // Buscar plantões fixos e coringa do mês/ano
+    const fixos = plantoesFixos.filter(p => {
+      const d = parseISO(p.data);
+      return d.getMonth() + 1 === value && d.getFullYear() === ano && !p.foi_passado;
+    });
+    const coringa = plantoesCoringa.filter(p => {
+      const d = parseISO(p.data);
+      return d.getMonth() + 1 === value && d.getFullYear() === ano && (!('motivo_cancelamento' in p && p.motivo_cancelamento));
+    });
+    const valor = fixos.reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0) +
+      coringa.reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0);
+    return { mes, valor };
+  });
 
   const { profile } = useAuth();
 
@@ -79,8 +104,9 @@ const GestaoFinanceira: React.FC = () => {
     if (!profile) return;
     const { data } = await supabase
       .from('plantonista_locais_trabalho')
-      .select('id, nome')
-      .eq('medico_id', profile.id);
+      .select('id, nome, faixas')
+      .eq('medico_id', profile.id)
+      .order('nome', { ascending: true });
     setLocais(data || []);
   }, [profile]);
   useEffect(() => {
@@ -108,14 +134,7 @@ const GestaoFinanceira: React.FC = () => {
 
   const [localFixo, setLocalFixo] = useState('');
   const [localCoringa, setLocalCoringa] = useState('');
-  // Buscar locais do usuário para o select
-  useEffect(() => {
-    async function fetchLocais() {
-      const { data } = await supabase.from('plantonista_locais_trabalho').select('*').order('nome');
-      setLocais(data || []);
-    }
-    fetchLocais();
-  }, []);
+
   // Form state para fixo
   const [fixoForm, setFixoForm] = useState({
     dia_semana: 1,
@@ -146,21 +165,23 @@ const GestaoFinanceira: React.FC = () => {
     return `${horas}:${mins}`;
   }
 
-  // Função utilitária para verificar sobreposição de horários, considerando virada de dia
-  function horariosSobrepostos(inicio1: string, fim1: string, inicio2: string, fim2: string) {
-    // Assume formato 'HH:MM' ou 'HH:MM:SS'
-    const toMinutes = (h: string) => {
-      const [hh, mm] = h.split(':').map(Number);
-      return hh * 60 + mm;
+  // Função robusta para verificar sobreposição de horários em minutos
+  function verificaSobreposicao(inicio1: string, fim1: string, inicio2: string, fim2: string): boolean {
+    const paraMinutos = (h: string) => {
+        const [hora, minuto] = h.split(':').map(Number);
+        return hora * 60 + minuto;
     };
-    let i1 = toMinutes(inicio1);
-    let f1 = toMinutes(fim1);
-    let i2 = toMinutes(inicio2);
-    let f2 = toMinutes(fim2);
-    // Ajusta para plantões que viram o dia
+
+    let i1 = paraMinutos(inicio1);
+    let f1 = paraMinutos(fim1);
+    let i2 = paraMinutos(inicio2);
+    let f2 = paraMinutos(fim2);
+
+    // Normaliza para plantões que viram a meia-noite
     if (f1 <= i1) f1 += 24 * 60;
     if (f2 <= i2) f2 += 24 * 60;
-    // Sobrepõe se um começa antes do outro terminar e termina depois do outro começar
+
+    // A lógica (i1 < f2 && i2 < f1) permite que os horários se "toquem" (ex: fim 19:00 e início 19:00)
     return i1 < f2 && i2 < f1;
   }
 
@@ -173,7 +194,19 @@ const GestaoFinanceira: React.FC = () => {
       // Buscar o local selecionado
       const local = locais.find(l => l.id === localFixo);
       if (!local) return;
-      // Validação de sobreposição de horários
+
+      const valorFixo = local.faixas && Array.isArray(local.faixas) && local.faixas[0] && local.faixas[0].valor ? Number(local.faixas[0].valor) : 0;
+      
+      if (!valorFixo || valorFixo === 0) {
+        toast({
+          title: 'Valor do local zerado',
+          description: 'O valor na faixa de pagamento do local selecionado está zerado. Edite o local de trabalho e defina um valor antes de criar a escala.',
+          variant: 'destructive'
+        });
+        setSalvando(false);
+        return;
+      }
+      // Validação de sobreposição de horários (independente do local)
       const { data: escalasExistentes } = await supabase
         .from('plantonista_escala_fixa')
         .select('*')
@@ -181,7 +214,7 @@ const GestaoFinanceira: React.FC = () => {
         .eq('dia_semana', fixoForm.dia_semana);
       if (escalasExistentes) {
         for (const escala of escalasExistentes) {
-          if (horariosSobrepostos(
+          if (verificaSobreposicao(
             fixoForm.horario_inicio,
             fixoForm.horario_fim,
             escala.horario_inicio,
@@ -189,7 +222,7 @@ const GestaoFinanceira: React.FC = () => {
           )) {
             toast({
               title: 'Horário em conflito',
-              description: 'Já existe uma escala fixa para este dia e horário. Ajuste para não sobrepor.',
+              description: 'Já existe uma escala fixa para este dia e horário (independente do local). Ajuste para não sobrepor.',
               variant: 'destructive'
             });
             setSalvando(false);
@@ -197,8 +230,6 @@ const GestaoFinanceira: React.FC = () => {
           }
         }
       }
-      // Pega o valor fixo mensal do local (primeira faixa)
-      const valorFixo = local.faixas && local.faixas[0] && local.faixas[0].valor ? Number(local.faixas[0].valor) : 0;
       // Converter carga_horaria para 'HH:MM:00'
       const cargaHorariaFormatada = fixoForm.carga_horaria.length === 5 ? fixoForm.carga_horaria + ':00' : fixoForm.carga_horaria;
       const payload: any = {
@@ -213,7 +244,6 @@ const GestaoFinanceira: React.FC = () => {
       };
       console.log('Payload enviado para plantonista_escala_fixa:', payload);
       await supabase.from('plantonista_escala_fixa').insert(payload);
-      // setNovoPlantaoOpen(false); // This line was removed as per the edit hint
       setLocalFixo('');
     } finally {
       setSalvando(false);
@@ -225,7 +255,55 @@ const GestaoFinanceira: React.FC = () => {
     setSalvando(true);
     try {
       if (!profile || !localCoringa) return;
-      const payload: any = {
+
+      // Buscar todos os plantões fixos e coringa do local para a data
+      const { data: plantoesFixo } = await supabase
+        .from('plantonista_plantao_fixo_realizado')
+        .select('id, data, escala_fixa_id')
+        .eq('local_id', localCoringa)
+        .eq('data', coringaForm.data);
+        
+      const { data: plantoesCoringa } = await supabase
+        .from('plantonista_plantao_coringa')
+        .select('id, data, horario_inicio, horario_fim')
+        .eq('local_id', localCoringa)
+        .eq('data', coringaForm.data);
+
+      // Verificar sobreposição com plantões fixos
+      if (Array.isArray(plantoesFixo)) {
+        for (const p of plantoesFixo) {
+          const escalaFixa = escalas.find(e => e.id === p.escala_fixa_id);
+          if (!escalaFixa || !escalaFixa.horario_inicio || !escalaFixa.horario_fim) continue;
+          
+          if (verificaSobreposicao(coringaForm.horario_inicio, coringaForm.horario_fim, escalaFixa.horario_inicio, escalaFixa.horario_fim)) {
+            toast({
+              title: 'Conflito de plantão',
+              description: 'O horário selecionado sobrepõe um plantão fixo existente.',
+              variant: 'destructive'
+            });
+            setSalvando(false);
+            return;
+          }
+        }
+      }
+      
+      // Verificar sobreposição com plantões coringa
+      if (Array.isArray(plantoesCoringa)) {
+        for (const p of plantoesCoringa) {
+          if (!p.horario_inicio || !p.horario_fim) continue;
+          if (verificaSobreposicao(coringaForm.horario_inicio, coringaForm.horario_fim, p.horario_inicio, p.horario_fim)) {
+            toast({
+              title: 'Conflito de plantão',
+              description: 'O horário selecionado sobrepõe um plantão coringa existente.',
+              variant: 'destructive'
+            });
+            setSalvando(false);
+            return;
+          }
+        }
+      }
+
+      const payload = {
         medico_id: profile.id,
         data: coringaForm.data,
         horario_inicio: coringaForm.horario_inicio,
@@ -234,8 +312,8 @@ const GestaoFinanceira: React.FC = () => {
         data_pagamento_prevista: coringaForm.data_pagamento_prevista,
         local_id: localCoringa
       };
+
       await criarPlantaoCoringa(payload);
-      // setNovoPlantaoOpen(false); // This line was removed as per the edit hint
       setLocalCoringa('');
     } finally {
       setSalvando(false);
@@ -327,10 +405,10 @@ const GestaoFinanceira: React.FC = () => {
     return local ? local.nome : '--';
   }
 
-  // Função para obter valor mensal do grupo
+  // Função para obter valor mensal do grupo (soma de todas as escalas do local)
   function valorMensalGrupo(grupo: any) {
-    const escala = escalas.find(e => e.local_id === grupo.local_id);
-    return escala ? escala.valor_mensal : 0;
+    const escalasDoLocal = escalas.filter(e => e.local_id === grupo.local_id);
+    return escalasDoLocal.reduce((acc, e) => acc + (Number(e.valor_mensal) || 0), 0);
   }
 
   // Função para marcar todos os plantões do grupo como pagos e atualizar valor
@@ -385,13 +463,59 @@ const GestaoFinanceira: React.FC = () => {
     return diasSemana[num] || '';
   }
 
+  // Filtrar plantões coringa ativos (não cancelados)
+  const plantoesCoringaAtivos = plantoesCoringa.filter(p => p.status_pagamento !== 'cancelado');
+  const plantoesCoringaRelAtivos = plantoesCoringaRel.filter(p => p.status_pagamento !== 'cancelado');
+
   // Totais sempre calculados localmente a partir do campo valor
   const totalFixos = plantoesFixos.reduce((acc, p) => acc + (typeof p.valor === 'number' && !p.foi_passado ? p.valor : 0), 0);
-  const totalCoringa = plantoesCoringa.reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0);
+  const totalCoringa = plantoesCoringaAtivos.reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0);
   const totalPago =
     plantoesFixos.filter(p => p.status_pagamento === 'pago' && !p.foi_passado).reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0) +
-    plantoesCoringa.filter(p => p.status_pagamento === 'pago').reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0);
+    plantoesCoringaAtivos.filter(p => p.status_pagamento === 'pago').reduce((acc, p) => acc + (typeof p.valor === 'number' ? p.valor : 0), 0);
   const totalPendente = totalFixos + totalCoringa - totalPago;
+
+  const [cancelarCoringaModalOpen, setCancelarCoringaModalOpen] = useState(false);
+  const [coringaParaCancelar, setCoringaParaCancelar] = useState<any>(null);
+  const [motivoCancelamentoCoringa, setMotivoCancelamentoCoringa] = useState('');
+  const [cancelandoCoringa, setCancelandoCoringa] = useState(false);
+
+  async function handleCancelarCoringa(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!coringaParaCancelar || !motivoCancelamentoCoringa.trim()) return;
+    setCancelandoCoringa(true);
+    try {
+      console.log('[CANCELAR CORINGA] id:', coringaParaCancelar.id, 'motivo:', motivoCancelamentoCoringa);
+      const { error, data } = await supabase.from('plantonista_plantao_coringa').update({
+        status_pagamento: 'cancelado',
+        motivo_cancelamento: motivoCancelamentoCoringa,
+        data_cancelamento: new Date().toISOString()
+      }).eq('id', coringaParaCancelar.id);
+      console.log('[CANCELAR CORINGA] resultado update:', { error, data });
+      if (error) {
+        console.error('[CANCELAR CORINGA] erro:', error);
+        toast({
+          title: 'Erro ao cancelar plantão',
+          description: error.message || 'Erro desconhecido.',
+          variant: 'destructive'
+        });
+        setCancelandoCoringa(false);
+        return;
+      }
+      setCancelarCoringaModalOpen(false);
+      setCoringaParaCancelar(null);
+      setMotivoCancelamentoCoringa('');
+      if (typeof refetch === 'function') await refetch();
+    } finally {
+      setCancelandoCoringa(false);
+    }
+  }
+
+  // Mesclar e ordenar todos os plantões por data
+  const todosPlantoes = [
+    ...plantoesFixosRel.map(p => ({ ...p, tipo: 'fixo' })),
+    ...plantoesCoringaRel.map(p => ({ ...p, tipo: 'coringa' }))
+  ].sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
@@ -592,7 +716,7 @@ const GestaoFinanceira: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total de Plantões</p>
-                  <p className="text-2xl font-bold text-purple-600">{plantoesFixos.length + plantoesCoringa.length}</p>
+                  <p className="text-2xl font-bold text-purple-600">{plantoesFixos.length + plantoesCoringaAtivos.length}</p>
                 </div>
                 <Calendar className="h-8 w-8 text-purple-500" />
               </div>
@@ -650,7 +774,7 @@ const GestaoFinanceira: React.FC = () => {
                                 style={{ width: `${Math.min((item.valor / 5000) * 100, 100)}%` }}
                               ></div>
                             </div>
-                            <span className="text-sm font-semibold">R$ {item.valor}</span>
+                            <span className="text-sm font-semibold">R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                           </div>
                         </div>
                       ))}
@@ -674,7 +798,7 @@ const GestaoFinanceira: React.FC = () => {
                     <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                       <div>
                         <p className="text-sm font-medium text-green-800">Plantões Avulsos</p>
-                        <p className="text-lg font-bold text-green-600">{plantoesCoringa.length}</p>
+                        <p className="text-lg font-bold text-green-600">{plantoesCoringaAtivos.length}</p>
                       </div>
                       <TrendingUp className="h-6 w-6 text-green-500" />
                     </div>
@@ -733,7 +857,7 @@ const GestaoFinanceira: React.FC = () => {
                                         {subgrupo.plantoes.map((plantao: any) => (
                                           <div key={plantao.id} className="flex items-center justify-between p-2 border rounded">
                                             <div>
-                                              <span className="font-medium">{new Date(plantao.data).toLocaleDateString('pt-BR')}</span>
+                                              <span className="font-medium">{format(parseISO(plantao.data), 'dd/MM/yyyy')}</span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <span className="text-sm text-gray-600">R$ {plantao.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
@@ -769,35 +893,25 @@ const GestaoFinanceira: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {plantoesCoringa.length === 0 && <p className="text-gray-500">Nenhum plantão avulso encontrado para este mês.</p>}
-                    {plantoesCoringa.map((plantao) => (
-                      <div key={plantao.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <Building className="h-5 w-5 text-gray-500" />
-                          <div>
-                            <p className="font-medium">{new Date(plantao.data).toLocaleDateString('pt-BR')}</p>
-                            <p className="text-sm text-gray-60">Plantão avulso</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <p className="font-medium">R$ {plantao.valor}</p>
-                          {plantao.status_pagamento === 'pago' ? (
-                            <Badge className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" /> Pago
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-orange-600">
-                              <Clock className="h-3 w-3 mr-1" /> Pendente
-                          </Badge>
-                          )}
-                          {plantao.status_pagamento !== 'pago' && (
-                            <Button size="sm" variant="outline" onClick={() => marcarPagoCoringa(plantao.id)}>
-                              Marcar Pago
-                          </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    {plantoesCoringaAtivos.length === 0 && <p className="text-gray-500">Nenhum plantão avulso encontrado para este mês.</p>}
+                    <ul className="divide-y">
+                      {plantoesCoringaAtivos.map(p => {
+                        const local = locais.find(l => l.id === p.local_id);
+                        return (
+                          <li key={p.id} className="py-2 flex items-center gap-4">
+                            <Clock className="w-5 h-5 text-indigo-400" />
+                            <span className="font-medium w-24">{format(parseISO(p.data), 'dd/MM/yyyy')}</span>
+                            <span className="text-sm text-gray-600 w-48">{local ? local.nome : '--'}</span>
+                            <span className="text-sm text-gray-500 w-32">
+                                {p.horario_inicio && p.horario_fim ? `${p.horario_inicio.slice(0,5)} - ${p.horario_fim.slice(0,5)}` : ''}
+                            </span>
+                            <span className="text-sm text-gray-600">R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
+                            <Button size="sm" variant="destructive" onClick={() => { setCoringaParaCancelar(p); setCancelarCoringaModalOpen(true); }}>Cancelar</Button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
@@ -840,30 +954,46 @@ const GestaoFinanceira: React.FC = () => {
                           <th className="px-2 py-1 text-left">Status</th>
                           <th className="px-2 py-1 text-left">Substituto</th>
                           <th className="px-2 py-1 text-left">Justificativa</th>
+                          <th className="px-2 py-1 text-left">Local</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {plantoesFixosRel.map(p => (
-                          <tr key={p.id} className="border-b">
-                            <td className="px-2 py-1">{new Date(p.data).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-2 py-1">Fixo</td>
-                            <td className="px-2 py-1">{(() => { const escala = escalas.find(e => e.id === p.escala_fixa_id); const total = plantoesFixosRel.filter(x => x.escala_fixa_id === p.escala_fixa_id).length; return escala && total ? `R$ ${(escala.valor_mensal / total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'; })()}</td>
-                            <td className="px-2 py-1">{p.status_pagamento}</td>
-                            <td className="px-2 py-1">{p.substituto_nome || '-'}</td>
-                            <td className="px-2 py-1">{p.justificativa_passagem || '-'}</td>
-                            <td className="px-2 py-1">{(() => { const escala = escalas.find(e => e.id === p.escala_fixa_id); const local = locais.find(l => l.id === p.local_id); const horario = escala ? `${escala.horario_inicio?.slice(0,5)} - ${escala.horario_fim?.slice(0,5)}` : '--'; return `${local ? local.nome : '--'} | ${horario}`; })()}</td>
-                          </tr>
-                        ))}
-                        {plantoesCoringaRel.map(p => (
-                          <tr key={p.id} className="border-b">
-                            <td className="px-2 py-1">{new Date(p.data).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-2 py-1">Coringa</td>
-                            <td className="px-2 py-1">R$ {p.valor}</td>
-                            <td className="px-2 py-1">{p.status_pagamento}</td>
-                            <td className="px-2 py-1">-</td>
-                            <td className="px-2 py-1">-</td>
-                          </tr>
-                        ))}
+                        {todosPlantoes.map(p => {
+                          if (p.tipo === 'fixo') {
+                            const pf = p as typeof plantoesFixosRel[number];
+                            const escala = escalas.find(e => e.id === pf.escala_fixa_id);
+                            const total = plantoesFixosRel.filter(x => x.escala_fixa_id === pf.escala_fixa_id).length;
+                            const local = locais.find(l => l.id === pf.local_id);
+                            const horario = escala ? `${escala.horario_inicio?.slice(0,5)} - ${escala.horario_fim?.slice(0,5)}` : '--';
+                            return (
+                              <tr key={pf.id} className="border-b">
+                                <td className="px-2 py-1">{format(parseISO(pf.data), 'dd/MM/yyyy')}</td>
+                                <td className="px-2 py-1">Fixo</td>
+                                <td className="px-2 py-1">{escala && total ? `R$ ${(escala.valor_mensal / total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'}</td>
+                                <td className="px-2 py-1">{pf.status_pagamento}</td>
+                                <td className="px-2 py-1">{pf.substituto_nome || '-'}</td>
+                                <td className="px-2 py-1">{pf.justificativa_passagem || '-'}</td>
+                                <td className="px-2 py-1">{local ? local.nome : '--'} | {horario}</td>
+                              </tr>
+                            );
+                          } else {
+                            const pc = p as typeof plantoesCoringaRel[number];
+                            const motivo = (pc as any).motivo_cancelamento || '-';
+                            const local = locais.find(l => l.id === pc.local_id);
+                            const horario = pc.horario_inicio && pc.horario_fim ? `${pc.horario_inicio.slice(0,5)} - ${pc.horario_fim.slice(0,5)}` : '--';
+                            return (
+                              <tr key={pc.id} className={`border-b ${pc.status_pagamento === 'cancelado' ? 'bg-red-50' : ''}`}>
+                                <td className="px-2 py-1">{format(parseISO(pc.data), 'dd/MM/yyyy')}</td>
+                                <td className="px-2 py-1">Coringa</td>
+                                <td className="px-2 py-1">R$ {Number(pc.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-2 py-1">{pc.status_pagamento}</td>
+                                <td className="px-2 py-1">-</td>
+                                <td className="px-2 py-1">{pc.status_pagamento === 'cancelado' ? motivo : '-'}</td>
+                                <td className="px-2 py-1">{local ? local.nome : '--'}{horario !== '--' ? ` | ${horario}` : ''}</td>
+                              </tr>
+                            );
+                          }
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -931,6 +1061,25 @@ const GestaoFinanceira: React.FC = () => {
             <Button type="button" variant="outline" onClick={() => setModalPagamentoOpen(false)}>Cancelar</Button>
             <Button type="button" onClick={handleConfirmarPagamentoGrupo} disabled={!valorConfirmado}>Confirmar Pagamento</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de cancelamento coringa */}
+      <Dialog open={cancelarCoringaModalOpen} onOpenChange={setCancelarCoringaModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Plantão Coringa</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCancelarCoringa} className="space-y-4">
+            <div>
+              <Label>Motivo do cancelamento</Label>
+              <Input value={motivoCancelamentoCoringa} onChange={e => setMotivoCancelamentoCoringa(e.target.value)} required placeholder="Descreva o motivo" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCancelarCoringaModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={cancelandoCoringa}>Confirmar Cancelamento</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
