@@ -10,7 +10,8 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
-  FileText
+  FileText,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { QuickAIAssistant } from '@/components/medical/QuickAIAssistant';
 
 // Componente Calculadora Automática para o modal (fora do AtendimentoAtivo)
 const CalculadoraAutomaticaPlantonista = ({
@@ -735,7 +737,7 @@ reav:
       {/* Abas Principais */}
       <div className="max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
             <TabsTrigger
               value="novo-atendimento"
               className="flex items-center space-x-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
@@ -756,6 +758,13 @@ reav:
             >
               <Clock className="h-4 w-4" />
               <span>Reavaliações</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="quick-ai"
+              className="flex items-center space-x-2 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700"
+            >
+              <Brain className="h-4 w-4" />
+              <span>🚀 Quick AI</span>
             </TabsTrigger>
           </TabsList>
           {/* Conteúdo das Abas */}
@@ -1012,6 +1021,12 @@ reav:
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+            {/* Aba - Quick AI */}
+            <TabsContent value="quick-ai" className="space-y-4">
+              <div className="max-w-2xl mx-auto">
+                <QuickAIAssistant />
+              </div>
             </TabsContent>
           </div>
         </Tabs>
