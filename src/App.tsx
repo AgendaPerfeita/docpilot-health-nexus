@@ -64,6 +64,9 @@ import BIAvancado from "./pages/BIAvancado";
 // Acompanhamento
 import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
+// Backup
+import BackupGestao from "./pages/BackupGestao";
+
 // Plantonista
 import PlantonistaIndex from "./pages/plantonista/index";
 import AtendimentoAtivo from "./pages/plantonista/AtendimentoAtivo";
@@ -188,6 +191,9 @@ function App() {
                     <Route path="/teste-clinica" element={<div>Teste Clínica</div>} />
                     <Route path="/teste-hospital" element={<div>Teste Hospital</div>} />
                     <Route path="/teste-financeiro" element={<div>Teste Financeiro</div>} />
+
+                    {/* Backup - acessível por todos */}
+                    <Route path="/backup" element={<BackupGestao />} />
 
                     {/* Configurações - acessível por todos */}
                     <Route path="/configuracoes" element={<Configuracoes />} />

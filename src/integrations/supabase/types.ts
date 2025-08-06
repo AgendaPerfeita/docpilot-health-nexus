@@ -96,6 +96,93 @@ export type Database = {
           },
         ]
       }
+      backup_configuracoes: {
+        Row: {
+          backup_automatico: boolean
+          compressao: boolean
+          created_at: string
+          frequencia: string
+          horario: string
+          id: string
+          incluir_anexos: boolean
+          incluir_imagens: boolean
+          notificar_email: boolean
+          retencao_dias: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          backup_automatico?: boolean
+          compressao?: boolean
+          created_at?: string
+          frequencia?: string
+          horario?: string
+          id?: string
+          incluir_anexos?: boolean
+          incluir_imagens?: boolean
+          notificar_email?: boolean
+          retencao_dias?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          backup_automatico?: boolean
+          compressao?: boolean
+          created_at?: string
+          frequencia?: string
+          horario?: string
+          id?: string
+          incluir_anexos?: boolean
+          incluir_imagens?: boolean
+          notificar_email?: boolean
+          retencao_dias?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_logs: {
+        Row: {
+          arquivo_url: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          parametros: Json | null
+          resultado: Json | null
+          status: string
+          tamanho_bytes: number | null
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          arquivo_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          parametros?: Json | null
+          resultado?: Json | null
+          status?: string
+          tamanho_bytes?: number | null
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          arquivo_url?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          parametros?: Json | null
+          resultado?: Json | null
+          status?: string
+          tamanho_bytes?: number | null
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       catalogo_exames: {
         Row: {
           ativo: boolean
@@ -1665,6 +1752,10 @@ export type Database = {
           total_consultas: number
           total_gasto: number
         }[]
+      }
+      get_user_complete_data: {
+        Args: { target_user_id: string }
+        Returns: Json
       }
       insert_paciente: {
         Args: {

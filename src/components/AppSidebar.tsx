@@ -19,7 +19,8 @@ import {
   Activity,
   Clock,
   History,
-  MapPin
+  MapPin,
+  Shield
 } from "lucide-react"
 
 import {
@@ -121,6 +122,12 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
     url: "/relatorios",
     icon: BarChart3,
     group: "relatorios"
+  },
+  {
+    title: "Backup",
+    url: "/backup",
+    icon: Shield,
+    group: "sistema"
   },
   {
     title: "Configurações",
