@@ -65,7 +65,7 @@ const LocaisTrabalho: React.FC = () => {
   });
   const [contabilidade, setContabilidade] = useState<'todas_semanas' | 'media_mensal'>('todas_semanas');
   const [salvando, setSalvando] = useState(false);
-  const { plantoesFixos, plantoesCoringa } = usePlantoesFinanceiro(mesAtual, anoAtual);
+  const { plantoes, escalas } = usePlantoesFinanceiro();
   const [statusFiltro, setStatusFiltro] = useState<'todos' | 'ativo' | 'inativo'>('ativo');
 
   // Buscar locais do usuário
@@ -190,21 +190,12 @@ const LocaisTrabalho: React.FC = () => {
 
   // Função para calcular valor do plantão e plantões/mês
   function getValorEPlantoes(local: any) {
-    // Filtrar plantões fixos do local, do mês, não passados e não cancelados
-    const fixos = plantoesFixos.filter(
-      (p) =>
-        p.local_id === local.id &&
-        !p.foi_passado &&
-        p.status_pagamento !== 'cancelado'
-    );
-    // Filtrar plantões coringa do local, do mês, não cancelados
-    const coringas = plantoesCoringa.filter((p) => p.local_id === local.id && p.status_pagamento !== 'cancelado');
+    // Usar plantões do hook
+    const plantoesLocal = plantoes.filter(p => p.local === local.nome);
     // Total de plantões
-    const plantoesMes = fixos.length + coringas.length;
+    const plantoesMes = plantoesLocal.length;
     // Soma dos valores
-    const valorTotal =
-      fixos.reduce((acc, p) => acc + (Number(p.valor) || 0), 0) +
-      coringas.reduce((acc, p) => acc + (Number(p.valor) || 0), 0);
+    const valorTotal = plantoesLocal.reduce((acc, p) => acc + (Number(p.valor) || 0), 0);
     // Valor médio do plantão
     const valorMedio = plantoesMes > 0 ? valorTotal / plantoesMes : 0;
     return {

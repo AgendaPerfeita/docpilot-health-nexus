@@ -12,7 +12,7 @@ const mesAtual = now.getMonth() + 1;
 const anoAtual = now.getFullYear();
 
 const AgendaPlantonista: React.FC = () => {
-  const { plantoesFixos, plantoesCoringa, loading } = usePlantoesFinanceiro(mesAtual, anoAtual);
+  const { plantoes, escalas: escalasHook, loading } = usePlantoesFinanceiro();
   const [mes, setMes] = useState(mesAtual);
   const [ano, setAno] = useState(anoAtual);
   const [escalas, setEscalas] = useState<any[]>([]);
@@ -49,15 +49,15 @@ const AgendaPlantonista: React.FC = () => {
     const escala = escalas.find(e => e.id === plantao.escala_fixa_id);
     if (!escala) return null;
     // Contar quantos plantões fixos existem para essa escala no mês
-    const totalPlantoes = plantoesFixos.filter(p => p.escala_fixa_id === escala.id).length;
+    const totalPlantoes = plantoes.filter(p => p.id === escala.id).length;
     if (!totalPlantoes) return null;
     return escala.valor_mensal / totalPlantoes;
   }
 
   // Pode evoluir para visualização mensal/semanal futuramente
 
-  // Filtrar plantões coringa ativos (não cancelados)
-  const plantoesCoringaAtivos = plantoesCoringa.filter(p => p.status_pagamento !== 'cancelado');
+  // Usar plantões do hook
+  const plantoesAtivos = plantoes;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -70,24 +70,20 @@ const AgendaPlantonista: React.FC = () => {
             <CardTitle>Plantões Fixos</CardTitle>
           </CardHeader>
           <CardContent>
-            {plantoesFixos.length === 0 && <p className="text-gray-500">Nenhum plantão fixo encontrado para este mês.</p>}
+            {plantoes.length === 0 && <p className="text-gray-500">Nenhum plantão encontrado para este mês.</p>}
             <ul className="divide-y">
-              {plantoesFixos.map(p => {
-                const valor = calcularValorPlantaoFixo(p);
-                const escala = escalas.find(e => e.id === p.escala_fixa_id);
-                const local = locais.find(l => l.id === p.local_id);
+              {plantoes.map(p => {
                 return (
                   <li key={p.id} className="py-2 flex items-center gap-4">
                     <Clock className="w-5 h-5 text-blue-400" />
-                    <span className="font-medium w-24">{format(parseISO(p.data), 'dd/MM/yyyy')}</span>
+                    <span className="font-medium w-24">{p.data}</span>
                     <span className="text-sm text-gray-500 w-48">
-                      {local ? local.nome : '--'}
-                      {escala ? ` | ${escala.horario_inicio?.slice(0,5)} - ${escala.horario_fim?.slice(0,5)}` : ''}
+                      {p.local}
                     </span>
                     <span className="text-sm text-gray-600">
-                      {valor !== null ? `R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '--'}
+                      R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
-                    <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status}</span>
                   </li>
                 );
               })}
@@ -96,26 +92,24 @@ const AgendaPlantonista: React.FC = () => {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Plantões Coringa</CardTitle>
+            <CardTitle>Escalas Fixas</CardTitle>
           </CardHeader>
           <CardContent>
-            {plantoesCoringaAtivos.length === 0 && <p className="text-gray-500">Nenhum plantão coringa encontrado para este mês.</p>}
+            {escalasHook.length === 0 && <p className="text-gray-500">Nenhuma escala fixa cadastrada.</p>}
             <ul className="divide-y">
-              {plantoesCoringaAtivos.map(p => {
-                const local = locais.find(l => l.id === p.local_id);
-                return (
-                  <li key={p.id} className="py-2 flex items-center gap-4">
-                    <Clock className="w-5 h-5 text-indigo-400" />
-                    <span className="font-medium w-24">{format(parseISO(p.data), 'dd/MM/yyyy')}</span>
-                    <span className="text-sm text-gray-500 w-48">
-                      {local ? local.nome : '--'}
-                      {p.horario_inicio && p.horario_fim ? ` | ${p.horario_inicio.slice(0,5)} - ${p.horario_fim.slice(0,5)}` : ''}
-                    </span>
-                    <span className="text-sm text-gray-600">R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{p.status_pagamento}</span>
-                  </li>
-                );
-              })}
+              {escalasHook.map(e => (
+                <li key={e.id} className="py-2 flex items-center gap-4">
+                  <Clock className="w-5 h-5 text-indigo-400" />
+                  <span className="font-medium w-24">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][e.dia_semana]}
+                  </span>
+                  <span className="text-sm text-gray-500 w-48">
+                    {e.local_nome} | {e.horario_inicio} - {e.horario_fim}
+                  </span>
+                  <span className="text-sm text-gray-600">R$ {e.valor_mensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</span>
+                  <span className="text-xs px-2 py-1 rounded bg-gray-100 ml-auto">{e.ativo ? 'Ativo' : 'Inativo'}</span>
+                </li>
+              ))}
             </ul>
           </CardContent>
         </Card>

@@ -209,10 +209,9 @@ export function EvolutionEditor({
 
       {/* AI Assistant Card */}
       <AIAssistantCard
-        patientData={patientData}
-        vitalSigns={sinaisVitais}
-        physicalExam={exameFisico}
-        onSuggestionApplied={handleSuggestionApplied}
+        context="general"
+        title="Assistente IA - Evolução"
+        placeholder="Descreva sintomas ou peça sugestões para evolução do caso..."
       />
 
       {/* Editor de Evolução */}
