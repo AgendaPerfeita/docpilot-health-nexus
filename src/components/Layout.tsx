@@ -2,12 +2,14 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/AppSidebar"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
-import { LogOut, User, Bell } from "lucide-react"
+import { LogOut, User, Bell, Shield, ShieldCheck } from "lucide-react"
 import { useNavigate, Outlet } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
+import { useDigitalSignature } from "@/hooks/useDigitalSignature"
+import { Badge } from "@/components/ui/badge"
 
 interface LayoutProps {
   children?: React.ReactNode
@@ -34,6 +36,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="flex items-center gap-4">
               {profile && (
                 <>
+                  <CertificateStatus />
                   <div className="text-right">
                     <p className="text-sm font-medium">{profile.nome}</p>
                     <p className="text-xs text-muted-foreground capitalize">{profile.tipo}</p>
@@ -195,6 +198,76 @@ function NotificationBell() {
             ))}
           </div>
         )}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// Componente para mostrar status do certificado digital
+function CertificateStatus() {
+  const { hasActiveCertificate, activeCertificate } = useDigitalSignature()
+  const navigate = useNavigate()
+  
+  if (!hasActiveCertificate() || !activeCertificate) {
+    return (
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => navigate('/configuracoes')}
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <Shield className="h-4 w-4 mr-2" />
+        <span className="text-xs">Sem Certificado</span>
+      </Button>
+    )
+  }
+  
+  const isExpiringSoon = activeCertificate.validUntil && 
+    new Date(activeCertificate.validUntil) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias
+  
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+          <ShieldCheck className="h-4 w-4 mr-2" />
+          <span className="text-xs">Certificado Ativo</span>
+          {isExpiringSoon && (
+            <Badge variant="destructive" className="ml-2 text-xs px-1">
+              Expirando
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <div className="space-y-3">
+          <h4 className="font-semibold">Certificado Digital</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Tipo:</span>
+              <span className="text-sm font-medium">{activeCertificate.type}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Nome:</span>
+              <span className="text-sm font-medium">{activeCertificate.name || 'Certificado Digital'}</span>
+            </div>
+            {activeCertificate.validUntil && (
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Válido até:</span>
+                <span className={`text-sm font-medium ${isExpiringSoon ? 'text-red-600' : 'text-green-600'}`}>
+                  {format(new Date(activeCertificate.validUntil), 'dd/MM/yyyy')}
+                </span>
+              </div>
+            )}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/configuracoes')}
+            className="w-full"
+          >
+            Gerenciar Certificados
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   )

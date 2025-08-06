@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield } from "lucide-react"
+import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield, ShieldCheck } from "lucide-react"
 import { DigitalSignatureModal } from "@/components/medical/DigitalSignatureModal"
 import QuickSignatureModal from "@/components/signatures/QuickSignatureModal"
 import { useDigitalSignature } from "@/hooks/useDigitalSignature"
@@ -322,20 +322,34 @@ export default function PrescricaoDigital() {
 
               <TabsContent value="assinatura" className="space-y-4">
                 <div className="text-center space-y-4">
-                  <div className="p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Assinatura Digital</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Utilize seu certificado digital A1 ou A3 para assinar a prescrição
-                    </p>
-                    <Button className="mb-2" onClick={handleConnectCertificate}>
-                      <Shield className="h-4 w-4 mr-2" />
-                      {hasActiveCertificate() ? 'Assinar Receita' : 'Conectar Certificado Digital'}
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Certificado válido e compatível com ICP-Brasil
-                    </p>
-                  </div>
+                  {hasActiveCertificate() ? (
+                    <div className="p-8 border-2 border-green-200 rounded-lg bg-green-50">
+                      <ShieldCheck className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                      <h3 className="text-lg font-semibold mb-2 text-green-800">Certificado Configurado</h3>
+                      <p className="text-green-700 mb-4">
+                        Certificado digital ativo e pronto para assinar prescrições
+                      </p>
+                      <Button onClick={handleConnectCertificate} className="bg-green-600 hover:bg-green-700">
+                        <Shield className="h-4 w-4 mr-2" />
+                        Assinar Prescrição
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-8 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                      <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-semibold mb-2">Certificado Digital Necessário</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Configure seu certificado digital A1 ou A3 nas configurações do sistema
+                      </p>
+                      <Button variant="outline" onClick={() => window.location.href = '/configuracoes'}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Configurar Certificado
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Certificado válido e compatível com ICP-Brasil
+                      </p>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
