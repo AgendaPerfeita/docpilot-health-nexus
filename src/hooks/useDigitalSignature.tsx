@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// WebUSB type extension
+declare global {
+  interface Navigator {
+    usb?: {
+      requestDevice(options: { filters: Array<{ vendorId?: number }> }): Promise<any>;
+      getDevices(): Promise<any[]>;
+    };
+  }
+}
+
 export interface CertificateInfo {
   type: 'A1' | 'A3';
   data?: string; // Base64 for A1
@@ -96,13 +106,13 @@ export const useDigitalSignature = () => {
   const detectCertificateA3 = async (): Promise<CertificateInfo | null> => {
     try {
       // Check if WebUSB is supported
-      if (!('usb' in navigator)) {
+      if (!navigator.usb) {
         toast.error('WebUSB não suportado neste navegador');
         return null;
       }
 
       // Request device access
-      const device = await (navigator as any).usb.requestDevice({
+      const device = await navigator.usb.requestDevice({
         filters: [
           { vendorId: 0x0529 }, // Common smart card reader vendor
           { vendorId: 0x072f },
