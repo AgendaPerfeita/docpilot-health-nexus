@@ -14,6 +14,9 @@ import { DocumentsSection } from './DocumentsSection'
 import { ImagesSection } from './ImagesSection'
 import { EvolutionEditor } from './EvolutionEditor'
 import { MedicalLayoutProps, PatientData } from './types'
+import { TelemedicineInterface } from '../telemedicine/TelemedicineInterface'
+import { Button } from '@/components/ui/button'
+import { Video } from 'lucide-react'
 
 export function MedicalLayout({ 
   children, 
@@ -29,6 +32,7 @@ export function MedicalLayout({
   const [activeSection, setActiveSection] = useState('resumo')
   const [finalizationOpen, setFinalizationOpen] = useState(false)
   const [signatureType, setSignatureType] = useState<'none' | 'installed' | 'cloud'>('none')
+  const [telemedicineOpen, setTelemedicineOpen] = useState(false)
 
   // Garante que o timer sempre inicia quando a consulta está ativa
   useEffect(() => {
@@ -78,6 +82,18 @@ export function MedicalLayout({
         onStartConsultation={handleStartConsultation}
         onFinishConsultation={handleFinishConsultation}
       />
+      
+      {/* Botão de Telemedicina */}
+      <div className="p-4 border-t">
+        <Button 
+          onClick={() => setTelemedicineOpen(true)}
+          className="w-full"
+          variant="outline"
+        >
+          <Video className="h-4 w-4 mr-2" />
+          Iniciar Telemedicina
+        </Button>
+      </div>
     </div>
   )
 
@@ -184,6 +200,30 @@ export function MedicalLayout({
         setSignatureType={setSignatureType}
         confirmFinish={confirmFinish}
       />
+
+      {/* Interface de Telemedicina */}
+      {telemedicineOpen && patientData && (
+        <TelemedicineInterface
+          consultaId={prontuarioId || 'temp'}
+          paciente={{
+            id: pacienteId || 'temp',
+            nome: patientData.nome,
+            idade: patientData.idade.anos
+          }}
+          medico={{
+            id: 'medico-temp',
+            nome: 'Dr. Sistema',
+            especialidade: 'Clínica Geral'
+          }}
+          consulta={{
+            dataHora: new Date().toISOString(),
+            tipo: 'Telemedicina',
+            status: 'em_andamento'
+          }}
+          onClose={() => setTelemedicineOpen(false)}
+          userType="medico"
+        />
+      )}
     </div>
   )
 }
