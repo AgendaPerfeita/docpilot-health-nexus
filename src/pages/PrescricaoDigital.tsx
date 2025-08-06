@@ -14,12 +14,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield } from "lucide-react"
 import { DigitalSignatureModal } from "@/components/medical/DigitalSignatureModal"
+import QuickSignatureModal from "@/components/signatures/QuickSignatureModal"
+import { useDigitalSignature } from "@/hooks/useDigitalSignature"
 
 
 export default function PrescricaoDigital() {
   const { pacientes } = usePacientes()
   const { medicamentos } = useMedicamentos()
   const { toast } = useToast()
+  const { hasActiveCertificate } = useDigitalSignature()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -50,6 +53,7 @@ export default function PrescricaoDigital() {
   ])
   const [loading, setLoading] = useState(false)
   const [signatureModalOpen, setSignatureModalOpen] = useState(false)
+  const [quickSignatureModalOpen, setQuickSignatureModalOpen] = useState(false)
   const [selectedPrescriptionForSign, setSelectedPrescriptionForSign] = useState<any>(null)
   const [currentPrescription, setCurrentPrescription] = useState({ instructions: "", observations: "" })
 
@@ -76,7 +80,21 @@ export default function PrescricaoDigital() {
   const handleSignatureComplete = (result: any) => {
     console.log('Assinatura concluída:', result)
     setSignatureModalOpen(false)
+    setQuickSignatureModalOpen(false)
     setSelectedPrescriptionForSign(null)
+    
+    // Atualizar status da prescrição para assinada
+    if (selectedPrescriptionForSign) {
+      const updatedPrescription = { ...selectedPrescriptionForSign, status: "assinada" }
+      setPrescricoes([updatedPrescription, ...prescricoes])
+      
+      // Reset form
+      setSelectedPatient("")
+      setMedications([{ name: "", dosage: "", duration: "" }])
+      setCurrentPrescription({ instructions: "", observations: "" })
+      setIsDialogOpen(false)
+    }
+    
     toast({
       title: "Prescrição assinada!",
       description: "A prescrição foi assinada digitalmente com sucesso."
@@ -118,7 +136,14 @@ export default function PrescricaoDigital() {
     }
 
     setSelectedPrescriptionForSign(newPrescription)
-    setSignatureModalOpen(true)
+    
+    // Se já tem certificado configurado, usar assinatura rápida
+    if (hasActiveCertificate()) {
+      setQuickSignatureModalOpen(true)
+    } else {
+      // Senão, abrir modal de configuração
+      setSignatureModalOpen(true)
+    }
   }
 
   const handleSavePrescription = () => {
@@ -305,7 +330,7 @@ export default function PrescricaoDigital() {
                     </p>
                     <Button className="mb-2" onClick={handleConnectCertificate}>
                       <Shield className="h-4 w-4 mr-2" />
-                      Conectar Certificado Digital
+                      {hasActiveCertificate() ? 'Assinar Receita' : 'Conectar Certificado Digital'}
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       Certificado válido e compatível com ICP-Brasil
@@ -465,15 +490,26 @@ export default function PrescricaoDigital() {
       </Card>
 
       {selectedPrescriptionForSign && (
-        <DigitalSignatureModal
-          open={signatureModalOpen}
-          onOpenChange={setSignatureModalOpen}
-          documentId={selectedPrescriptionForSign.id}
-          documentTitle={`Prescrição - ${selectedPrescriptionForSign.patient}`}
-          documentContent={JSON.stringify(selectedPrescriptionForSign)}
-          documentType="receita"
-          onSignatureComplete={handleSignatureComplete}
-        />
+        <>
+          <DigitalSignatureModal
+            open={signatureModalOpen}
+            onOpenChange={setSignatureModalOpen}
+            documentId={selectedPrescriptionForSign.id}
+            documentTitle={`Prescrição - ${selectedPrescriptionForSign.patient}`}
+            documentContent={JSON.stringify(selectedPrescriptionForSign)}
+            documentType="receita"
+            onSignatureComplete={handleSignatureComplete}
+          />
+          
+          <QuickSignatureModal
+            open={quickSignatureModalOpen}
+            onOpenChange={setQuickSignatureModalOpen}
+            documentId={selectedPrescriptionForSign.id}
+            documentContent={JSON.stringify(selectedPrescriptionForSign)}
+            documentType="receita"
+            onSignatureComplete={handleSignatureComplete}
+          />
+        </>
       )}
     </div>
   )

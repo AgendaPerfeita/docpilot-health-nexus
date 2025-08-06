@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -13,12 +13,14 @@ declare global {
 }
 
 export interface CertificateInfo {
+  id?: string;
   type: 'A1' | 'A3';
   data?: string; // Base64 for A1
   password?: string; // For A1
   name?: string;
   cpf?: string;
   validUntil?: string;
+  isActive?: boolean;
 }
 
 export interface SignatureResult {
@@ -30,9 +32,12 @@ export interface SignatureResult {
   error?: string;
 }
 
+const STORAGE_KEY = 'digital_certificates';
+
 export const useDigitalSignature = () => {
   const [loading, setLoading] = useState(false);
   const [certificates, setCertificates] = useState<CertificateInfo[]>([]);
+  const [activeCertificate, setActiveCertificate] = useState<CertificateInfo | null>(null);
 
   const signDocument = async (
     documentId: string,
@@ -133,22 +138,145 @@ export const useDigitalSignature = () => {
     return null;
   };
 
-  const addCertificate = (certificate: CertificateInfo) => {
-    setCertificates(prev => [...prev, certificate]);
+  // Storage functions
+  const encryptData = (data: string): string => {
+    // Simple base64 encoding - in production use proper encryption
+    return btoa(data);
   };
 
-  const removeCertificate = (index: number) => {
-    setCertificates(prev => prev.filter((_, i) => i !== index));
+  const decryptData = (encrypted: string): string => {
+    try {
+      return atob(encrypted);
+    } catch {
+      return '';
+    }
+  };
+
+  const loadCertificates = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const decrypted = decryptData(stored);
+        const parsed = JSON.parse(decrypted);
+        setCertificates(parsed.certificates || []);
+        const active = parsed.certificates?.find((cert: CertificateInfo) => cert.isActive);
+        setActiveCertificate(active || null);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar certificados:', error);
+    }
+  }, []);
+
+  const saveCertificate = useCallback(async (certificate: CertificateInfo) => {
+    try {
+      const newCert = {
+        ...certificate,
+        id: Date.now().toString(),
+        isActive: true
+      };
+
+      // Deactivate other certificates
+      const updatedCerts = certificates.map(cert => ({ ...cert, isActive: false }));
+      updatedCerts.push(newCert);
+
+      const toStore = { certificates: updatedCerts };
+      const encrypted = encryptData(JSON.stringify(toStore));
+      localStorage.setItem(STORAGE_KEY, encrypted);
+      
+      setCertificates(updatedCerts);
+      setActiveCertificate(newCert);
+    } catch (error) {
+      console.error('Erro ao salvar certificado:', error);
+      throw error;
+    }
+  }, [certificates]);
+
+  const removeCertificate = useCallback(async (index: number) => {
+    try {
+      const updatedCerts = certificates.filter((_, i) => i !== index);
+      const toStore = { certificates: updatedCerts };
+      const encrypted = encryptData(JSON.stringify(toStore));
+      localStorage.setItem(STORAGE_KEY, encrypted);
+      
+      setCertificates(updatedCerts);
+      
+      // If removed certificate was active, set another as active
+      const removedCert = certificates[index];
+      if (removedCert?.isActive) {
+        const newActive = updatedCerts.find(cert => cert.type === 'A1') || updatedCerts[0] || null;
+        if (newActive) {
+          newActive.isActive = true;
+          setActiveCertificate(newActive);
+        } else {
+          setActiveCertificate(null);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao remover certificado:', error);
+      throw error;
+    }
+  }, [certificates]);
+
+  const setActiveCert = useCallback(async (certificateId: string) => {
+    try {
+      const updatedCerts = certificates.map(cert => ({
+        ...cert,
+        isActive: cert.id === certificateId
+      }));
+      
+      const toStore = { certificates: updatedCerts };
+      const encrypted = encryptData(JSON.stringify(toStore));
+      localStorage.setItem(STORAGE_KEY, encrypted);
+      
+      setCertificates(updatedCerts);
+      setActiveCertificate(updatedCerts.find(cert => cert.isActive) || null);
+    } catch (error) {
+      console.error('Erro ao definir certificado ativo:', error);
+      throw error;
+    }
+  }, [certificates]);
+
+  const hasActiveCertificate = useCallback(() => {
+    return activeCertificate !== null;
+  }, [activeCertificate]);
+
+  const signWithActiveCertificate = async (
+    documentId: string,
+    documentContent: string,
+    documentType: string,
+    additionalPassword?: string
+  ): Promise<SignatureResult> => {
+    if (!activeCertificate) {
+      return { success: false, error: 'Nenhum certificado ativo configurado' };
+    }
+
+    const certificateForSigning = {
+      ...activeCertificate,
+      password: additionalPassword || activeCertificate.password
+    };
+
+    return signDocument(documentId, documentContent, documentType, certificateForSigning);
+  };
+
+  // Legacy functions for backward compatibility
+  const addCertificate = (certificate: CertificateInfo) => {
+    saveCertificate(certificate);
   };
 
   return {
     loading,
     certificates,
+    activeCertificate,
     signDocument,
     validateSignature,
     processCertificateA1,
     detectCertificateA3,
     addCertificate,
-    removeCertificate
+    removeCertificate,
+    loadCertificates,
+    saveCertificate,
+    setActiveCert,
+    hasActiveCertificate,
+    signWithActiveCertificate
   };
 };

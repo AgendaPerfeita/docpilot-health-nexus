@@ -13,8 +13,9 @@ import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/integrations/supabase/client"
 import { formatarTelefone } from "@/lib/formatters"
-import { User, Bell, Settings, Calendar, Clock, Plus, Trash2, FileText, Upload, Type, Image, Info, Eye } from "lucide-react"
+import { User, Bell, Settings, Calendar, Clock, Plus, Trash2, FileText, Upload, Type, Image, Info, Eye, Shield } from "lucide-react"
 import { useTheme } from 'next-themes';
+import DigitalCertificateConfig from '@/components/certificates/DigitalCertificateConfig';
 
 export default function Configuracoes() {
   const { profile, refreshProfile } = useAuth();
@@ -283,13 +284,14 @@ export default function Configuracoes() {
         </div>
 
         <Tabs defaultValue="perfil" className="space-y-4">
-          <TabsList className={`grid w-full ${profile?.tipo === 'medico' ? 'grid-cols-6' : 'grid-cols-4'}`}>
+          <TabsList className={`grid w-full ${profile?.tipo === 'medico' ? 'grid-cols-7' : 'grid-cols-4'}`}>
             <TabsTrigger value="perfil">Perfil</TabsTrigger>
             <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
             <TabsTrigger value="sistema">Sistema</TabsTrigger>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             {profile?.tipo === 'medico' && (
               <>
+                <TabsTrigger value="certificados">Certificados</TabsTrigger>
                 <TabsTrigger value="receituario">Receituário</TabsTrigger>
                 <TabsTrigger value="plano">Plano de Acesso</TabsTrigger>
               </>
@@ -1308,6 +1310,10 @@ export default function Configuracoes() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="certificados">
+                <DigitalCertificateConfig />
               </TabsContent>
 
               <TabsContent value="plano">
