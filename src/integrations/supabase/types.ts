@@ -843,6 +843,390 @@ export type Database = {
         }
         Relationships: []
       }
+      plantonista_atendimentos: {
+        Row: {
+          alergias: string | null
+          anamnese: Json | null
+          comorbidades: string | null
+          conduta_final: string | null
+          conduta_inicial: Json | null
+          created_at: string | null
+          descricao: string | null
+          diagnostico_final: string | null
+          evolucao: string | null
+          exame_fisico_estruturado: string | null
+          habitos: string | null
+          id: string
+          medicamentos_uso: string | null
+          medico_id: string
+          paciente_idade: number | null
+          paciente_nome: string | null
+          paciente_sexo: string | null
+          queixa_principal: string | null
+          reavaliacao_agendada: string | null
+          resultados_exames: Json | null
+          sessao_id: string
+          sinais_vitais: Json | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alergias?: string | null
+          anamnese?: Json | null
+          comorbidades?: string | null
+          conduta_final?: string | null
+          conduta_inicial?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          diagnostico_final?: string | null
+          evolucao?: string | null
+          exame_fisico_estruturado?: string | null
+          habitos?: string | null
+          id?: string
+          medicamentos_uso?: string | null
+          medico_id: string
+          paciente_idade?: number | null
+          paciente_nome?: string | null
+          paciente_sexo?: string | null
+          queixa_principal?: string | null
+          reavaliacao_agendada?: string | null
+          resultados_exames?: Json | null
+          sessao_id: string
+          sinais_vitais?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alergias?: string | null
+          anamnese?: Json | null
+          comorbidades?: string | null
+          conduta_final?: string | null
+          conduta_inicial?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          diagnostico_final?: string | null
+          evolucao?: string | null
+          exame_fisico_estruturado?: string | null
+          habitos?: string | null
+          id?: string
+          medicamentos_uso?: string | null
+          medico_id?: string
+          paciente_idade?: number | null
+          paciente_nome?: string | null
+          paciente_sexo?: string | null
+          queixa_principal?: string | null
+          reavaliacao_agendada?: string | null
+          resultados_exames?: Json | null
+          sessao_id?: string
+          sinais_vitais?: Json | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_atendimentos_sessao_id_fkey"
+            columns: ["sessao_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_sessoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_escala_fixa: {
+        Row: {
+          carga_horaria: unknown
+          created_at: string | null
+          data_pagamento: number
+          dia_semana: number
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          local_id: string
+          medico_id: string
+          updated_at: string | null
+          valor_mensal: number
+        }
+        Insert: {
+          carga_horaria: unknown
+          created_at?: string | null
+          data_pagamento: number
+          dia_semana: number
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          local_id: string
+          medico_id: string
+          updated_at?: string | null
+          valor_mensal: number
+        }
+        Update: {
+          carga_horaria?: unknown
+          created_at?: string | null
+          data_pagamento?: number
+          dia_semana?: number
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          local_id?: string
+          medico_id?: string
+          updated_at?: string | null
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_escala_fixa_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_locais_trabalho"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_escala_fixa_cancelamentos: {
+        Row: {
+          data_cancelamento: string
+          escala_fixa_id: string
+          id: string
+          motivo: string
+          usuario_id: string
+        }
+        Insert: {
+          data_cancelamento?: string
+          escala_fixa_id: string
+          id?: string
+          motivo: string
+          usuario_id: string
+        }
+        Update: {
+          data_cancelamento?: string
+          escala_fixa_id?: string
+          id?: string
+          motivo?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_escala_fixa_cancelamentos_escala_fixa_id_fkey"
+            columns: ["escala_fixa_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_escala_fixa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plantonista_escala_fixa_cancelamentos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_locais_trabalho: {
+        Row: {
+          contabilidade: string | null
+          created_at: string | null
+          email: string | null
+          endereco: string | null
+          faixas: Json | null
+          id: string
+          medico_id: string
+          nome: string
+          regra: string
+          status: string
+          telefone: string | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          contabilidade?: string | null
+          created_at?: string | null
+          email?: string | null
+          endereco?: string | null
+          faixas?: Json | null
+          id?: string
+          medico_id: string
+          nome: string
+          regra: string
+          status?: string
+          telefone?: string | null
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          contabilidade?: string | null
+          created_at?: string | null
+          email?: string | null
+          endereco?: string | null
+          faixas?: Json | null
+          id?: string
+          medico_id?: string
+          nome?: string
+          regra?: string
+          status?: string
+          telefone?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      plantonista_plantao_coringa: {
+        Row: {
+          created_at: string | null
+          data: string
+          data_cancelamento: string | null
+          data_pagamento_efetiva: string | null
+          data_pagamento_prevista: string
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          local_id: string
+          medico_id: string
+          motivo_cancelamento: string | null
+          status_pagamento: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          data_cancelamento?: string | null
+          data_pagamento_efetiva?: string | null
+          data_pagamento_prevista: string
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          local_id: string
+          medico_id: string
+          motivo_cancelamento?: string | null
+          status_pagamento?: string
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          data_cancelamento?: string | null
+          data_pagamento_efetiva?: string | null
+          data_pagamento_prevista?: string
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          local_id?: string
+          medico_id?: string
+          motivo_cancelamento?: string | null
+          status_pagamento?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_plantao_coringa_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_locais_trabalho"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_plantao_fixo_realizado: {
+        Row: {
+          created_at: string | null
+          data: string
+          data_pagamento_efetiva: string | null
+          data_pagamento_prevista: string
+          escala_fixa_id: string | null
+          foi_passado: boolean
+          id: string
+          justificativa_passagem: string | null
+          local_id: string
+          status_pagamento: string
+          substituto_id: string | null
+          substituto_nome: string | null
+          updated_at: string | null
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: string
+          data_pagamento_efetiva?: string | null
+          data_pagamento_prevista: string
+          escala_fixa_id?: string | null
+          foi_passado?: boolean
+          id?: string
+          justificativa_passagem?: string | null
+          local_id: string
+          status_pagamento?: string
+          substituto_id?: string | null
+          substituto_nome?: string | null
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: string
+          data_pagamento_efetiva?: string | null
+          data_pagamento_prevista?: string
+          escala_fixa_id?: string | null
+          foi_passado?: boolean
+          id?: string
+          justificativa_passagem?: string | null
+          local_id?: string
+          status_pagamento?: string
+          substituto_id?: string | null
+          substituto_nome?: string | null
+          updated_at?: string | null
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantonista_plantao_fixo_realizado_escala_fixa_id_fkey"
+            columns: ["escala_fixa_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_escala_fixa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plantonista_plantao_fixo_realizado_local_id_fkey"
+            columns: ["local_id"]
+            isOneToOne: false
+            referencedRelation: "plantonista_locais_trabalho"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plantonista_sessoes: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          id: string
+          local_trabalho: string
+          medico_id: string
+          status: string | null
+          turno: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          local_trabalho: string
+          medico_id: string
+          status?: string | null
+          turno: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          local_trabalho?: string
+          medico_id?: string
+          status?: string | null
+          turno?: string
+        }
+        Relationships: []
+      }
       prescricoes: {
         Row: {
           created_at: string
@@ -1146,248 +1530,6 @@ export type Database = {
         }
         Relationships: []
       }
-      plantonista_sessoes: {
-        Row: {
-          id: string;
-          medico_id: string;
-          local_trabalho: string;
-          turno: string;
-          data_inicio: string;
-          data_fim?: string;
-          status: 'ativa' | 'finalizada';
-          created_at: string;
-        };
-        Insert: {
-          medico_id: string;
-          local_trabalho: string;
-          turno: string;
-          data_fim?: string;
-          status?: 'ativa' | 'finalizada';
-        };
-        Update: {
-          medico_id?: string;
-          local_trabalho?: string;
-          turno?: string;
-          data_fim?: string;
-          status?: 'ativa' | 'finalizada';
-        };
-        Relationships: [
-          {
-            foreignKeyName: "plantonista_sessoes_medico_id_fkey";
-            columns: ["medico_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-      plantonista_plantao_fixo_realizado: {
-        Row: {
-          id: string;
-          escala_fixa_id: string;
-          data: string;
-          valor: number;
-          status_pagamento: string;
-          data_pagamento_prevista: string;
-          data_pagamento_efetiva: string | null;
-          foi_passado: boolean;
-          substituto_id: string | null;
-          substituto_nome: string | null;
-          justificativa_passagem: string | null;
-          created_at: string;
-          updated_at: string;
-          local_id: string;
-        };
-        Insert: {
-          id?: string;
-          escala_fixa_id: string;
-          data: string;
-          valor: number;
-          status_pagamento?: string;
-          data_pagamento_prevista: string;
-          data_pagamento_efetiva?: string | null;
-          foi_passado?: boolean;
-          substituto_id?: string | null;
-          substituto_nome?: string | null;
-          justificativa_passagem?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          local_id: string;
-        };
-        Update: {
-          id?: string;
-          escala_fixa_id?: string;
-          data?: string;
-          valor?: number;
-          status_pagamento?: string;
-          data_pagamento_prevista?: string;
-          data_pagamento_efetiva?: string | null;
-          foi_passado?: boolean;
-          substituto_id?: string | null;
-          substituto_nome?: string | null;
-          justificativa_passagem?: string | null;
-          created_at?: string;
-          updated_at?: string;
-          local_id?: string;
-        };
-        Relationships: [];
-      };
-      plantonista_plantao_coringa: {
-        Row: {
-          id: string;
-          medico_id: string;
-          data: string;
-          horario_inicio: string;
-          horario_fim: string;
-          valor: number;
-          status_pagamento: string;
-          data_pagamento_prevista: string;
-          data_pagamento_efetiva: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          medico_id: string;
-          data: string;
-          horario_inicio: string;
-          horario_fim: string;
-          valor: number;
-          status_pagamento?: string;
-          data_pagamento_prevista: string;
-          data_pagamento_efetiva?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          medico_id?: string;
-          data?: string;
-          horario_inicio?: string;
-          horario_fim?: string;
-          valor?: number;
-          status_pagamento?: string;
-          data_pagamento_prevista?: string;
-          data_pagamento_efetiva?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      plantonista_escala_fixa: {
-        Row: {
-          id: string;
-          medico_id: string;
-          dia_semana: number;
-          valor_mensal: number;
-          horario_inicio: string;
-          horario_fim: string;
-          carga_horaria: string;
-          data_pagamento: number;
-          local_id: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          medico_id: string;
-          dia_semana: number;
-          valor_mensal: number;
-          horario_inicio: string;
-          horario_fim: string;
-          carga_horaria: string;
-          data_pagamento: number;
-          local_id: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          medico_id?: string;
-          dia_semana?: number;
-          valor_mensal?: number;
-          horario_inicio?: string;
-          horario_fim?: string;
-          carga_horaria?: string;
-          data_pagamento?: number;
-          local_id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      plantonista_locais_trabalho: {
-        Row: {
-          id: string;
-          medico_id: string;
-          nome: string;
-          tipo: string;
-          endereco: string | null;
-          telefone: string | null;
-          email: string | null;
-          regra: 'fixo' | 'faixa';
-          faixas: { atendimentos: string; valor: string }[] | null;
-          contabilidade: 'todas_semanas' | 'media_mensal' | null;
-          status: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          medico_id: string;
-          nome: string;
-          tipo: string;
-          endereco?: string | null;
-          telefone?: string | null;
-          email?: string | null;
-          regra: 'fixo' | 'faixa';
-          faixas?: { atendimentos: string; valor: string }[] | null;
-          contabilidade?: 'todas_semanas' | 'media_mensal' | null;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          medico_id?: string;
-          nome?: string;
-          tipo?: string;
-          endereco?: string | null;
-          telefone?: string | null;
-          email?: string | null;
-          regra?: 'fixo' | 'faixa';
-          faixas?: { atendimentos: string; valor: string }[] | null;
-          contabilidade?: 'todas_semanas' | 'media_mensal' | null;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      plantonista_escala_fixa_cancelamentos: {
-        Row: {
-          id: string;
-          escala_fixa_id: string;
-          data_cancelamento: string;
-          motivo: string;
-          usuario_id: string;
-        };
-        Insert: {
-          id?: string;
-          escala_fixa_id: string;
-          data_cancelamento?: string;
-          motivo: string;
-          usuario_id: string;
-        };
-        Update: {
-          id?: string;
-          escala_fixa_id?: string;
-          data_cancelamento?: string;
-          motivo?: string;
-          usuario_id?: string;
-        };
-        Relationships: [];
-      };
     }
     Views: {
       [_ in never]: never
@@ -1451,6 +1593,10 @@ export type Database = {
           policy_qual: string
           policy_with_check: string
         }[]
+      }
+      generate_monthly_shifts: {
+        Args: { p_user_id: string; p_ano: number; p_mes: number }
+        Returns: undefined
       }
       get_paciente_ids_clinica: {
         Args: { clinica_id_param: string }
@@ -1565,7 +1711,13 @@ export type Database = {
       }
     }
     Enums: {
-      user_type: "medico" | "paciente" | "clinica" | "hospital" | "staff"
+      user_type:
+        | "medico"
+        | "paciente"
+        | "clinica"
+        | "hospital"
+        | "staff"
+        | "plantonista"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1693,83 +1845,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_type: ["medico", "paciente", "clinica", "hospital", "staff"],
+      user_type: [
+        "medico",
+        "paciente",
+        "clinica",
+        "hospital",
+        "staff",
+        "plantonista",
+      ],
     },
   },
 } as const
-
-// Tipos para Plantonista
-export interface PlantonistaSessao {
-  id: string;
-  medico_id: string;
-  local_trabalho: string;
-  turno: string;
-  data_inicio: string;
-  data_fim?: string;
-  status: 'ativa' | 'finalizada';
-  created_at: string;
-}
-
-export interface PlantonistaAtendimento {
-  id: string;
-  sessao_id: string;
-  medico_id: string;
-  paciente_nome?: string;
-  paciente_idade?: number;
-  paciente_sexo?: 'M' | 'F';
-  queixa_principal?: string;
-  descricao?: string;
-  anamnese?: any; // JSONB
-  exame_fisico?: any; // JSONB
-  exame_fisico_estruturado?: string; // Campo estruturado para IA
-  conduta_inicial?: any; // JSONB
-  reavaliacao_agendada?: string;
-  evolucao?: string;
-  resultados_exames?: any; // JSONB
-  sinais_vitais?: any; // JSONB
-  conduta_final?: string;
-  diagnostico_final?: string;
-  status: 'primeiro_atendimento' | 'em_andamento' | 'reavaliacao' | 'reavaliado' | 'finalizado';
-  created_at: string;
-  updated_at: string;
-  // Campo auxiliar para frontend: histórico de reavaliações
-  reavaliacoes?: Array<{
-    id?: string;
-    created_at?: string;
-    evolucao?: string;
-    resultados_exames?: string;
-    sinais_vitais?: any;
-    conduta_final?: string;
-    diagnostico_final?: string;
-  }>;
-}
-
-// Tipos para inserção (sem campos automáticos)
-export interface InsertPlantonistaSessao {
-  medico_id: string;
-  local_trabalho: string;
-  turno: string;
-  data_fim?: string;
-  status?: 'ativa' | 'finalizada';
-}
-
-export interface InsertPlantonistaAtendimento {
-  sessao_id: string;
-  medico_id: string;
-  paciente_nome?: string;
-  paciente_idade?: number;
-  paciente_sexo?: 'M' | 'F';
-  queixa_principal?: string;
-  descricao?: string;
-  anamnese?: any; // JSONB
-  exame_fisico?: any; // JSONB
-  exame_fisico_estruturado?: string; // Campo estruturado para IA
-  conduta_inicial?: any; // JSONB
-  reavaliacao_agendada?: string;
-  evolucao?: string;
-  resultados_exames?: any;
-  sinais_vitais?: any;
-  conduta_final?: string;
-  diagnostico_final?: string;
-  status?: 'primeiro_atendimento' | 'reavaliado' | 'finalizado';
-}
