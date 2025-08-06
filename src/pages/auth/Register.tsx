@@ -57,10 +57,55 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
+    if (formData.password.length < 8) {
       toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter no mínimo 6 caracteres.",
+        title: "Senha muito fraca",
+        description: "A senha deve ter no mínimo 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password strength
+    const hasUpperCase = /[A-Z]/.test(formData.password);
+    const hasLowerCase = /[a-z]/.test(formData.password);
+    const hasNumbers = /\d/.test(formData.password);
+    const hasNonalphas = /\W/.test(formData.password);
+    
+    if (!(hasUpperCase && hasLowerCase && hasNumbers && hasNonalphas)) {
+      toast({
+        title: "Senha muito fraca",
+        description: "A senha deve conter ao menos: 1 maiúscula, 1 minúscula, 1 número e 1 símbolo.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate CPF/CNPJ format and restrict privileged roles
+    if (!formData.documento.trim()) {
+      const docType = (formData.tipo === "medico" || formData.tipo === "paciente" || formData.tipo === "plantonista") ? "CPF" : "CNPJ";
+      toast({
+        title: `${docType} obrigatório`,
+        description: `O ${docType} é obrigatório para este tipo de usuário`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Restrict self-registration for certain roles
+    if (formData.tipo === "clinica" && !formData.documento.match(/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/)) {
+      toast({
+        title: "CNPJ inválido",
+        description: "Por favor, digite um CNPJ válido no formato 00.000.000/0000-00",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if ((formData.tipo === "medico" || formData.tipo === "plantonista") && !formData.crm.trim()) {
+      toast({
+        title: "CRM obrigatório",
+        description: "O CRM é obrigatório para médicos e plantonistas",
         variant: "destructive",
       });
       return;
@@ -69,25 +114,33 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await signUp(
-        formData.email,
-        formData.password,
-        {
-          nome: formData.nome,
-          tipo: formData.tipo,
-          documento: formData.documento,
-          telefone: formData.telefone,
-          especialidade: formData.especialidade,
-          crm: formData.crm
-        }
-      );
+      const userData = {
+        nome: formData.nome,
+        tipo: formData.tipo,
+        documento: formData.documento,
+        telefone: formData.telefone,
+        especialidade: formData.especialidade,
+        crm: formData.crm
+      };
+
+      const { error } = await signUp(formData.email, formData.password, userData);
       
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Bem-vindo ao SmartDoc. Você pode começar a usar a plataforma agora.",
-      });
-      
-      navigate("/");
+      if (error) {
+        toast({
+          title: "Erro ao criar conta",
+          description: error.message === "User already registered" 
+            ? "Este email já está cadastrado" 
+            : error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao SmartDoc. Você pode começar a usar a plataforma agora.",
+        });
+        
+        navigate("/");
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao criar conta",

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -25,6 +26,21 @@ export const useMedicosCadastro = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  const generateSecurePassword = async (): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-secure-password', {
+        body: { length: 12, includeSymbols: true }
+      });
+
+      if (error) throw error;
+      return data.password;
+    } catch (error) {
+      console.error('Error generating secure password:', error);
+      // Fallback to client-side generation if edge function fails
+      return Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase();
+    }
+  };
 
   const cadastrarMedico = async (dados: MedicoCadastroData) => {
     if (profile?.tipo !== 'clinica') {
@@ -73,8 +89,8 @@ export const useMedicosCadastro = () => {
         return { tipo: 'vinculo_existente', medico: medicoExistente };
       }
 
-      // Gerar senha temporária
-      const senhaTemporaria = generateTemporaryPassword();
+      // Gerar senha segura usando edge function
+      const senhaTemporaria = await generateSecurePassword();
 
       // Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -169,23 +185,3 @@ export const useMedicosCadastro = () => {
     loading
   };
 };
-
-// Função para gerar senha temporária
-function generateTemporaryPassword(): string {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
-  let password = '';
-  
-  // Garantir pelo menos uma letra maiúscula, uma minúscula, um número e um símbolo
-  password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-  password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-  password += '0123456789'[Math.floor(Math.random() * 10)];
-  password += '!@#$%'[Math.floor(Math.random() * 5)];
-  
-  // Adicionar mais 4 caracteres aleatórios
-  for (let i = 4; i < 8; i++) {
-    password += characters[Math.floor(Math.random() * characters.length)];
-  }
-  
-  // Embaralhar a senha
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
