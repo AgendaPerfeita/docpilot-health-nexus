@@ -51,6 +51,7 @@ export default function PrescricaoDigital() {
   const [loading, setLoading] = useState(false)
   const [signatureModalOpen, setSignatureModalOpen] = useState(false)
   const [selectedPrescriptionForSign, setSelectedPrescriptionForSign] = useState<any>(null)
+  const [currentPrescription, setCurrentPrescription] = useState({ instructions: "", observations: "" })
 
   const addMedication = () => {
     setMedications([...medications, { name: "", dosage: "", duration: "" }])
@@ -79,6 +80,89 @@ export default function PrescricaoDigital() {
     toast({
       title: "Prescrição assinada!",
       description: "A prescrição foi assinada digitalmente com sucesso."
+    })
+  }
+
+  const handleConnectCertificate = () => {
+    // Validar se há dados mínimos
+    if (!selectedPatient) {
+      toast({
+        title: "Erro",
+        description: "Selecione um paciente antes de assinar a prescrição",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (medications.filter(med => med.name.trim()).length === 0) {
+      toast({
+        title: "Erro", 
+        description: "Adicione pelo menos um medicamento antes de assinar",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Encontrar dados do paciente selecionado
+    const pacienteData = pacientes.find(p => p.id === selectedPatient)
+    
+    // Criar objeto da nova prescrição
+    const newPrescription = {
+      id: Date.now().toString(),
+      patient: pacienteData?.nome || "Paciente",
+      date: new Date().toISOString(),
+      medications: medications.filter(med => med.name.trim()),
+      instructions: currentPrescription.instructions,
+      observations: currentPrescription.observations,
+      status: "pendente"
+    }
+
+    setSelectedPrescriptionForSign(newPrescription)
+    setSignatureModalOpen(true)
+  }
+
+  const handleSavePrescription = () => {
+    if (!selectedPatient) {
+      toast({
+        title: "Erro",
+        description: "Selecione um paciente antes de salvar",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (medications.filter(med => med.name.trim()).length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione pelo menos um medicamento",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const pacienteData = pacientes.find(p => p.id === selectedPatient)
+    
+    const newPrescription = {
+      id: Date.now().toString(),
+      patient: pacienteData?.nome || "Paciente",
+      date: new Date().toISOString(),
+      medications: medications.filter(med => med.name.trim()),
+      instructions: currentPrescription.instructions,
+      observations: currentPrescription.observations,
+      status: "enviada"
+    }
+
+    setPrescricoes([newPrescription, ...prescricoes])
+    
+    // Reset form
+    setSelectedPatient("")
+    setMedications([{ name: "", dosage: "", duration: "" }])
+    setCurrentPrescription({ instructions: "", observations: "" })
+    setIsDialogOpen(false)
+
+    toast({
+      title: "Prescrição salva!",
+      description: "A prescrição foi salva com sucesso."
     })
   }
 
@@ -191,10 +275,22 @@ export default function PrescricaoDigital() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>Instruções Gerais</Label>
+                  <Textarea
+                    placeholder="Instruções gerais de uso, cuidados especiais..."
+                    value={currentPrescription.instructions}
+                    onChange={(e) => setCurrentPrescription({...currentPrescription, instructions: e.target.value})}
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label>Observações Médicas</Label>
                   <Textarea
                     placeholder="Observações adicionais, orientações ao paciente..."
-                    className="min-h-[100px]"
+                    value={currentPrescription.observations}
+                    onChange={(e) => setCurrentPrescription({...currentPrescription, observations: e.target.value})}
+                    className="min-h-[80px]"
                   />
                 </div>
               </TabsContent>
@@ -207,7 +303,8 @@ export default function PrescricaoDigital() {
                     <p className="text-muted-foreground mb-4">
                       Utilize seu certificado digital A1 ou A3 para assinar a prescrição
                     </p>
-                    <Button className="mb-2">
+                    <Button className="mb-2" onClick={handleConnectCertificate}>
+                      <Shield className="h-4 w-4 mr-2" />
                       Conectar Certificado Digital
                     </Button>
                     <p className="text-xs text-muted-foreground">
@@ -222,7 +319,11 @@ export default function PrescricaoDigital() {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button>
+              <Button variant="outline" onClick={handleSavePrescription}>
+                <FileText className="h-4 w-4 mr-2" />
+                Salvar Rascunho
+              </Button>
+              <Button onClick={handleSavePrescription}>
                 <Send className="h-4 w-4 mr-2" />
                 Enviar Prescrição
               </Button>
