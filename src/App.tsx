@@ -66,6 +66,7 @@ import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 
 // Backup
 import BackupGestao from "./pages/BackupGestao";
+import ValidarAssinatura from "./pages/ValidarAssinatura";
 
 // Plantonista
 import PlantonistaIndex from "./pages/plantonista/index";
@@ -194,6 +195,9 @@ function App() {
 
                     {/* Backup - acessível por todos */}
                     <Route path="/backup" element={<BackupGestao />} />
+
+                    {/* Validação de Assinatura Digital - público */}
+                    <Route path="/validar-assinatura" element={<ValidarAssinatura />} />
 
                     {/* Configurações - acessível por todos */}
                     <Route path="/configuracoes" element={<Configuracoes />} />

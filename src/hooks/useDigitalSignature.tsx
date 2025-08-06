@@ -96,13 +96,13 @@ export const useDigitalSignature = () => {
   const detectCertificateA3 = async (): Promise<CertificateInfo | null> => {
     try {
       // Check if WebUSB is supported
-      if (!navigator.usb) {
+      if (!('usb' in navigator)) {
         toast.error('WebUSB não suportado neste navegador');
         return null;
       }
 
       // Request device access
-      const device = await navigator.usb.requestDevice({
+      const device = await (navigator as any).usb.requestDevice({
         filters: [
           { vendorId: 0x0529 }, // Common smart card reader vendor
           { vendorId: 0x072f },

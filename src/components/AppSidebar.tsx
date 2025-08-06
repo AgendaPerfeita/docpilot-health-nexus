@@ -130,6 +130,12 @@ import { ClinicaSelector } from "@/components/ui/clinica-selector"
     group: "sistema"
   },
   {
+    title: "Validar Assinatura",
+    url: "/validar-assinatura",
+    icon: Shield,
+    group: "sistema"
+  },
+  {
     title: "Configurações",
     url: "/configuracoes",
     icon: Settings,

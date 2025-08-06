@@ -96,6 +96,48 @@ export type Database = {
           },
         ]
       }
+      assinaturas_digitais: {
+        Row: {
+          codigo_verificacao: string
+          created_at: string
+          dados_certificado: Json | null
+          documento_id: string
+          documento_tipo: string
+          hash_documento: string
+          id: string
+          status: string
+          timestamp_assinatura: string
+          tipo_certificado: string
+          updated_at: string
+        }
+        Insert: {
+          codigo_verificacao: string
+          created_at?: string
+          dados_certificado?: Json | null
+          documento_id: string
+          documento_tipo: string
+          hash_documento: string
+          id?: string
+          status?: string
+          timestamp_assinatura?: string
+          tipo_certificado: string
+          updated_at?: string
+        }
+        Update: {
+          codigo_verificacao?: string
+          created_at?: string
+          dados_certificado?: Json | null
+          documento_id?: string
+          documento_tipo?: string
+          hash_documento?: string
+          id?: string
+          status?: string
+          timestamp_assinatura?: string
+          tipo_certificado?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       backup_configuracoes: {
         Row: {
           backup_automatico: boolean

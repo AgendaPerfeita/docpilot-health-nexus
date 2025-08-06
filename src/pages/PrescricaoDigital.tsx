@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar } from "lucide-react"
+import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield } from "lucide-react"
+import { DigitalSignatureModal } from "@/components/medical/DigitalSignatureModal"
 
 
 export default function PrescricaoDigital() {
@@ -24,8 +25,32 @@ export default function PrescricaoDigital() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState("")
   const [medications, setMedications] = useState([{ name: "", dosage: "", duration: "" }])
-  const [prescricoes, setPrescricoes] = useState<any[]>([])
+  const [prescricoes, setPrescricoes] = useState<any[]>([
+    {
+      id: "1",
+      patient: "Maria Silva",
+      date: "2024-01-15",
+      medications: [{ name: "Dipirona 500mg" }, { name: "Omeprazol 20mg" }],
+      status: "enviada"
+    },
+    {
+      id: "2", 
+      patient: "João Santos",
+      date: "2024-01-14",
+      medications: [{ name: "Amoxicilina 875mg" }],
+      status: "assinada"
+    },
+    {
+      id: "3",
+      patient: "Ana Costa", 
+      date: "2024-01-13",
+      medications: [{ name: "Losartana 50mg" }, { name: "Sinvastatina 20mg" }],
+      status: "pendente"
+    }
+  ])
   const [loading, setLoading] = useState(false)
+  const [signatureModalOpen, setSignatureModalOpen] = useState(false)
+  const [selectedPrescriptionForSign, setSelectedPrescriptionForSign] = useState<any>(null)
 
   const addMedication = () => {
     setMedications([...medications, { name: "", dosage: "", duration: "" }])
@@ -40,6 +65,21 @@ export default function PrescricaoDigital() {
 
   const removeMedication = (index: number) => {
     setMedications(medications.filter((_, i) => i !== index))
+  }
+
+  const handleSignPrescription = (prescription: any) => {
+    setSelectedPrescriptionForSign(prescription)
+    setSignatureModalOpen(true)
+  }
+
+  const handleSignatureComplete = (result: any) => {
+    console.log('Assinatura concluída:', result)
+    setSignatureModalOpen(false)
+    setSelectedPrescriptionForSign(null)
+    toast({
+      title: "Prescrição assinada!",
+      description: "A prescrição foi assinada digitalmente com sucesso."
+    })
   }
 
   return (
@@ -305,7 +345,12 @@ export default function PrescricaoDigital() {
                         Ver Detalhes
                       </Button>
                       {prescription.status === 'pendente' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleSignPrescription(prescription)}
+                        >
+                          <Shield className="h-3 w-3 mr-1" />
                           Assinar
                         </Button>
                       )}
@@ -317,6 +362,18 @@ export default function PrescricaoDigital() {
           </Table>
         </CardContent>
       </Card>
+
+      {selectedPrescriptionForSign && (
+        <DigitalSignatureModal
+          open={signatureModalOpen}
+          onOpenChange={setSignatureModalOpen}
+          documentId={selectedPrescriptionForSign.id}
+          documentTitle={`Prescrição - ${selectedPrescriptionForSign.patient}`}
+          documentContent={JSON.stringify(selectedPrescriptionForSign)}
+          documentType="receita"
+          onSignatureComplete={handleSignatureComplete}
+        />
+      )}
     </div>
   )
 }
