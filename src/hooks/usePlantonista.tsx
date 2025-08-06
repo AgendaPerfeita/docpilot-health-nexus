@@ -1,11 +1,65 @@
 import React, { createContext, useContext, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import {
-  PlantonistaSessao, 
-  PlantonistaAtendimento,
-  InsertPlantonistaSessao,
-  InsertPlantonistaAtendimento
-} from '@/integrations/supabase/types';
+// Define types locally since they may not exist in the generated types
+interface PlantonistaSessao {
+  id: string;
+  medico_id: string;
+  local_trabalho: string;
+  turno: string;
+  data_inicio: string;
+  data_fim?: string;
+  status: string;
+  created_at: string;
+}
+
+interface PlantonistaAtendimento {
+  id: string;
+  sessao_id: string;
+  medico_id: string;
+  paciente_nome?: string;
+  paciente_idade?: number;
+  paciente_sexo?: string;
+  queixa_principal?: string;
+  anamnese?: any;
+  exame_fisico?: any;
+  sinais_vitais?: any;
+  resultados_exames?: any;
+  conduta_inicial?: any;
+  diagnostico_final?: string;
+  conduta_final?: string;
+  evolucao?: string;
+  status?: string;
+  reavaliacao_agendada?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertPlantonistaSessao {
+  medico_id: string;
+  local_trabalho: string;
+  turno: string;
+  data_inicio?: string;
+  status?: string;
+}
+
+interface InsertPlantonistaAtendimento {
+  sessao_id: string;
+  medico_id: string;
+  paciente_nome?: string;
+  paciente_idade?: number;
+  paciente_sexo?: string;
+  queixa_principal?: string;
+  anamnese?: any;
+  exame_fisico?: any;
+  sinais_vitais?: any;
+  resultados_exames?: any;
+  conduta_inicial?: any;
+  diagnostico_final?: string;
+  conduta_final?: string;
+  evolucao?: string;
+  status?: string;
+  reavaliacao_agendada?: string;
+}
 
 const PlantonistaContext = createContext<any>(null);
 

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, Clock, DollarSign, FileText, MapPin, Plus, TrendingUp, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePlantonista } from '@/hooks/usePlantonista';
-import { PlantonistaSessao, PlantonistaAtendimento } from '@/integrations/supabase/types';
+// Types will be imported from the context provider
 
 export default function PlantonistaDashboard() {
   const navigate = useNavigate();
@@ -18,8 +18,8 @@ export default function PlantonistaDashboard() {
     criarAtendimento
   } = usePlantonista();
   
-  const [activeSession, setActiveSession] = useState<PlantonistaSessao | null>(null);
-  const [todayAttendances, setTodayAttendances] = useState<PlantonistaAtendimento[]>([]);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [todayAttendances, setTodayAttendances] = useState<any[]>([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {

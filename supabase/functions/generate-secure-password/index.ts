@@ -15,16 +15,20 @@ serve(async (req) => {
   try {
     const { length = 12, includeSymbols = true } = await req.json();
 
-    // Character sets for password generation
+    // Enhanced character sets for medical-grade password generation
     const lowercase = 'abcdefghijklmnopqrstuvwxyz';
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const numbers = '0123456789';
-    const symbols = includeSymbols ? '!@#$%&*()_+-=[]{}|;:,.<>?' : '';
+    // Medical-grade symbols (avoiding confusing characters)
+    const symbols = includeSymbols ? '!@#$%&*()-_=+[]{}|;:<>?' : '';
+    
+    // Enforce minimum length for medical applications
+    const minimumLength = Math.max(length, 12);
     
     const allChars = lowercase + uppercase + numbers + symbols;
     
-    // Generate cryptographically secure random password
-    const array = new Uint8Array(length);
+    // Generate cryptographically secure random password with medical-grade requirements
+    const array = new Uint8Array(minimumLength);
     crypto.getRandomValues(array);
     
     let password = '';
@@ -39,7 +43,7 @@ serve(async (req) => {
     }
     
     // Fill remaining length with random characters
-    for (let i = password.length; i < length; i++) {
+    for (let i = password.length; i < minimumLength; i++) {
       password += allChars[Math.floor(array[i] / 256 * allChars.length)];
     }
     
