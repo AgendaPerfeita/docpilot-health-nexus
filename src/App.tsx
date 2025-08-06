@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ActiveClinicaProvider } from "./hooks/useActiveClinica";
 import Layout from "./components/Layout";
-import { ThemeProvider } from 'next-themes';
+
 
 // Auth
 import Landing from "./pages/auth/Landing";
@@ -80,8 +80,7 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <ActiveClinicaProvider>
             <TooltipProvider>
@@ -200,7 +199,6 @@ function App() {
           </ActiveClinicaProvider>
         </AuthProvider>
       </QueryClientProvider>
-    </ThemeProvider>
   );
 }
 
