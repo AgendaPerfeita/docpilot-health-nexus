@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VideoCall } from './VideoCall';
+import { VideoCallReal } from './VideoCallReal';
 import { WaitingRoom } from './WaitingRoom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,11 +74,13 @@ export const TelemedicineInterface: React.FC<TelemedicineInterfaceProps> = ({
   if (currentState === 'in-call') {
     return (
       <div className="fixed inset-0 bg-background z-50">
-        <VideoCall
+        <VideoCallReal
           consultaId={consultaId}
           participantName={userType === 'medico' ? paciente.nome : medico.nome}
           onCallEnd={handleEndCall}
           isHost={userType === 'medico'}
+          userName={userType === 'medico' ? medico.nome : paciente.nome}
+          userId={userType === 'medico' ? medico.id : paciente.id}
         />
       </div>
     );
