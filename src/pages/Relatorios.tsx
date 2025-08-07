@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { PermissionGuard } from "@/components/PermissionGuard"
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth"
+import { useRelatoriosData } from "@/hooks/useRelatoriosData"
 
 interface ReportData {
   type: string
@@ -68,25 +69,9 @@ const availableReports: ReportData[] = [
   }
 ]
 
-const analyticsData = {
-  overview: {
-    totalPatients: 1247,
-    newPatientsThisMonth: 78,
-    totalRevenue: 125000,
-    averageTicket: 285,
-    appointmentsThisMonth: 342,
-    conversionRate: 68.5
-  },
-  trends: {
-    patientsGrowth: 12.5,
-    revenueGrowth: 8.3,
-    appointmentsGrowth: -2.1,
-    ticketGrowth: 15.7
-  }
-}
-
 export default function Relatorios() {
   const { profile, loadingProfile } = useAuth();
+  const { dashboardData, specialtyData, originData, loading } = useRelatoriosData();
   const [selectedPeriod, setSelectedPeriod] = useState('mensal')
   const [selectedReport, setSelectedReport] = useState('todos')
   const [dateRange, setDateRange] = useState({
@@ -165,10 +150,10 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Total de Pacientes</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  {analyticsData.overview.totalPatients.toLocaleString()}
+                  {dashboardData?.totalPatients.toLocaleString() || '0'}
                 </div>
-                <div className={`text-sm ${analyticsData.trends.patientsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.trends.patientsGrowth > 0 ? '+' : ''}{analyticsData.trends.patientsGrowth}% vs mês anterior
+                <div className={`text-sm ${(dashboardData?.patientsGrowth || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(dashboardData?.patientsGrowth || 0) > 0 ? '+' : ''}{(dashboardData?.patientsGrowth || 0).toFixed(1)}% vs mês anterior
                 </div>
               </CardContent>
             </Card>
@@ -180,10 +165,10 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Receita Total</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  R$ {analyticsData.overview.totalRevenue.toLocaleString('pt-BR')}
+                  R$ {(dashboardData?.totalRevenue || 0).toLocaleString('pt-BR')}
                 </div>
-                <div className={`text-sm ${analyticsData.trends.revenueGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.trends.revenueGrowth > 0 ? '+' : ''}{analyticsData.trends.revenueGrowth}% vs mês anterior
+                <div className={`text-sm ${(dashboardData?.revenueGrowth || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(dashboardData?.revenueGrowth || 0) > 0 ? '+' : ''}{(dashboardData?.revenueGrowth || 0).toFixed(1)}% vs mês anterior
                 </div>
               </CardContent>
             </Card>
@@ -195,10 +180,10 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Ticket Médio</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  R$ {analyticsData.overview.averageTicket.toLocaleString('pt-BR')}
+                  R$ {(dashboardData?.averageTicket || 0).toLocaleString('pt-BR')}
                 </div>
-                <div className={`text-sm ${analyticsData.trends.ticketGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.trends.ticketGrowth > 0 ? '+' : ''}{analyticsData.trends.ticketGrowth}% vs mês anterior
+                <div className={`text-sm ${(dashboardData?.ticketGrowth || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(dashboardData?.ticketGrowth || 0) > 0 ? '+' : ''}{(dashboardData?.ticketGrowth || 0).toFixed(1)}% vs mês anterior
                 </div>
               </CardContent>
             </Card>
@@ -210,10 +195,10 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Consultas no Mês</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  {analyticsData.overview.appointmentsThisMonth}
+                  {dashboardData?.appointmentsThisMonth || 0}
                 </div>
-                <div className={`text-sm ${analyticsData.trends.appointmentsGrowth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.trends.appointmentsGrowth > 0 ? '+' : ''}{analyticsData.trends.appointmentsGrowth}% vs mês anterior
+                <div className={`text-sm ${(dashboardData?.appointmentsGrowth || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {(dashboardData?.appointmentsGrowth || 0) > 0 ? '+' : ''}{(dashboardData?.appointmentsGrowth || 0).toFixed(1)}% vs mês anterior
                 </div>
               </CardContent>
             </Card>
@@ -225,7 +210,7 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Novos Pacientes</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  {analyticsData.overview.newPatientsThisMonth}
+                  {dashboardData?.newPatientsThisMonth || 0}
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Este mês
@@ -240,7 +225,7 @@ export default function Relatorios() {
                   <span className="text-sm font-medium">Taxa de Conversão</span>
                 </div>
                 <div className="text-2xl font-bold text-foreground mt-2">
-                  {analyticsData.overview.conversionRate}%
+                  {(dashboardData?.conversionRate || 0).toFixed(1)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Leads para consultas
@@ -256,42 +241,28 @@ export default function Relatorios() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Clínica Geral</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full w-3/4"></div>
+                  {specialtyData.slice(0, 5).map((specialty, index) => {
+                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-teal-500'];
+                    return (
+                      <div key={specialty.name} className="flex items-center justify-between">
+                        <span className="text-sm">{specialty.name}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-muted rounded-full h-2">
+                            <div 
+                              className={`${colors[index] || 'bg-gray-500'} h-2 rounded-full`}
+                              style={{ width: `${specialty.percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium">{specialty.count}</span>
+                        </div>
                       </div>
-                      <span className="text-sm font-medium">156</span>
+                    );
+                  })}
+                  {specialtyData.length === 0 && (
+                    <div className="text-center text-muted-foreground text-sm py-4">
+                      Nenhuma consulta encontrada
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Cardiologia</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full w-2/3"></div>
-                      </div>
-                      <span className="text-sm font-medium">98</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Ortopedia</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full w-1/2"></div>
-                      </div>
-                      <span className="text-sm font-medium">72</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Outros</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-orange-500 h-2 rounded-full w-1/4"></div>
-                      </div>
-                      <span className="text-sm font-medium">45</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -302,60 +273,28 @@ export default function Relatorios() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Facebook</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full w-1/4"></div>
+                  {originData.slice(0, 6).map((origin, index) => {
+                    const colors = ['bg-blue-600', 'bg-pink-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-green-700'];
+                    return (
+                      <div key={origin.source} className="flex items-center justify-between">
+                        <span className="text-sm">{origin.source}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-muted rounded-full h-2">
+                            <div 
+                              className={`${colors[index] || 'bg-gray-500'} h-2 rounded-full`}
+                              style={{ width: `${origin.percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium">{origin.percentage.toFixed(0)}%</span>
+                        </div>
                       </div>
-                      <span className="text-sm font-medium">22%</span>
+                    );
+                  })}
+                  {originData.length === 0 && (
+                    <div className="text-center text-muted-foreground text-sm py-4">
+                      Nenhum paciente encontrado
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Instagram</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-pink-500 h-2 rounded-full w-1/5"></div>
-                      </div>
-                      <span className="text-sm font-medium">18%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Indicação</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full w-1/4"></div>
-                      </div>
-                      <span className="text-sm font-medium">22%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Google</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-yellow-500 h-2 rounded-full w-1/6"></div>
-                      </div>
-                      <span className="text-sm font-medium">14%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Marketplace</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full w-1/8"></div>
-                      </div>
-                      <span className="text-sm font-medium">12%</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">WhatsApp</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 bg-muted rounded-full h-2">
-                        <div className="bg-green-700 h-2 rounded-full w-1/8"></div>
-                      </div>
-                      <span className="text-sm font-medium">12%</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

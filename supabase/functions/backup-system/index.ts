@@ -1,162 +1,176 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.3';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Verificar autenticação
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Token de autorização necessário');
-    }
+    // Get user from auth header
+    const authHeader = req.headers.get('Authorization')!
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    )
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
     if (authError || !user) {
-      throw new Error('Usuário não autenticado');
+      throw new Error('Usuário não autenticado')
     }
 
-    const { action, ...params } = await req.json();
-    console.log(`Backup action: ${action} for user: ${user.id}`);
+    const { action, ...params } = await req.json()
 
     let result;
-
     switch (action) {
       case 'export_completo':
         result = await exportCompleto(supabase, user.id, params);
         break;
-      
       case 'export_seletivo':
         result = await exportSeletivo(supabase, user.id, params);
         break;
-      
       case 'import_dados':
         result = await importDados(supabase, user.id, params);
         break;
-      
       case 'listar_backups':
         result = await listarBackups(supabase, user.id);
         break;
-      
       case 'download_backup':
         result = await downloadBackup(supabase, user.id, params.backup_id);
         break;
-      
       case 'cleanup_antigos':
         result = await cleanupBackupsAntigos(supabase, user.id);
         break;
-      
       default:
-        throw new Error(`Ação não suportada: ${action}`);
+        throw new Error(`Ação não reconhecida: ${action}`)
     }
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify(result),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200 
+      }
+    )
 
   } catch (error) {
-    console.error('Erro no backup system:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
+    console.error('Erro na função de backup:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400 
+      }
+    )
   }
-});
+})
 
 async function exportCompleto(supabase: any, userId: string, params: any) {
-  // Criar log inicial
+  console.log('Iniciando export completo para user:', userId);
+
+  // Log do início da operação
   const { data: logData } = await supabase
     .from('backup_logs')
     .insert({
+      user_id: userId,
       tipo: 'export_completo',
       status: 'processando',
-      user_id: userId,
       parametros: params
     })
     .select()
     .single();
 
   try {
-    // Obter dados completos usando a função do banco
-    const { data: userData, error } = await supabase.rpc('get_user_complete_data', {
-      target_user_id: userId
-    });
+    // Buscar todos os dados do usuário
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId);
 
-    if (error) throw error;
+    const userProfileId = profileData?.[0]?.id;
 
-    // Adicionar metadados
+    // Buscar pacientes vinculados
+    const { data: pacientesData } = await supabase
+      .rpc('get_pacientes_medico', { medico_id_param: userProfileId });
+
+    // Buscar consultas
+    const { data: consultasData } = await supabase
+      .from('consultas')
+      .select('*')
+      .eq('medico_id', userProfileId);
+
+    // Buscar prontuários
+    const { data: prontuariosData } = await supabase
+      .from('prontuarios')
+      .select('*')
+      .eq('medico_id', userProfileId);
+
+    // Buscar anexos médicos
+    const { data: anexosData } = await supabase
+      .from('anexos_medicos')
+      .select('*')
+      .eq('medico_id', userProfileId);
+
     const backupData = {
-      metadata: {
-        export_timestamp: new Date().toISOString(),
-        version: '1.0',
-        user_id: userId,
-        type: 'export_completo'
-      },
-      data: userData
+      export_date: new Date().toISOString(),
+      user_id: userId,
+      profile: profileData?.[0],
+      pacientes: pacientesData || [],
+      consultas: consultasData || [],
+      prontuarios: prontuariosData || [],
+      anexos_medicos: anexosData || []
     };
 
-    // Converter para JSON e calcular tamanho
-    const jsonData = JSON.stringify(backupData, null, 2);
-    const sizeBytes = new TextEncoder().encode(jsonData).length;
-
+    const backupJson = JSON.stringify(backupData, null, 2);
+    const fileName = `backup_completo_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
+    
     // Upload para storage
-    const fileName = `backup_completo_${userId}_${new Date().toISOString().split('T')[0]}.json`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('anexos-medicos')
-      .upload(`backups/${fileName}`, jsonData, {
+      .upload(`backups/${userId}/${fileName}`, backupJson, {
         contentType: 'application/json'
       });
 
     if (uploadError) throw uploadError;
 
-    // Obter URL pública
-    const { data: urlData } = await supabase.storage
+    // Gerar URL assinada
+    const { data: signedUrlData } = await supabase.storage
       .from('anexos-medicos')
-      .createSignedUrl(`backups/${fileName}`, 604800); // 7 dias
+      .createSignedUrl(`backups/${userId}/${fileName}`, 3600); // 1 hora
 
-    // Atualizar log
+    const summary = {
+      total_pacientes: backupData.pacientes.length,
+      total_consultas: backupData.consultas.length,
+      total_prontuarios: backupData.prontuarios.length,
+      total_anexos: backupData.anexos_medicos.length
+    };
+
+    // Atualizar log com sucesso
     await supabase
       .from('backup_logs')
       .update({
         status: 'concluido',
         completed_at: new Date().toISOString(),
-        arquivo_url: urlData?.signedUrl,
-        tamanho_bytes: sizeBytes,
-        resultado: {
-          total_pacientes: Array.isArray(userData?.pacientes) ? userData.pacientes.length : 0,
-          total_consultas: Array.isArray(userData?.consultas) ? userData.consultas.length : 0,
-          total_prontuarios: Array.isArray(userData?.prontuarios) ? userData.prontuarios.length : 0,
-          total_anexos: Array.isArray(userData?.anexos_medicos) ? userData.anexos_medicos.length : 0
-        }
+        arquivo_url: signedUrlData?.signedUrl,
+        tamanho_bytes: new TextEncoder().encode(backupJson).length,
+        resultado: { summary, file_path: uploadData.path }
       })
       .eq('id', logData.id);
 
     return {
       success: true,
-      backup_id: logData.id,
-      download_url: urlData?.signedUrl,
-      size_bytes: sizeBytes,
-      summary: {
-        total_pacientes: Array.isArray(userData?.pacientes) ? userData.pacientes.length : 0,
-        total_consultas: Array.isArray(userData?.consultas) ? userData.consultas.length : 0,
-        total_prontuarios: Array.isArray(userData?.prontuarios) ? userData.prontuarios.length : 0,
-        total_anexos: Array.isArray(userData?.anexos_medicos) ? userData.anexos_medicos.length : 0
-      }
+      download_url: signedUrlData?.signedUrl,
+      size_bytes: new TextEncoder().encode(backupJson).length,
+      summary
     };
 
   } catch (error) {
@@ -175,94 +189,99 @@ async function exportCompleto(supabase: any, userId: string, params: any) {
 }
 
 async function exportSeletivo(supabase: any, userId: string, params: any) {
-  const { tabelas = [], data_inicio, data_fim } = params;
+  console.log('Iniciando export seletivo para user:', userId, 'params:', params);
 
   const { data: logData } = await supabase
     .from('backup_logs')
     .insert({
+      user_id: userId,
       tipo: 'export_seletivo',
       status: 'processando',
-      user_id: userId,
       parametros: params
     })
     .select()
     .single();
 
   try {
+    const { tabelas, data_inicio, data_fim } = params;
     const backupData: any = {
-      metadata: {
-        export_timestamp: new Date().toISOString(),
-        version: '1.0',
-        user_id: userId,
-        type: 'export_seletivo',
-        filters: { tabelas, data_inicio, data_fim }
-      },
-      data: {}
+      export_date: new Date().toISOString(),
+      user_id: userId,
+      export_type: 'seletivo',
+      filters: { tabelas, data_inicio, data_fim }
     };
 
-    // Exportar apenas tabelas selecionadas
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId);
+
+    const userProfileId = profileData?.[0]?.id;
+
+    // Exportar tabelas selecionadas
     if (tabelas.includes('pacientes')) {
       const { data } = await supabase
-        .from('pacientes')
-        .select('*')
-        .gte('created_at', data_inicio || '1900-01-01')
-        .lte('created_at', data_fim || '2100-01-01');
-      backupData.data.pacientes = data || [];
+        .rpc('get_pacientes_medico', { medico_id_param: userProfileId });
+      backupData.pacientes = data || [];
     }
 
     if (tabelas.includes('consultas')) {
-      const { data } = await supabase
+      let query = supabase
         .from('consultas')
         .select('*')
-        .gte('created_at', data_inicio || '1900-01-01')
-        .lte('created_at', data_fim || '2100-01-01');
-      backupData.data.consultas = data || [];
+        .eq('medico_id', userProfileId);
+      
+      if (data_inicio) query = query.gte('data_consulta', data_inicio);
+      if (data_fim) query = query.lte('data_consulta', data_fim);
+      
+      const { data } = await query;
+      backupData.consultas = data || [];
     }
 
     if (tabelas.includes('prontuarios')) {
-      const { data } = await supabase
+      let query = supabase
         .from('prontuarios')
         .select('*')
-        .gte('created_at', data_inicio || '1900-01-01')
-        .lte('created_at', data_fim || '2100-01-01');
-      backupData.data.prontuarios = data || [];
+        .eq('medico_id', userProfileId);
+      
+      if (data_inicio) query = query.gte('created_at', data_inicio);
+      if (data_fim) query = query.lte('created_at', data_fim);
+      
+      const { data } = await query;
+      backupData.prontuarios = data || [];
     }
 
-    const jsonData = JSON.stringify(backupData, null, 2);
-    const sizeBytes = new TextEncoder().encode(jsonData).length;
-
-    const fileName = `backup_seletivo_${userId}_${new Date().toISOString().split('T')[0]}.json`;
+    const backupJson = JSON.stringify(backupData, null, 2);
+    const fileName = `backup_seletivo_${new Date().toISOString().split('T')[0]}_${Date.now()}.json`;
+    
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('anexos-medicos')
-      .upload(`backups/${fileName}`, jsonData, {
+      .upload(`backups/${userId}/${fileName}`, backupJson, {
         contentType: 'application/json'
       });
 
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = await supabase.storage
+    const { data: signedUrlData } = await supabase.storage
       .from('anexos-medicos')
-      .createSignedUrl(`backups/${fileName}`, 604800);
+      .createSignedUrl(`backups/${userId}/${fileName}`, 3600);
 
     await supabase
       .from('backup_logs')
       .update({
         status: 'concluido',
         completed_at: new Date().toISOString(),
-        arquivo_url: urlData?.signedUrl,
-        tamanho_bytes: sizeBytes,
-        resultado: {
-          tabelas_exportadas: tabelas.length,
-          total_registros: Object.values(backupData.data).reduce((sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0), 0)
-        }
+        arquivo_url: signedUrlData?.signedUrl,
+        tamanho_bytes: new TextEncoder().encode(backupJson).length,
+        resultado: { file_path: uploadData.path, tabelas_exportadas: tabelas }
       })
       .eq('id', logData.id);
 
     return {
       success: true,
-      backup_id: logData.id,
-      download_url: urlData?.signedUrl,
-      size_bytes: sizeBytes
+      download_url: signedUrlData?.signedUrl,
+      size_bytes: new TextEncoder().encode(backupJson).length,
+      tabelas_exportadas: tabelas
     };
 
   } catch (error) {
@@ -280,43 +299,37 @@ async function exportSeletivo(supabase: any, userId: string, params: any) {
 }
 
 async function importDados(supabase: any, userId: string, params: any) {
-  const { backup_data } = params;
+  console.log('Iniciando importação para user:', userId);
 
   const { data: logData } = await supabase
     .from('backup_logs')
     .insert({
+      user_id: userId,
       tipo: 'import',
       status: 'processando',
-      user_id: userId,
-      parametros: { import_type: 'restore_backup' }
+      parametros: { source: 'upload' }
     })
     .select()
     .single();
 
   try {
-    let importedCount = 0;
-
-    // Validar estrutura do backup
-    if (!backup_data.metadata || !backup_data.data) {
-      throw new Error('Formato de backup inválido');
+    const { backup_data } = params;
+    
+    if (!backup_data || typeof backup_data !== 'object') {
+      throw new Error('Dados de backup inválidos');
     }
 
-    // Importar dados (apenas criação, não atualização para segurança)
-    if (backup_data.data.pacientes) {
-      for (const paciente of backup_data.data.pacientes) {
-        const { id, created_at, updated_at, ...pacienteData } = paciente;
-        
-        // Verificar se já existe
-        const { data: existing } = await supabase
-          .from('pacientes')
-          .select('id')
-          .eq('cpf', pacienteData.cpf)
-          .single();
+    let importedCount = 0;
 
-        if (!existing) {
-          await supabase.from('pacientes').insert(pacienteData);
-          importedCount++;
-        }
+    // Importar pacientes (apenas novos)
+    if (backup_data.pacientes?.length) {
+      for (const paciente of backup_data.pacientes) {
+        const { error } = await supabase
+          .from('pacientes')
+          .insert(paciente)
+          .select();
+        
+        if (!error) importedCount++;
       }
     }
 
@@ -325,10 +338,7 @@ async function importDados(supabase: any, userId: string, params: any) {
       .update({
         status: 'concluido',
         completed_at: new Date().toISOString(),
-        resultado: {
-          registros_importados: importedCount,
-          tipo_backup: backup_data.metadata.type
-        }
+        resultado: { imported_count: importedCount }
       })
       .eq('id', logData.id);
 
@@ -352,35 +362,32 @@ async function importDados(supabase: any, userId: string, params: any) {
 }
 
 async function listarBackups(supabase: any, userId: string) {
-  const { data, error } = await supabase
+  const { data: backups } = await supabase
     .from('backup_logs')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) throw error;
-
-  return { backups: data };
+  return { backups: backups || [] };
 }
 
 async function downloadBackup(supabase: any, userId: string, backupId: string) {
-  const { data: backup, error } = await supabase
+  const { data: backup } = await supabase
     .from('backup_logs')
     .select('*')
     .eq('id', backupId)
     .eq('user_id', userId)
     .single();
 
-  if (error || !backup) {
+  if (!backup) {
     throw new Error('Backup não encontrado');
   }
 
-  if (backup.arquivo_url) {
-    return { download_url: backup.arquivo_url };
-  }
-
-  throw new Error('URL de download não disponível');
+  return {
+    download_url: backup.arquivo_url,
+    backup_info: backup
+  };
 }
 
 async function cleanupBackupsAntigos(supabase: any, userId: string) {
@@ -405,22 +412,28 @@ async function cleanupBackupsAntigos(supabase: any, userId: string) {
   let deletedCount = 0;
 
   for (const backup of backupsAntigos || []) {
-    // Deletar arquivo do storage se existir
-    if (backup.arquivo_url) {
-      const fileName = backup.arquivo_url.split('/').pop();
-      await supabase.storage
-        .from('anexos-medicos')
-        .remove([`backups/${fileName}`]);
+    try {
+      // Remover arquivo do storage se existir
+      if (backup.resultado?.file_path) {
+        await supabase.storage
+          .from('anexos-medicos')
+          .remove([backup.resultado.file_path]);
+      }
+
+      // Remover registro do log
+      await supabase
+        .from('backup_logs')
+        .delete()
+        .eq('id', backup.id);
+
+      deletedCount++;
+    } catch (error) {
+      console.error(`Erro ao deletar backup ${backup.id}:`, error);
     }
-
-    // Deletar registro
-    await supabase
-      .from('backup_logs')
-      .delete()
-      .eq('id', backup.id);
-
-    deletedCount++;
   }
 
-  return { deleted_count: deletedCount };
+  return {
+    success: true,
+    deleted_count: deletedCount
+  };
 }
