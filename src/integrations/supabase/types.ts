@@ -105,10 +105,14 @@ export type Database = {
           documento_tipo: string
           hash_documento: string
           id: string
+          ip_address: string | null
           status: string
+          tentativas_validacao: number | null
           timestamp_assinatura: string
           tipo_certificado: string
+          ultima_validacao: string | null
           updated_at: string
+          user_agent: string | null
         }
         Insert: {
           codigo_verificacao: string
@@ -118,10 +122,14 @@ export type Database = {
           documento_tipo: string
           hash_documento: string
           id?: string
+          ip_address?: string | null
           status?: string
+          tentativas_validacao?: number | null
           timestamp_assinatura?: string
           tipo_certificado: string
+          ultima_validacao?: string | null
           updated_at?: string
+          user_agent?: string | null
         }
         Update: {
           codigo_verificacao?: string
@@ -131,10 +139,14 @@ export type Database = {
           documento_tipo?: string
           hash_documento?: string
           id?: string
+          ip_address?: string | null
           status?: string
+          tentativas_validacao?: number | null
           timestamp_assinatura?: string
           tipo_certificado?: string
+          ultima_validacao?: string | null
           updated_at?: string
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -523,6 +535,45 @@ export type Database = {
           },
         ]
       }
+      documentos_auditoria: {
+        Row: {
+          acao: string
+          created_at: string
+          dados_contexto: Json | null
+          documento_id: string
+          id: string
+          ip_address: string | null
+          timestamp: string
+          user_agent: string | null
+          usuario_id: string | null
+          usuario_tipo: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          dados_contexto?: Json | null
+          documento_id: string
+          id?: string
+          ip_address?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          usuario_id?: string | null
+          usuario_tipo?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          dados_contexto?: Json | null
+          documento_id?: string
+          id?: string
+          ip_address?: string | null
+          timestamp?: string
+          user_agent?: string | null
+          usuario_id?: string | null
+          usuario_tipo?: string | null
+        }
+        Relationships: []
+      }
       documentos_compartilhados: {
         Row: {
           clinica_id: string | null
@@ -572,6 +623,7 @@ export type Database = {
       documentos_medicos: {
         Row: {
           assinado: boolean | null
+          codigo_qr: string | null
           conteudo: string
           created_at: string
           hash_assinatura: string | null
@@ -585,10 +637,12 @@ export type Database = {
           tipo: string
           titulo: string
           updated_at: string
+          url_validacao: string | null
           validade_ate: string | null
         }
         Insert: {
           assinado?: boolean | null
+          codigo_qr?: string | null
           conteudo: string
           created_at?: string
           hash_assinatura?: string | null
@@ -602,10 +656,12 @@ export type Database = {
           tipo: string
           titulo: string
           updated_at?: string
+          url_validacao?: string | null
           validade_ate?: string | null
         }
         Update: {
           assinado?: boolean | null
+          codigo_qr?: string | null
           conteudo?: string
           created_at?: string
           hash_assinatura?: string | null
@@ -619,6 +675,7 @@ export type Database = {
           tipo?: string
           titulo?: string
           updated_at?: string
+          url_validacao?: string | null
           validade_ate?: string | null
         }
         Relationships: [
@@ -1668,6 +1725,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      create_digital_signature: {
+        Args: {
+          documento_id_param: string
+          hash_documento_param: string
+          tipo_certificado_param: string
+          dados_certificado_param?: Json
+        }
+        Returns: {
+          signature_id: string
+          verification_code: string
+          qr_code_data: string
+        }[]
+      }
       criar_vinculo_paciente_clinica: {
         Args: { paciente_id_param: string; clinica_id_param: string }
         Returns: undefined
@@ -1726,6 +1796,10 @@ export type Database = {
       generate_monthly_shifts: {
         Args: { p_user_id: string; p_ano: number; p_mes: number }
         Returns: undefined
+      }
+      generate_verification_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_paciente_ids_clinica: {
         Args: { clinica_id_param: string }
@@ -1833,6 +1907,22 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      log_documento_download: {
+        Args: {
+          documento_id_param: string
+          usuario_id_param?: string
+          file_name?: string
+        }
+        Returns: undefined
+      }
+      log_documento_visualization: {
+        Args: {
+          documento_id_param: string
+          usuario_id_param?: string
+          context_data?: Json
+        }
+        Returns: undefined
       }
       medico_tem_permissao: {
         Args: { medico_id: string; permissao: string }

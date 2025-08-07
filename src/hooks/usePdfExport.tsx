@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import QRCode from 'qrcode';
 import { Prontuario } from './useProntuarios';
 import { Paciente } from './usePacientes';
 
@@ -12,6 +13,8 @@ interface PrescriptionData {
   medico: any;
   numeroDocumento: string;
   dataEmissao: string;
+  codigoVerificacao?: string;
+  urlValidacao?: string;
 }
 
 export const usePdfExport = () => {
@@ -62,7 +65,7 @@ export const usePdfExport = () => {
     }
   };
 
-  const generatePrescriptionPdf = (data: PrescriptionData) => {
+  const generatePrescriptionPdf = async (data: PrescriptionData) => {
     const doc = new jsPDF();
     
     // Header principal
@@ -206,6 +209,37 @@ export const usePdfExport = () => {
       doc.text(obsLines, 20, yPos);
       yPos += obsLines.length * 5;
     }
+
+    // QR Code de validação (se disponível)
+    if (data.codigoVerificacao && data.urlValidacao) {
+      try {
+        // Gerar QR code como data URL
+        const qrDataUrl = await QRCode.toDataURL(data.urlValidacao, {
+          width: 100,
+          margin: 2
+        });
+
+        // Posição do QR code no canto inferior direito
+        if (yPos > 220) {
+          doc.addPage();
+          yPos = 50;
+        }
+
+        const qrX = 150;
+        const qrY = Math.max(yPos + 20, 200);
+        
+        doc.addImage(qrDataUrl, 'PNG', qrX, qrY, 30, 30);
+        
+        // Informações de validação
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Validação Digital:', qrX, qrY + 35);
+        doc.text(`Código: ${data.codigoVerificacao}`, qrX, qrY + 40);
+        doc.text('Escaneie o QR para validar', qrX, qrY + 45);
+      } catch (error) {
+        console.error('Erro ao gerar QR code:', error);
+      }
+    }
     
     // Assinatura
     if (yPos > 220) {
@@ -234,7 +268,10 @@ export const usePdfExport = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Data: ${data.dataEmissao}`, 20, yPos);
     doc.text(`Documento: ${data.numeroDocumento}`, 105, yPos, { align: 'center' });
-    doc.text('Assinado digitalmente', 190, yPos, { align: 'right' });
+    
+    if (data.codigoVerificacao) {
+      doc.text('Assinado digitalmente', 190, yPos, { align: 'right' });
+    }
     
     return doc;
   };

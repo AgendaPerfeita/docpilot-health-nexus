@@ -15,10 +15,13 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield, ShieldCheck } from "lucide-react"
+import { Search, Plus, Send, FileText, Clock, CheckCircle, AlertCircle, Pill, User, Calendar, Shield, ShieldCheck, Eye, Download, AlertTriangle, History } from "lucide-react"
 import { DigitalSignatureModal } from "@/components/medical/DigitalSignatureModal"
 import QuickSignatureModal from "@/components/signatures/QuickSignatureModal"
 import { useDigitalSignature } from "@/hooks/useDigitalSignature"
+import { DocumentPreviewModal } from "@/components/medical/DocumentPreviewModal"
+import { useAuditoria } from "@/hooks/useAuditoria"
+import { Link } from "react-router-dom"
 
 
 export default function PrescricaoDigital() {
@@ -29,6 +32,7 @@ export default function PrescricaoDigital() {
   const { generatePrescriptionPdf } = usePdfExport()
   const { toast } = useToast()
   const { hasActiveCertificate } = useDigitalSignature()
+  const { getSecurityAlerts } = useAuditoria()
   
   const [searchTerm, setSearchTerm] = useState("")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -54,6 +58,9 @@ export default function PrescricaoDigital() {
   const [quickSignatureModalOpen, setQuickSignatureModalOpen] = useState(false)
   const [selectedPrescriptionForSign, setSelectedPrescriptionForSign] = useState<any>(null)
   const [currentPrescription, setCurrentPrescription] = useState({ instructions: "", observations: "" })
+  const [previewModalOpen, setPreviewModalOpen] = useState(false)
+  const [selectedDocumentForPreview, setSelectedDocumentForPreview] = useState<DocumentoMedico | null>(null)
+  const [certificateExpiryWarning, setCertificateExpiryWarning] = useState(false)
 
   const addMedication = () => {
     setMedications([...medications, { name: "", dosage: "", duration: "" }])
@@ -82,14 +89,16 @@ export default function PrescricaoDigital() {
     
     try {
       if (selectedPrescriptionForSign && selectedPrescriptionForSign.document) {
-        // Atualizar status no banco
+        // Atualizar status no banco com QR code
         await atualizarDocumento(selectedPrescriptionForSign.document.id, {
           status: 'assinado',
           assinado: true,
-          hash_assinatura: result.signatureId || result.hash
+          hash_assinatura: result.signatureId || result.hash,
+          codigo_qr: result.qrCodeData || `https://seudominio.com/validar-assinatura?code=${result.verificationCode}`,
+          url_validacao: `https://seudominio.com/validar-assinatura?code=${result.verificationCode}`
         });
         
-        // Gerar PDF assinado
+        // Gerar PDF assinado com QR code
         const pacienteData = pacientes.find(p => p.id === selectedPrescriptionForSign.document.paciente_id);
         if (pacienteData && profile) {
           const pdfData = {
@@ -99,10 +108,12 @@ export default function PrescricaoDigital() {
             observacoes: currentPrescription.observations,
             medico: profile,
             numeroDocumento: selectedPrescriptionForSign.document.numero_documento || '',
-            dataEmissao: new Date().toLocaleDateString('pt-BR')
+            dataEmissao: new Date().toLocaleDateString('pt-BR'),
+            codigoVerificacao: result.verificationCode,
+            urlValidacao: `https://seudominio.com/validar-assinatura?code=${result.verificationCode}`
           };
           
-          const pdf = generatePrescriptionPdf(pdfData);
+          const pdf = await generatePrescriptionPdf(pdfData);
           pdf.save(`receita_${selectedPrescriptionForSign.document.numero_documento}.pdf`);
         }
         
@@ -129,11 +140,33 @@ export default function PrescricaoDigital() {
     })
   }
 
+  const handlePreviewDocument = (document: DocumentoMedico) => {
+    setSelectedDocumentForPreview(document)
+    setPreviewModalOpen(true)
+  }
+
+  const handleSignFromPreview = (document: DocumentoMedico) => {
+    const prescriptionForSign = {
+      id: document.id,
+      patient: pacientes.find(p => p.id === document.paciente_id)?.nome || "Paciente",
+      date: document.created_at,
+      document
+    }
+    setSelectedPrescriptionForSign(prescriptionForSign)
+    setPreviewModalOpen(false)
+    
+    if (hasActiveCertificate()) {
+      setQuickSignatureModalOpen(true)
+    } else {
+      setSignatureModalOpen(true)
+    }
+  }
+
   const handleConnectCertificate = async () => {
-    // Validar se há dados mínimos
+    // Validações aprimoradas
     if (!selectedPatient) {
       toast({
-        title: "Erro",
+        title: "Campo obrigatório",
         description: "Selecione um paciente antes de assinar a prescrição",
         variant: "destructive"
       })
@@ -142,8 +175,19 @@ export default function PrescricaoDigital() {
 
     if (medications.filter(med => med.name.trim()).length === 0) {
       toast({
-        title: "Erro", 
+        title: "Campo obrigatório", 
         description: "Adicione pelo menos um medicamento antes de assinar",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validar medicamentos com posologia
+    const medicamentosSemPosologia = medications.filter(med => med.name.trim() && !med.dosage.trim())
+    if (medicamentosSemPosologia.length > 0) {
+      toast({
+        title: "Posologia obrigatória",
+        description: "Informe a posologia para todos os medicamentos",
         variant: "destructive"
       })
       return
@@ -238,9 +282,10 @@ ${currentPrescription.observations || 'N/A'}`;
   };
 
   const handleSavePrescription = async (isDraft = false) => {
+    // Validações aprimoradas
     if (!selectedPatient) {
       toast({
-        title: "Erro",
+        title: "Campo obrigatório",
         description: "Selecione um paciente antes de salvar",
         variant: "destructive"
       })
@@ -249,11 +294,24 @@ ${currentPrescription.observations || 'N/A'}`;
 
     if (medications.filter(med => med.name.trim()).length === 0) {
       toast({
-        title: "Erro",
+        title: "Campo obrigatório",
         description: "Adicione pelo menos um medicamento",
         variant: "destructive"
       })
       return
+    }
+
+    // Validações adicionais para finalização
+    if (!isDraft) {
+      const medicamentosSemPosologia = medications.filter(med => med.name.trim() && !med.dosage.trim())
+      if (medicamentosSemPosologia.length > 0) {
+        toast({
+          title: "Posologia obrigatória",
+          description: "Informe a posologia para todos os medicamentos",
+          variant: "destructive"
+        })
+        return
+      }
     }
 
     try {
@@ -296,6 +354,22 @@ ${currentPrescription.observations || 'N/A'}`;
     }
   };
 
+  // Verificar alertas de segurança
+  const securityAlerts = getSecurityAlerts();
+
+  // Verificar expiração do certificado (simulado)
+  useEffect(() => {
+    if (hasActiveCertificate()) {
+      // Simular verificação de expiração
+      const mockExpiryDate = new Date();
+      mockExpiryDate.setDate(mockExpiryDate.getDate() + 30); // 30 dias
+      
+      if (mockExpiryDate.getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000) { // 7 dias
+        setCertificateExpiryWarning(true);
+      }
+    }
+  }, [hasActiveCertificate]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -303,13 +377,20 @@ ${currentPrescription.observations || 'N/A'}`;
           <h1 className="text-3xl font-bold text-foreground">Prescrição Digital</h1>
           <p className="text-muted-foreground">Crie e gerencie prescrições digitais com assinatura eletrônica</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Prescrição
+        <div className="flex gap-2">
+          <Link to="/historico-documentos">
+            <Button variant="outline">
+              <History className="h-4 w-4 mr-2" />
+              Histórico Completo
             </Button>
-          </DialogTrigger>
+          </Link>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Prescrição
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nova Prescrição Digital</DialogTitle>
@@ -359,12 +440,13 @@ ${currentPrescription.observations || 'N/A'}`;
                     <Card key={index} className="p-4">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label>Medicamento</Label>
+                          <Label>Medicamento *</Label>
                           <Input
                             placeholder="Nome do medicamento"
                             value={medication.name}
                             onChange={(e) => updateMedication(index, 'name', e.target.value)}
                             list="medications-list"
+                            required
                           />
                           <datalist id="medications-list">
                             {medicamentos.map((med) => (
@@ -373,20 +455,22 @@ ${currentPrescription.observations || 'N/A'}`;
                           </datalist>
                         </div>
                         <div className="space-y-2">
-                          <Label>Posologia</Label>
+                          <Label>Posologia *</Label>
                           <Input
                             placeholder="Ex: 1 comp. de 8/8h"
                             value={medication.dosage}
                             onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Duração</Label>
+                          <Label>Duração *</Label>
                           <div className="flex gap-2">
                             <Input
                               placeholder="Ex: 7 dias"
                               value={medication.duration}
                               onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                              required
                             />
                             {medications.length > 1 && (
                               <Button
@@ -480,8 +564,48 @@ ${currentPrescription.observations || 'N/A'}`;
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Alertas de Segurança */}
+      {securityAlerts.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-800">
+              <AlertTriangle className="h-5 w-5" />
+              Alertas de Segurança
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {securityAlerts.map((alert, index) => (
+                <div key={index} className="flex items-center gap-2 text-sm text-yellow-700">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                  <span>{alert.message}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Aviso de Expiração do Certificado */}
+      {certificateExpiryWarning && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-800">
+              <Shield className="h-5 w-5" />
+              Certificado Digital
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-orange-700">
+              Seu certificado digital expira em breve. Renove o certificado para continuar assinando documentos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
