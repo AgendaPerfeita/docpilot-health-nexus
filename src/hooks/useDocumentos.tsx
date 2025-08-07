@@ -17,6 +17,8 @@ export interface DocumentoMedico {
   assinado: boolean;
   hash_assinatura?: string;
   status: 'rascunho' | 'finalizado' | 'assinado' | 'cancelado';
+  codigo_qr?: string;
+  url_validacao?: string;
   created_at: string;
   updated_at: string;
 }

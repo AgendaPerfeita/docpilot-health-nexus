@@ -5,9 +5,9 @@ import { useAuth } from './useAuth';
 export interface AuditoriaLog {
   id: string;
   documento_id: string;
-  acao: 'criado' | 'assinado' | 'visualizado' | 'download' | 'compartilhado';
+  acao: string;
   usuario_id?: string;
-  usuario_tipo?: 'medico' | 'paciente' | 'clinica' | 'staff';
+  usuario_tipo?: string;
   dados_contexto?: any;
   ip_address?: string;
   user_agent?: string;

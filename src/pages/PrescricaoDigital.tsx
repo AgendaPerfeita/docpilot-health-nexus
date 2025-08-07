@@ -93,9 +93,7 @@ export default function PrescricaoDigital() {
         await atualizarDocumento(selectedPrescriptionForSign.document.id, {
           status: 'assinado',
           assinado: true,
-          hash_assinatura: result.signatureId || result.hash,
-          codigo_qr: result.qrCodeData || `https://seudominio.com/validar-assinatura?code=${result.verificationCode}`,
-          url_validacao: `https://seudominio.com/validar-assinatura?code=${result.verificationCode}`
+          hash_assinatura: result.signatureId || result.hash
         });
         
         // Gerar PDF assinado com QR code
