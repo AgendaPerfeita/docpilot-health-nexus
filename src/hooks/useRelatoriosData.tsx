@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -34,7 +34,7 @@ export const useRelatoriosData = () => {
   const [originData, setOriginData] = useState<OriginData[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const carregarDashboard = async () => {
+  const carregarDashboard = useCallback(async () => {
     if (!profile?.id) return;
 
     setLoading(true);
@@ -158,7 +158,7 @@ export const useRelatoriosData = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.id]);
 
   const carregarEspecialidades = async () => {
     if (!profile?.id) return;
@@ -242,8 +242,10 @@ export const useRelatoriosData = () => {
   };
 
   useEffect(() => {
-    carregarDashboard();
-  }, [profile?.id]);
+    if (profile?.id) {
+      carregarDashboard();
+    }
+  }, [profile?.id, carregarDashboard]); // Fix: Add carregarDashboard dependency
 
   return {
     dashboardData,

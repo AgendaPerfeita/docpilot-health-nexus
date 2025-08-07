@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,80 +8,57 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ActiveClinicaProvider } from "./hooks/useActiveClinica";
 import Layout from "./components/Layout";
 
+// Lazy load components for better performance
+const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
+const Landing = lazy(() => import("./pages/auth/Landing"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const ProntuarioList = lazy(() => import("./pages/prontuario/index"));
+const PacienteProntuario = lazy(() => import("./pages/prontuario/PacienteProntuario"));
+const NovaEvolucaoProntuario = lazy(() => import("./pages/prontuario/NovaEvolucao"));
+const VisualizarProntuario = lazy(() => import("./pages/prontuario/VisualizarProntuario"));
+const EditarProntuario = lazy(() => import("./pages/prontuario/EditarProntuario"));
+const AreaPaciente = lazy(() => import("./pages/paciente/AreaPaciente"));
+const AgendaMedico = lazy(() => import("./pages/clinica/Agenda"));
+const CRMMedico = lazy(() => import("./pages/clinica/CRM"));
+const CRMGlobal = lazy(() => import("./pages/CRM"));
+const PrescricaoDigital = lazy(() => import("./pages/PrescricaoDigital"));
+const GestaoMedicos = lazy(() => import("./pages/clinica/GestaoMedicos"));
+const WhatsAppAPI = lazy(() => import("./pages/WhatsAppAPI"));
+const GestaoHospitalar = lazy(() => import("./pages/GestaoHospitalar"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const DRE = lazy(() => import("./pages/DRE"));
+const Comissoes = lazy(() => import("./pages/Comissoes"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const BIAvancado = lazy(() => import("./pages/BIAvancado"));
+const AcompanhamentoPacientes = lazy(() => import("./pages/AcompanhamentoPacientes"));
+const BackupGestao = lazy(() => import("./pages/BackupGestao"));
+const ValidarAssinatura = lazy(() => import("./pages/ValidarAssinatura"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const PlantonistaIndex = lazy(() => import("./pages/plantonista/index"));
+const AtendimentoAtivo = lazy(() => import("./pages/plantonista/AtendimentoAtivo"));
+const GestaoFinanceira = lazy(() => import("./pages/plantonista/GestaoFinanceira"));
+const Historico = lazy(() => import("./pages/plantonista/Historico"));
+const LocaisTrabalho = lazy(() => import("./pages/plantonista/LocaisTrabalho"));
+const AgendaPlantonista = lazy(() => import("./pages/plantonista/Agenda"));
 
-// Auth
-import Landing from "./pages/auth/Landing";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
 
-// Dashboard Global
-import Dashboard from "./pages/dashboard/Dashboard";
-
-// SISTEMA GLOBAL DE PRONTUÁRIOS (acessível por todos os tipos de usuário)
-import ProntuarioList from "./pages/prontuario/index";
-import PacienteProntuario from "./pages/prontuario/PacienteProntuario";
-import NovaEvolucaoProntuario from "./pages/prontuario/NovaEvolucao";
-import VisualizarProntuario from "./pages/prontuario/VisualizarProntuario";
-import EditarProntuario from "./pages/prontuario/EditarProntuario";
-
-// ÁREAS ESPECÍFICAS POR TIPO DE USUÁRIO
-// Área do Paciente
-import AreaPaciente from "./pages/paciente/AreaPaciente";
-
-// Área do Médico Individual
-import AgendaMedico from "./pages/clinica/Agenda";
-import CRMMedico from "./pages/clinica/CRM";
-
-// Área da Clínica
-// (reutiliza algumas páginas de médico + funcionalidades específicas)
-
-// CRM Global (funcionalidade compartilhada)
-import CRMGlobal from "./pages/CRM";
-
-// Index
+// Import shared components normally (they are critical for app structure)
 import Index from "./pages/Index";
-import PrescricaoDigital from "./pages/PrescricaoDigital";
-
-// Configurações
-import Configuracoes from "./pages/Configuracoes";
-
-// Clínica
-import GestaoMedicos from "./pages/clinica/GestaoMedicos";
-import WhatsAppAPI from "./pages/WhatsAppAPI";
-
-// Hospital
-import GestaoHospitalar from "./pages/GestaoHospitalar";
-
-// Financeiro
-import Financeiro from "./pages/Financeiro";
-import DRE from "./pages/DRE";
-import Comissoes from "./pages/Comissoes";
-
-// Relatórios
-import Relatorios from "./pages/Relatorios";
-import BIAvancado from "./pages/BIAvancado";
-
-// Acompanhamento
-import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
-
-// Backup
-import BackupGestao from "./pages/BackupGestao";
-import ValidarAssinatura from "./pages/ValidarAssinatura";
-import HistoricoDocumentos from "./pages/HistoricoDocumentos";
-
-// Plantonista
-import PlantonistaIndex from "./pages/plantonista/index";
-import AtendimentoAtivo from "./pages/plantonista/AtendimentoAtivo";
-import GestaoFinanceira from "./pages/plantonista/GestaoFinanceira";
-import Historico from "./pages/plantonista/Historico";
-import LocaisTrabalho from "./pages/plantonista/LocaisTrabalho";
-import AgendaPlantonista from "./pages/plantonista/Agenda";
-
-// Shared components
 import { PermissionGuard } from "./components/PermissionGuard";
 import { PlantonistaProvider } from './hooks/usePlantonista';
 
-const queryClient = new QueryClient();
+// Optimize QueryClient configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
@@ -92,7 +69,12 @@ function App() {
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Routes>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-300 border-t-blue-600" />
+                  </div>
+                }>
+                  <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/landing" element={<Landing />} />
                   
@@ -205,6 +187,7 @@ function App() {
 
                   </Route>
                 </Routes>
+                </Suspense>
               </BrowserRouter>
             </TooltipProvider>
           </ActiveClinicaProvider>

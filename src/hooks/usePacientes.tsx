@@ -93,35 +93,43 @@ export const usePacientes = () => {
     }
   }, [profile]);
 
-  // Polling curto após evento realtime
+  // Optimized polling with longer intervals and fewer attempts
   const pollingAfterRealtime = useCallback(() => {
     if (pollingActiveRef.current) return; // já está rodando
     pollingActiveRef.current = true;
     let attempts = 0;
-    const maxAttempts = 6; // 6 * 500ms = 3s
+    const maxAttempts = 3; // Reduced from 6 to 3
     let lastPacientesIds: string = pacientes.map(p => p.id).join(',');
-    console.log('[Polling] Iniciando polling após evento realtime. Lista atual:', lastPacientesIds, `(length: ${pacientes.length})`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Polling] Iniciando polling após evento realtime. Lista atual:', lastPacientesIds, `(length: ${pacientes.length})`);
+    }
     const poll = async () => {
       attempts++;
       const newPacientes = await fetchPacientes(true);
       const newIds = (newPacientes || []).map(p => p.id).join(',');
-      console.log(`[Polling] Attempt ${attempts}: ${newIds} (length: ${(newPacientes || []).length})`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Polling] Attempt ${attempts}: ${newIds} (length: ${(newPacientes || []).length})`);
+      }
       if (newIds !== lastPacientesIds || (newPacientes || []).length !== pacientes.length) {
-        console.log('[Polling] Lista mudou! Parando polling.');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Polling] Lista mudou! Parando polling.');
+        }
         pollingActiveRef.current = false;
         if (pollingRef.current) clearInterval(pollingRef.current);
         pollingRef.current = null;
         return;
       }
       if (attempts >= maxAttempts) {
-        console.log('[Polling] Atingiu o máximo de tentativas. Parando polling.');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Polling] Atingiu o máximo de tentativas. Parando polling.');
+        }
         pollingActiveRef.current = false;
         if (pollingRef.current) clearInterval(pollingRef.current);
         pollingRef.current = null;
         return;
       }
     };
-    pollingRef.current = setInterval(poll, 500);
+    pollingRef.current = setInterval(poll, 1000); // Increased from 500ms to 1000ms
     // Executa o primeiro imediatamente
     poll();
   }, [fetchPacientes, pacientes]);

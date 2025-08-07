@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -31,7 +31,7 @@ export const useConsultas = () => {
   const [consultas, setConsultas] = useState<Consulta[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchConsultas = async (data?: string) => {
+  const fetchConsultas = useCallback(async (data?: string) => {
     if (!profile) return;
     
     setLoading(true);
@@ -69,7 +69,7 @@ export const useConsultas = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
 
   const criarConsulta = async (consultaData: Omit<Consulta, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabase
@@ -114,22 +114,22 @@ export const useConsultas = () => {
     await fetchConsultas();
   };
 
-  const getConsultasHoje = () => {
+  const getConsultasHoje = useCallback(() => {
     const hoje = new Date().toISOString().split('T')[0];
     return consultas.filter(consulta => 
       consulta.data_consulta.startsWith(hoje)
     );
-  };
+  }, [consultas]);
 
-  const getConsultasPorStatus = (status: Consulta['status']) => {
+  const getConsultasPorStatus = useCallback((status: Consulta['status']) => {
     return consultas.filter(consulta => consulta.status === status);
-  };
+  }, [consultas]);
 
   useEffect(() => {
     if (profile) {
       fetchConsultas();
     }
-  }, [profile]);
+  }, [profile?.id, fetchConsultas]); // Fix: Add fetchConsultas dependency
 
   return {
     consultas,

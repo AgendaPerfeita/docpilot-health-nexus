@@ -5,16 +5,19 @@ import { usePacientes } from "@/hooks/usePacientes";
 import { useConsultas } from "@/hooks/useConsultas";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { Users, Calendar, Clock, TrendingUp, Building, Stethoscope } from "lucide-react";
+import { useMemo, memo } from "react";
 
-export const DashboardCards = () => {
+export const DashboardCards = memo(() => {
   const { profile } = useAuth();
   const { pacientes } = usePacientes();
   const { consultas, getConsultasHoje } = useConsultas();
   const { clinicaMedicos } = useUserProfile();
 
-  const consultasHoje = getConsultasHoje();
-  const consultasPendentes = consultas.filter(c => 
-    ['agendada', 'confirmada'].includes(c.status)
+  // Memoize expensive calculations
+  const consultasHoje = useMemo(() => getConsultasHoje(), [getConsultasHoje]);
+  const consultasPendentes = useMemo(() => 
+    consultas.filter(c => ['agendada', 'confirmada'].includes(c.status)), 
+    [consultas]
   );
 
   const renderStatsForTipo = () => {
@@ -246,4 +249,4 @@ export const DashboardCards = () => {
       {renderStatsForTipo()}
     </div>
   );
-};
+});

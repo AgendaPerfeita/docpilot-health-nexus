@@ -22,10 +22,13 @@ const Dashboard = () => {
   
 
 
-  // Adicionando logs para depuração do plano
-  console.log('[DASHBOARD] Renderizando Dashboard. Profile:', profile);
-  if (profile) {
-    console.log('[DASHBOARD] Tipo:', profile.tipo, '| Plano:', profile.plano_medico);
+  // Remove console logs for performance
+  // Only log in development mode
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DASHBOARD] Renderizando Dashboard. Profile:', profile);
+    if (profile) {
+      console.log('[DASHBOARD] Tipo:', profile.tipo, '| Plano:', profile.plano_medico);
+    }
   }
 
   const quickActions = [
