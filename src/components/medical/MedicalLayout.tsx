@@ -15,6 +15,8 @@ import { ImagesSection } from './ImagesSection'
 import { EvolutionEditor } from './EvolutionEditor'
 import { MedicalLayoutProps, PatientData } from './types'
 import { TelemedicineInterface } from '../telemedicine/TelemedicineInterface'
+import { ChatMedico } from './ChatMedico'
+import { NotificacoesChatMedico } from './NotificacoesChatMedico'
 import { Button } from '@/components/ui/button'
 import { Video } from 'lucide-react'
 
@@ -33,6 +35,7 @@ export function MedicalLayout({
   const [finalizationOpen, setFinalizationOpen] = useState(false)
   const [signatureType, setSignatureType] = useState<'none' | 'installed' | 'cloud'>('none')
   const [telemedicineOpen, setTelemedicineOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   // Garante que o timer sempre inicia quando a consulta está ativa
   useEffect(() => {
@@ -222,6 +225,29 @@ export function MedicalLayout({
           }}
           onClose={() => setTelemedicineOpen(false)}
           userType="medico"
+        />
+      )}
+
+      {/* Notificações de Chat */}
+      <NotificacoesChatMedico
+        onOpenChat={(patId, patName) => {
+          // Se for um paciente diferente, resetar o chat
+          if (patId !== pacienteId) {
+            // Por enquanto só mostra notificação
+            console.log('Nova mensagem de:', patName);
+          } else {
+            setChatOpen(true);
+          }
+        }}
+      />
+
+      {/* Chat Médico */}
+      {pacienteId && patientData && (
+        <ChatMedico
+          pacienteId={pacienteId}
+          patientName={patientData.nome}
+          isOpen={chatOpen}
+          onToggle={() => setChatOpen(!chatOpen)}
         />
       )}
     </div>

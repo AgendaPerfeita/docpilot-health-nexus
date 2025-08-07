@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Video, VideoOff, Mic, MicOff, Phone, Monitor, 
-  StopCircle, Download, MessageCircle, Users,
-  Circle, Square
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Video, VideoOff, Mic, MicOff, Monitor, MessageCircle, Phone, Circle, Square, Download, Users } from 'lucide-react';
+import { useWebRTC } from '@/hooks/useWebRTC';
+import { useChatMensagens } from '@/hooks/useChatMensagens';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useWebRTC } from '@/hooks/useWebRTC';
-import { useToast } from '@/components/ui/use-toast';
 
 interface VideoCallRealProps {
   consultaId: string;
@@ -21,7 +19,7 @@ interface VideoCallRealProps {
   userId: string;
 }
 
-export const VideoCallReal: React.FC<VideoCallRealProps> = ({
+const VideoCallReal: React.FC<VideoCallRealProps> = ({
   consultaId,
   participantName,
   onCallEnd,
@@ -29,26 +27,25 @@ export const VideoCallReal: React.FC<VideoCallRealProps> = ({
   userName,
   userId
 }) => {
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [callDuration, setCallDuration] = useState(0);
-  const [callStartTime] = useState<Date>(new Date());
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  // WebRTC hook para gerenciar a conexão
   const {
     isConnected,
-    isConnecting,
     localStream,
     remoteStream,
     isVideoEnabled,
     isAudioEnabled,
     isScreenSharing,
     isRecording,
-    recordingBlob,
-    chatMessages,
     participants,
-    localVideoRef,
-    remoteVideoRef,
+    chatMessages,
     joinCall,
     leaveCall,
     toggleVideo,
@@ -60,274 +57,304 @@ export const VideoCallReal: React.FC<VideoCallRealProps> = ({
     downloadRecording
   } = useWebRTC(consultaId, userId, userName);
 
-  // Call duration timer
-  useEffect(() => {
-    if (isConnected) {
-      const interval = setInterval(() => {
-        setCallDuration(Math.floor((Date.now() - callStartTime.getTime()) / 1000));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isConnected, callStartTime]);
+  // Chat interno integrado
+  const { mensagens, sendMensagem, markAsRead, fetchMensagens } = useChatMensagens();
 
-  // Auto-join call when component mounts
+  // Buscar mensagens do paciente
+  useEffect(() => {
+    if (consultaId && profile?.tipo === 'medico') {
+      fetchMensagens(consultaId);
+    }
+  }, [consultaId, profile]);
+
+  // Configurar streams de vídeo
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
+  // Efeito para iniciar o timer quando conectado
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isConnected) {
+      interval = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isConnected]);
+
+  // Auto-conectar quando o componente monta
   useEffect(() => {
     joinCall();
-  }, [joinCall]);
+    
+    return () => {
+      leaveCall();
+    };
+  }, [joinCall, leaveCall]);
 
   const handleEndCall = () => {
     leaveCall();
     onCallEnd();
   };
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      sendChatMessage(chatMessage.trim());
+  // Enviar mensagem do chat interno
+  const handleSendChatMessage = async () => {
+    if (!chatMessage.trim() || !profile) return;
+
+    try {
+      await sendMensagem({
+        patient_id: consultaId,
+        author_id: profile.id,
+        author_type: profile.tipo === 'medico' ? 'doctor' : 'patient',
+        content: `💬 [Telemedicina] ${chatMessage}`,
+        author_nome: profile.nome
+      });
       setChatMessage('');
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
     }
   };
 
   const formatDuration = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
+    const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getConnectionStatus = () => {
-    if (isConnecting) return { text: 'Conectando...', color: 'bg-yellow-500' };
-    if (isConnected) return { text: 'Conectado', color: 'bg-green-500' };
-    return { text: 'Desconectado', color: 'bg-red-500' };
+    if (isConnected) {
+      return { text: 'Conectado', color: 'text-green-500' };
+    }
+    return { text: 'Conectando...', color: 'text-yellow-500' };
   };
+
+  // Filtrar mensagens da telemedicina
+  const telemedicineMensagens = mensagens.filter(m => 
+    m.patient_id === consultaId && 
+    m.content?.includes('[Telemedicina]')
+  );
 
   const status = getConnectionStatus();
 
   return (
-    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+    <div className="h-screen w-screen bg-black text-white flex flex-col">
       {/* Header */}
-      <div className="bg-background/90 backdrop-blur-sm border-b p-4 flex items-center justify-between">
+      <div className="bg-gray-900 p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Badge variant="outline" className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${status.color}`} />
+          <Badge variant={isConnected ? "default" : "secondary"} className={status.color}>
             {status.text}
           </Badge>
-          <span className="text-sm text-muted-foreground">
-            Consulta com {participantName}
-          </span>
+          <h1 className="text-lg font-semibold">{participantName}</h1>
           {isConnected && (
-            <Badge variant="secondary">
+            <span className="text-sm text-gray-400">
               {formatDuration(callDuration)}
-            </Badge>
+            </span>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Users className="w-3 h-3" />
-            {participants.length + 1}
+          <Badge variant="outline" className="text-gray-300">
+            <Users className="h-3 w-3 mr-1" />
+            {participants.length}
           </Badge>
-          {isRecording && (
-            <Badge variant="destructive" className="animate-pulse">
-              <Circle className="w-3 h-3 mr-1 fill-current" />
-              REC
-            </Badge>
-          )}
         </div>
       </div>
 
-      {/* Video Area */}
-      <div className="flex-1 relative bg-gray-900">
-        {/* Remote Video */}
-        <div className="absolute inset-0">
+      <div className="flex flex-1">
+        {/* Vídeo remoto */}
+        <div className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden">
           {remoteStream ? (
             <video
               ref={remoteVideoRef}
+              className="w-full h-full object-cover"
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              muted={false}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-              <div className="text-center text-white">
-                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl font-semibold">
-                    {participantName.charAt(0).toUpperCase()}
+            <div className="flex items-center justify-center h-full text-white">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <span className="text-2xl font-bold">
+                    {participantName.split(' ').map(n => n[0]).join('').substring(0, 2)}
                   </span>
                 </div>
-                <p className="text-sm opacity-75">Aguardando {participantName}...</p>
+                <p className="text-lg font-medium">{participantName}</p>
+                <p className="text-gray-400">Aguardando conexão...</p>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Local Video (Picture-in-Picture) */}
-        <div className="absolute top-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
-          {localStream ? (
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-sm font-semibold text-white">
-                  {userName.charAt(0).toUpperCase()}
-                </span>
+          
+          {/* Vídeo local (picture-in-picture) */}
+          <div className="absolute top-4 right-4 w-32 h-24 bg-gray-800 rounded-lg overflow-hidden border-2 border-white">
+            {localStream ? (
+              <video
+                ref={localVideoRef}
+                className="w-full h-full object-cover"
+                autoPlay
+                playsInline
+                muted
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-white text-xs">
+                Sem vídeo
               </div>
-            </div>
-          )}
-          {!isVideoEnabled && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-              <VideoOff className="w-6 h-6 text-white" />
-            </div>
-          )}
-        </div>
-
-        {/* Chat Panel */}
-        {showChat && (
-          <div className="absolute top-0 right-0 w-80 h-full bg-background border-l flex flex-col">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold">Chat da Consulta</h3>
-            </div>
-            
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-3">
-                {chatMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`p-3 rounded-lg ${
-                      msg.userId === userId
-                        ? 'bg-primary text-primary-foreground ml-4'
-                        : 'bg-muted mr-4'
-                    }`}
-                  >
-                    <div className="text-xs opacity-75 mb-1">
-                      {msg.userName} • {msg.timestamp.toLocaleTimeString()}
-                    </div>
-                    <div className="text-sm">{msg.message}</div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Input
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  placeholder="Digite sua mensagem..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <Button onClick={handleSendMessage} size="sm">
-                  Enviar
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
+        </div>
+
+        {/* Chat Panel - Integrado com chat interno */}
+        {showChat && (
+          <Card className="w-80 h-full bg-gray-800 border-gray-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm text-white">Chat da Consulta</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex flex-col h-full">
+              <ScrollArea className="flex-1 p-4">
+                {telemedicineMensagens.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma mensagem ainda</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {telemedicineMensagens.map((msg) => (
+                      <div key={msg.id} className="text-sm">
+                        <div className="font-medium text-xs text-muted-foreground mb-1">
+                          {msg.author_nome}
+                        </div>
+                        <div className="bg-muted p-2 rounded text-black">
+                          {msg.content?.replace('[Telemedicina] ', '')}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+              
+              <div className="border-t border-gray-700 p-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Digite sua mensagem..."
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendChatMessage()}
+                    className="flex-1 bg-gray-700 border-gray-600 text-white"
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={handleSendChatMessage}
+                    disabled={!chatMessage.trim()}
+                  >
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
       {/* Controls */}
-      <div className="bg-background/90 backdrop-blur-sm border-t p-4">
-        <div className="flex items-center justify-center gap-3">
-          {/* Media Controls */}
-          <Button
-            variant={isVideoEnabled ? "default" : "destructive"}
-            size="lg"
-            onClick={toggleVideo}
-            className="rounded-full w-12 h-12 p-0"
-          >
-            {isVideoEnabled ? (
-              <Video className="w-5 h-5" />
-            ) : (
-              <VideoOff className="w-5 h-5" />
-            )}
-          </Button>
+      <div className="bg-gray-900 p-4 flex items-center justify-center gap-4">
+        <Button
+          variant={isVideoEnabled ? "default" : "secondary"}
+          size="lg"
+          onClick={toggleVideo}
+          className="rounded-full"
+        >
+          {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+        </Button>
 
-          <Button
-            variant={isAudioEnabled ? "default" : "destructive"}
-            size="lg"
-            onClick={toggleAudio}
-            className="rounded-full w-12 h-12 p-0"
-          >
-            {isAudioEnabled ? (
-              <Mic className="w-5 h-5" />
-            ) : (
-              <MicOff className="w-5 h-5" />
-            )}
-          </Button>
+        <Button
+          variant={isAudioEnabled ? "default" : "secondary"}
+          size="lg"
+          onClick={toggleAudio}
+          className="rounded-full"
+        >
+          {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+        </Button>
 
-          {/* Screen Share */}
-          <Button
-            variant={isScreenSharing ? "secondary" : "outline"}
-            size="lg"
-            onClick={shareScreen}
-            className="rounded-full w-12 h-12 p-0"
-          >
-            <Monitor className="w-5 h-5" />
-          </Button>
+        <Button
+          variant={isScreenSharing ? "default" : "outline"}
+          size="lg"
+          onClick={shareScreen}
+          className="rounded-full"
+        >
+          <Monitor className="h-5 w-5" />
+        </Button>
 
-          {/* Recording Controls */}
-          {isHost && (
-            <Button
-              variant={isRecording ? "destructive" : "outline"}
-              size="lg"
-              onClick={isRecording ? stopRecording : startRecording}
-              className="rounded-full w-12 h-12 p-0"
-            >
-              {isRecording ? (
-                <Square className="w-5 h-5" />
-              ) : (
-                <Circle className="w-5 h-5" />
-              )}
-            </Button>
+        {isHost && (
+          <Button
+            variant={isRecording ? "destructive" : "outline"}
+            size="lg"
+            onClick={isRecording ? stopRecording : startRecording}
+            className="rounded-full"
+          >
+            {isRecording ? <Square className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+          </Button>
+        )}
+
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setShowChat(!showChat)}
+          className="rounded-full relative"
+        >
+          <MessageCircle className="h-5 w-5" />
+          {telemedicineMensagens.length > 0 && !showChat && (
+            <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+              {telemedicineMensagens.length > 99 ? '99+' : telemedicineMensagens.length}
+            </Badge>
           )}
+        </Button>
 
-          {/* Chat Toggle */}
+        {isRecording && (
           <Button
-            variant={showChat ? "secondary" : "outline"}
+            variant="outline"
             size="lg"
-            onClick={() => setShowChat(!showChat)}
-            className="rounded-full w-12 h-12 p-0 relative"
+            onClick={downloadRecording}
+            className="rounded-full"
           >
-            <MessageCircle className="w-5 h-5" />
-            {chatMessages.length > 0 && !showChat && (
-              <Badge className="absolute -top-2 -right-2 w-5 h-5 text-xs p-0 flex items-center justify-center">
-                {chatMessages.length}
-              </Badge>
-            )}
+            <Download className="h-5 w-5" />
           </Button>
+        )}
 
-          {/* Download Recording */}
-          {recordingBlob && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={downloadRecording}
-              className="rounded-full w-12 h-12 p-0"
-            >
-              <Download className="w-5 h-5" />
-            </Button>
-          )}
-
-          {/* End Call */}
-          <Button
-            variant="destructive"
-            size="lg"
-            onClick={handleEndCall}
-            className="rounded-full w-12 h-12 p-0 ml-4"
-          >
-            <Phone className="w-5 h-5" />
-          </Button>
-        </div>
+        <Button
+          variant="destructive"
+          size="lg"
+          onClick={handleEndCall}
+          className="rounded-full"
+        >
+          <Phone className="h-5 w-5" />
+        </Button>
       </div>
     </div>
   );
 };
+
+export default VideoCallReal;

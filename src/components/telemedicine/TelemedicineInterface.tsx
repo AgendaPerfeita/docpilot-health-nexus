@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VideoCallReal } from './VideoCallReal';
+import VideoCallReal from './VideoCallReal';
 import { WaitingRoom } from './WaitingRoom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
