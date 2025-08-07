@@ -2,34 +2,32 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { EspecialidadeCombobox } from "@/components/ui/especialidade-combobox";
-import { useToast } from "@/hooks/use-toast";
+import { useMedicosReal } from "@/hooks/useMedicosReal";
 import { useMedicosCadastro, MedicoCadastroData } from "@/hooks/useMedicosCadastro";
 import { formatarTelefone } from "@/lib/formatters";
 import { 
   UserPlus, 
   Users, 
   Search, 
-  Settings,
   Stethoscope,
   Mail,
   Phone,
   Edit,
-  Trash2,
   CheckCircle,
   XCircle,
-  Shield
+  Shield,
+  Calendar,
+  DollarSign
 } from "lucide-react";
 
 const GestaoMedicos = () => {
-  const { toast } = useToast();
-  const { cadastrarMedico, loading } = useMedicosCadastro();
+  const { medicos, loading: medicosLoading, obterEstatisticas, atualizarStatusVinculo, atualizarPlanoMedico } = useMedicosReal();
+  const { cadastrarMedico, loading: cadastroLoading } = useMedicosCadastro();
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -50,42 +48,6 @@ const GestaoMedicos = () => {
       ia: true
     }
   });
-
-  // Mock data for existing doctors
-  const medicos = [
-    {
-      id: '1',
-      nome: 'Dr. João Silva',
-      email: 'joao.silva@email.com',
-      telefone: '(11) 99999-1111',
-      crm: 'CRM 12345',
-      especialidade: 'Cardiologia',
-      status: 'ativo',
-      permissoes: {
-        prontuario: true,
-        agenda: true,
-        financeiro: true,
-        admin: false,
-        ia: true
-      }
-    },
-    {
-      id: '2',
-      nome: 'Dra. Maria Santos',
-      email: 'maria.santos@email.com',
-      telefone: '(11) 99999-2222',
-      crm: 'CRM 67890',
-      especialidade: 'Pediatria',
-      status: 'ativo',
-      permissoes: {
-        prontuario: true,
-        agenda: true,
-        financeiro: false,
-        admin: false,
-        ia: true
-      }
-    }
-  ];
 
   const handleInputChange = (field: keyof MedicoCadastroData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -131,28 +93,36 @@ const GestaoMedicos = () => {
 
   const filteredMedicos = medicos.filter(medico =>
     medico.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medico.especialidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medico.crm.toLowerCase().includes(searchTerm.toLowerCase())
+    (medico.especialidade && medico.especialidade.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (medico.crm && medico.crm.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const stats = [
+  const stats = obterEstatisticas();
+
+  const statsCards = [
     {
       title: "Total de Médicos",
-      value: medicos.length,
+      value: stats.total,
       icon: Users,
       color: "text-blue-600"
     },
     {
       title: "Médicos Ativos",
-      value: medicos.filter(m => m.status === 'ativo').length,
+      value: stats.ativos,
       icon: CheckCircle,
       color: "text-green-600"
     },
     {
       title: "Especialidades",
-      value: new Set(medicos.map(m => m.especialidade)).size,
+      value: stats.especialidades,
       icon: Stethoscope,
       color: "text-purple-600"
+    },
+    {
+      title: "Receita Total",
+      value: `R$ ${(stats.receitaTotal / 1000).toFixed(0)}k`,
+      icon: DollarSign,
+      color: "text-orange-600"
     }
   ];
 
@@ -163,7 +133,7 @@ const GestaoMedicos = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestão de Médicos</h1>
           <p className="text-muted-foreground">
-            Gerencie os médicos da sua clínica
+            Gerencie os médicos da sua clínica e seus planos
           </p>
         </div>
         <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -188,7 +158,7 @@ const GestaoMedicos = () => {
                 <TabsContent value="dados" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="nome">Nome Completo *</Label>
+                      <label htmlFor="nome" className="text-sm font-medium">Nome Completo *</label>
                       <Input
                         id="nome"
                         value={formData.nome}
@@ -198,7 +168,7 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
+                      <label htmlFor="email" className="text-sm font-medium">Email *</label>
                       <Input
                         id="email"
                         type="email"
@@ -209,7 +179,7 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="telefone">Telefone</Label>
+                      <label htmlFor="telefone" className="text-sm font-medium">Telefone</label>
                       <Input
                         id="telefone"
                         value={formData.telefone}
@@ -218,7 +188,7 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="cpf">CPF *</Label>
+                      <label htmlFor="cpf" className="text-sm font-medium">CPF *</label>
                       <Input
                         id="cpf"
                         value={formData.cpf}
@@ -228,7 +198,7 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="crm">CRM *</Label>
+                      <label htmlFor="crm" className="text-sm font-medium">CRM *</label>
                       <Input
                         id="crm"
                         value={formData.crm}
@@ -238,16 +208,17 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="especialidade">Especialidade</Label>
-                      <EspecialidadeCombobox
+                      <label htmlFor="especialidade" className="text-sm font-medium">Especialidade</label>
+                      <Input
+                        id="especialidade"
                         value={formData.especialidade}
-                        onValueChange={(value) => handleInputChange("especialidade", value)}
-                        placeholder="Selecione uma especialidade..."
+                        onChange={(e) => handleInputChange("especialidade", e.target.value)}
+                        placeholder="Ex: Cardiologia"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="valorConsulta">Valor da Consulta (R$)</Label>
+                      <label htmlFor="valorConsulta" className="text-sm font-medium">Valor da Consulta (R$)</label>
                       <Input
                         id="valorConsulta"
                         type="number"
@@ -257,7 +228,7 @@ const GestaoMedicos = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="comissao">Comissão (%)</Label>
+                      <label htmlFor="comissao" className="text-sm font-medium">Comissão (%)</label>
                       <Input
                         id="comissao"
                         type="number"
@@ -272,7 +243,7 @@ const GestaoMedicos = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-base">Acesso ao Prontuário</Label>
+                        <label className="text-base font-medium">Acesso ao Prontuário</label>
                         <p className="text-sm text-muted-foreground">
                           Permite criar e visualizar prontuários médicos
                         </p>
@@ -287,7 +258,7 @@ const GestaoMedicos = () => {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-base">Gestão de Agenda</Label>
+                        <label className="text-base font-medium">Gestão de Agenda</label>
                         <p className="text-sm text-muted-foreground">
                           Permite gerenciar consultas e horários
                         </p>
@@ -302,7 +273,7 @@ const GestaoMedicos = () => {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-base">Relatórios Financeiros</Label>
+                        <label className="text-base font-medium">Relatórios Financeiros</label>
                         <p className="text-sm text-muted-foreground">
                           Permite visualizar relatórios e dados financeiros
                         </p>
@@ -317,7 +288,7 @@ const GestaoMedicos = () => {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-base">Inteligência Artificial</Label>
+                        <label className="text-base font-medium">Inteligência Artificial</label>
                         <p className="text-sm text-muted-foreground">
                           Permite usar recursos de IA médica (gratuito para médicos vinculados)
                         </p>
@@ -332,7 +303,7 @@ const GestaoMedicos = () => {
                     
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label className="text-base">Administração</Label>
+                        <label className="text-base font-medium">Administração</label>
                         <p className="text-sm text-muted-foreground">
                           Permite gerenciar outros médicos e configurações da clínica
                         </p>
@@ -350,8 +321,8 @@ const GestaoMedicos = () => {
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? (
+                <Button type="submit" disabled={cadastroLoading}>
+                  {cadastroLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Cadastrando...
@@ -367,8 +338,8 @@ const GestaoMedicos = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {stats.map((stat, index) => {
+      <div className="grid gap-4 md:grid-cols-4">
+        {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <Card key={index}>
@@ -410,7 +381,12 @@ const GestaoMedicos = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredMedicos.length === 0 ? (
+          {medicosLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Carregando médicos...</p>
+            </div>
+          ) : filteredMedicos.length === 0 ? (
             <div className="text-center py-8">
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">
@@ -438,36 +414,44 @@ const GestaoMedicos = () => {
                         <Badge variant={medico.status === 'ativo' ? 'default' : 'secondary'}>
                           {medico.status}
                         </Badge>
+                        <Badge variant="outline">
+                          {medico.plano_medico === 'premium' ? 'Premium' : 'Free'}
+                        </Badge>
                       </div>
                       <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <span className="flex items-center">
                           <Mail className="h-3 w-3 mr-1" />
                           {medico.email}
                         </span>
-                        <span className="flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          {formatarTelefone(medico.telefone)}
-                        </span>
-                        <span>{medico.crm}</span>
-                        <span>{medico.especialidade}</span>
+                        {medico.telefone && (
+                          <span className="flex items-center">
+                            <Phone className="h-3 w-3 mr-1" />
+                            {formatarTelefone(medico.telefone)}
+                          </span>
+                        )}
+                        {medico.crm && <span>{medico.crm}</span>}
+                        {medico.especialidade && <span>{medico.especialidade}</span>}
                       </div>
                       <div className="flex items-center space-x-2 mt-2">
-                        {medico.permissoes.prontuario && (
-                          <Badge variant="outline" className="text-xs">Prontuário</Badge>
-                        )}
-                        {medico.permissoes.agenda && (
-                          <Badge variant="outline" className="text-xs">Agenda</Badge>
-                        )}
-                        {medico.permissoes.financeiro && (
-                          <Badge variant="outline" className="text-xs">Financeiro</Badge>
-                        )}
-                        {medico.permissoes.ia && (
+                        {medico.permite_ia && (
                           <Badge variant="outline" className="text-xs">IA</Badge>
                         )}
-                        {medico.permissoes.admin && (
+                        {medico.permite_atendimento_individual && (
+                          <Badge variant="outline" className="text-xs">Atend. Individual</Badge>
+                        )}
+                        {medico.permite_relatorios_avancados && (
+                          <Badge variant="outline" className="text-xs">Relatórios</Badge>
+                        )}
+                        {medico.total_consultas && (
                           <Badge variant="outline" className="text-xs">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Admin
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {medico.total_consultas} consultas
+                          </Badge>
+                        )}
+                        {medico.receita_total && (
+                          <Badge variant="outline" className="text-xs">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            R$ {medico.receita_total.toLocaleString()}
                           </Badge>
                         )}
                       </div>
@@ -475,17 +459,21 @@ const GestaoMedicos = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
+                      <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Permissões
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover
-                    </Button>
+                    {medico.vinculo_ativo !== undefined && (
+                      <Button 
+                        variant={medico.vinculo_ativo ? "destructive" : "default"}
+                        size="sm"
+                        onClick={() => atualizarStatusVinculo(medico.id, !medico.vinculo_ativo)}
+                      >
+                        {medico.vinculo_ativo ? (
+                          <XCircle className="h-4 w-4" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

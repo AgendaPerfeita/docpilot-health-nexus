@@ -1,116 +1,51 @@
 import { useState } from "react"
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Download, Calendar } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
-
-interface DREData {
-  periodo: string
-  receitas: {
-    consultas: number
-    exames: number
-    procedimentos: number
-    outros: number
-  }
-  custos: {
-    materiaisMedicos: number
-    laboratorio: number
-    equipamentos: number
-  }
-  despesas: {
-    salarios: number
-    aluguel: number
-    utilities: number
-    marketing: number
-    administrativas: number
-    outras: number
-  }
-}
-
-const mockDREData: DREData[] = [
-  {
-    periodo: '2024-01',
-    receitas: {
-      consultas: 15000,
-      exames: 8000,
-      procedimentos: 12000,
-      outros: 2000
-    },
-    custos: {
-      materiaisMedicos: 3000,
-      laboratorio: 2000,
-      equipamentos: 1500
-    },
-    despesas: {
-      salarios: 8000,
-      aluguel: 3000,
-      utilities: 800,
-      marketing: 1200,
-      administrativas: 600,
-      outras: 400
-    }
-  },
-  {
-    periodo: '2023-12',
-    receitas: {
-      consultas: 14000,
-      exames: 7500,
-      procedimentos: 11000,
-      outros: 1800
-    },
-    custos: {
-      materiaisMedicos: 2800,
-      laboratorio: 1900,
-      equipamentos: 1400
-    },
-    despesas: {
-      salarios: 8000,
-      aluguel: 3000,
-      utilities: 750,
-      marketing: 1000,
-      administrativas: 550,
-      outras: 350
-    }
-  }
-]
+import { useDREData } from "@/hooks/useDREData"
+import { useEffect } from "react"
 
 export default function DRE() {
-  const [selectedPeriod, setSelectedPeriod] = useState('2024-01')
-  const [comparisonPeriod, setComparisonPeriod] = useState('2023-12')
+  const { dreData, loading, carregarDREData, calcularTotais, calcularCrescimento } = useDREData();
+  const [selectedPeriod, setSelectedPeriod] = useState('2024-01');
+  const [comparisonPeriod, setComparisonPeriod] = useState('2023-12');
 
-  const currentData = mockDREData.find(d => d.periodo === selectedPeriod) || mockDREData[0]
-  const comparisonData = mockDREData.find(d => d.periodo === comparisonPeriod) || mockDREData[1]
+  useEffect(() => {
+    const anoAtual = new Date().getFullYear();
+    carregarDREData(anoAtual - 1, anoAtual);
+  }, []);
 
-  const calculateTotals = (data: DREData) => {
-    const receitaBruta = Object.values(data.receitas).reduce((sum, value) => sum + value, 0)
-    const custosVariaveis = Object.values(data.custos).reduce((sum, value) => sum + value, 0)
-    const receitaLiquida = receitaBruta - custosVariaveis
-    const despesasFixas = Object.values(data.despesas).reduce((sum, value) => sum + value, 0)
-    const lucroLiquido = receitaLiquida - despesasFixas
-    
-    const margemBruta = (receitaLiquida / receitaBruta) * 100
-    const margemLiquida = (lucroLiquido / receitaBruta) * 100
-    
-    return {
-      receitaBruta,
-      custosVariaveis,
-      receitaLiquida,
-      despesasFixas,
-      lucroLiquido,
-      margemBruta,
-      margemLiquida
-    }
+  const currentData = dreData.find(d => d.periodo === selectedPeriod) || dreData[0];
+  const comparisonData = dreData.find(d => d.periodo === comparisonPeriod) || dreData[1];
+
+  if (!currentData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">DRE - Demonstrativo de Resultado</h1>
+            <p className="text-muted-foreground">Análise financeira detalhada da clínica</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              {loading ? (
+                <p>Carregando dados...</p>
+              ) : (
+                <p>Nenhum dado financeiro encontrado. Adicione transações para gerar o DRE.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  const currentTotals = calculateTotals(currentData)
-  const comparisonTotals = calculateTotals(comparisonData)
-
-  const calculateGrowth = (current: number, previous: number) => {
-    if (previous === 0) return 0
-    return ((current - previous) / previous) * 100
-  }
+  const currentTotals = calcularTotais(currentData);
+  const comparisonTotals = comparisonData ? calcularTotais(comparisonData) : currentTotals;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -136,8 +71,11 @@ export default function DRE() {
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2024-01">Janeiro 2024</SelectItem>
-              <SelectItem value="2023-12">Dezembro 2023</SelectItem>
+              {dreData.map(item => (
+                <SelectItem key={item.periodo} value={item.periodo}>
+                  {new Date(item.periodo).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="outline" className="gap-2">
@@ -157,8 +95,8 @@ export default function DRE() {
             <div className="text-2xl font-bold text-foreground">
               {formatCurrency(currentTotals.receitaBruta)}
             </div>
-            <div className={`text-sm ${calculateGrowth(currentTotals.receitaBruta, comparisonTotals.receitaBruta) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculateGrowth(currentTotals.receitaBruta, comparisonTotals.receitaBruta) >= 0 ? '+' : ''}{formatPercentage(calculateGrowth(currentTotals.receitaBruta, comparisonTotals.receitaBruta))} vs mês anterior
+            <div className={`text-sm ${calcularCrescimento(currentTotals.receitaBruta, comparisonTotals.receitaBruta) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calcularCrescimento(currentTotals.receitaBruta, comparisonTotals.receitaBruta) >= 0 ? '+' : ''}{formatPercentage(calcularCrescimento(currentTotals.receitaBruta, comparisonTotals.receitaBruta))} vs mês anterior
             </div>
           </CardContent>
         </Card>
@@ -172,8 +110,8 @@ export default function DRE() {
             <div className="text-2xl font-bold text-foreground">
               {formatCurrency(currentTotals.receitaLiquida)}
             </div>
-            <div className={`text-sm ${calculateGrowth(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculateGrowth(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida) >= 0 ? '+' : ''}{formatPercentage(calculateGrowth(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida))} vs mês anterior
+            <div className={`text-sm ${calcularCrescimento(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calcularCrescimento(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida) >= 0 ? '+' : ''}{formatPercentage(calcularCrescimento(currentTotals.receitaLiquida, comparisonTotals.receitaLiquida))} vs mês anterior
             </div>
           </CardContent>
         </Card>
@@ -187,8 +125,8 @@ export default function DRE() {
             <div className="text-2xl font-bold text-foreground">
               {formatCurrency(currentTotals.lucroLiquido)}
             </div>
-            <div className={`text-sm ${calculateGrowth(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {calculateGrowth(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido) >= 0 ? '+' : ''}{formatPercentage(calculateGrowth(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido))} vs mês anterior
+            <div className={`text-sm ${calcularCrescimento(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {calcularCrescimento(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido) >= 0 ? '+' : ''}{formatPercentage(calcularCrescimento(currentTotals.lucroLiquido, comparisonTotals.lucroLiquido))} vs mês anterior
             </div>
           </CardContent>
         </Card>

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { DollarSign, TrendingUp, TrendingDown, Plus, Calendar, Filter, Search, Download } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, Plus, Download, Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,101 +7,36 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-interface Transaction {
-  id: string
-  type: 'entrada' | 'saida'
-  description: string
-  amount: number
-  category: string
-  date: string
-  paymentMethod: string
-  status: 'realizado' | 'pendente' | 'cancelado'
-  patient?: string
-  professional?: string
-}
-
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    type: 'entrada',
-    description: 'Consulta - Ana Silva',
-    amount: 200,
-    category: 'Consultas',
-    date: '2024-01-15',
-    paymentMethod: 'Cartão',
-    status: 'realizado',
-    patient: 'Ana Silva',
-    professional: 'Dr. João Silva'
-  },
-  {
-    id: '2',
-    type: 'entrada',
-    description: 'Exame - Carlos Santos',
-    amount: 150,
-    category: 'Exames',
-    date: '2024-01-14',
-    paymentMethod: 'PIX',
-    status: 'realizado',
-    patient: 'Carlos Santos',
-    professional: 'Dr. João Silva'
-  },
-  {
-    id: '3',
-    type: 'saida',
-    description: 'Aluguel da Clínica',
-    amount: 3000,
-    category: 'Despesas Fixas',
-    date: '2024-01-10',
-    paymentMethod: 'Transferência',
-    status: 'realizado'
-  },
-  {
-    id: '4',
-    type: 'saida',
-    description: 'Material Médico',
-    amount: 500,
-    category: 'Despesas Variáveis',
-    date: '2024-01-12',
-    paymentMethod: 'Cartão',
-    status: 'realizado'
-  }
-]
+import { useTransacoesFinanceiras, NovaTransacao } from "@/hooks/useTransacoesFinanceiras"
+import { useEffect } from "react"
 
 export default function Financeiro() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions)
+  const { 
+    transacoes, 
+    loading, 
+    carregarTransacoes, 
+    criarTransacao, 
+    obterResumoFinanceiro 
+  } = useTransacoesFinanceiras();
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('todos')
   const [categoryFilter, setCategoryFilter] = useState<string>('todos')
   const [isAddingTransaction, setIsAddingTransaction] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
 
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = typeFilter === 'todos' || transaction.type === typeFilter
-    const matchesCategory = categoryFilter === 'todos' || transaction.category === categoryFilter
-    const matchesMonth = transaction.date.startsWith(selectedMonth)
+  useEffect(() => {
+    carregarTransacoes(selectedMonth);
+  }, [selectedMonth]);
+
+  const filteredTransactions = transacoes.filter(transaction => {
+    const matchesSearch = transaction.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = typeFilter === 'todos' || transaction.tipo === typeFilter
+    const matchesCategory = categoryFilter === 'todos' || transaction.categoria === categoryFilter
+    const matchesMonth = transaction.data.startsWith(selectedMonth)
     
     return matchesSearch && matchesType && matchesCategory && matchesMonth
   })
-
-  const getFinancialSummary = () => {
-    const currentMonthTransactions = transactions.filter(t => t.date.startsWith(selectedMonth))
-    
-    const totalEntradas = currentMonthTransactions
-      .filter(t => t.type === 'entrada' && t.status === 'realizado')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const totalSaidas = currentMonthTransactions
-      .filter(t => t.type === 'saida' && t.status === 'realizado')
-      .reduce((sum, t) => sum + t.amount, 0)
-    
-    const saldoLiquido = totalEntradas - totalSaidas
-    
-    return { totalEntradas, totalSaidas, saldoLiquido }
-  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -112,28 +47,29 @@ export default function Financeiro() {
     }
   }
 
-  const handleAddTransaction = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddTransaction = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
     
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      type: formData.get('type') as 'entrada' | 'saida',
-      description: formData.get('description') as string,
-      amount: Number(formData.get('amount')),
-      category: formData.get('category') as string,
-      date: formData.get('date') as string,
-      paymentMethod: formData.get('paymentMethod') as string,
-      status: 'realizado',
-      patient: formData.get('patient') as string || undefined,
-      professional: formData.get('professional') as string || undefined
+    const novaTransacao: NovaTransacao = {
+      tipo: formData.get('type') as 'entrada' | 'saida',
+      descricao: formData.get('description') as string,
+      valor: Number(formData.get('amount')),
+      categoria: formData.get('category') as string,
+      data: formData.get('date') as string,
+      forma_pagamento: formData.get('paymentMethod') as string
     }
     
-    setTransactions([...transactions, newTransaction])
-    setIsAddingTransaction(false)
+    try {
+      await criarTransacao(novaTransacao);
+      setIsAddingTransaction(false);
+      carregarTransacoes(selectedMonth);
+    } catch (error) {
+      console.error('Erro ao criar transação:', error);
+    }
   }
 
-  const summary = getFinancialSummary()
+  const summary = obterResumoFinanceiro(selectedMonth);
 
   return (
     <div className="space-y-6">
@@ -194,10 +130,11 @@ export default function Financeiro() {
                         <SelectItem value="Consultas">Consultas</SelectItem>
                         <SelectItem value="Exames">Exames</SelectItem>
                         <SelectItem value="Procedimentos">Procedimentos</SelectItem>
-                        <SelectItem value="Despesas Fixas">Despesas Fixas</SelectItem>
-                        <SelectItem value="Despesas Variáveis">Despesas Variáveis</SelectItem>
-                        <SelectItem value="Materiais">Materiais</SelectItem>
-                        <SelectItem value="Equipamentos">Equipamentos</SelectItem>
+                        <SelectItem value="Aluguel">Aluguel</SelectItem>
+                        <SelectItem value="Salários">Salários</SelectItem>
+                        <SelectItem value="Materiais Médicos">Materiais Médicos</SelectItem>
+                        <SelectItem value="Utilities">Utilities</SelectItem>
+                        <SelectItem value="Marketing">Marketing</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -218,22 +155,18 @@ export default function Financeiro() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Data</Label>
-                    <Input id="date" name="date" type="date" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="patient">Paciente (opcional)</Label>
-                    <Input id="patient" name="patient" />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date">Data</Label>
+                  <Input id="date" name="date" type="date" required />
                 </div>
 
                 <div className="flex gap-2 justify-end">
                   <Button type="button" variant="outline" onClick={() => setIsAddingTransaction(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit">Salvar</Button>
+                  <Button type="submit" disabled={loading}>
+                    {loading ? "Salvando..." : "Salvar"}
+                  </Button>
                 </div>
               </form>
             </DialogContent>
@@ -324,50 +257,37 @@ export default function Financeiro() {
                   <SelectItem value="saida">Saídas</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas</SelectItem>
-                  <SelectItem value="Consultas">Consultas</SelectItem>
-                  <SelectItem value="Exames">Exames</SelectItem>
-                  <SelectItem value="Despesas Fixas">Despesas Fixas</SelectItem>
-                  <SelectItem value="Despesas Variáveis">Despesas Variáveis</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {filteredTransactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`w-3 h-3 rounded-full ${transaction.type === 'entrada' ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <div>
-                    <div className="font-medium text-foreground">{transaction.description}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {transaction.category} • {transaction.paymentMethod} • {new Date(transaction.date).toLocaleDateString('pt-BR')}
-                    </div>
-                    {transaction.patient && (
+          {loading ? (
+            <div className="text-center py-4">Carregando...</div>
+          ) : (
+            <div className="space-y-4">
+              {filteredTransactions.map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-3 h-3 rounded-full ${transaction.tipo === 'entrada' ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <div>
+                      <div className="font-medium text-foreground">{transaction.descricao}</div>
                       <div className="text-sm text-muted-foreground">
-                        Paciente: {transaction.patient}
+                        {transaction.categoria} • {transaction.forma_pagamento} • {new Date(transaction.data).toLocaleDateString('pt-BR')}
                       </div>
-                    )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge className={getStatusColor(transaction.status)}>
+                      {transaction.status}
+                    </Badge>
+                    <div className={`text-lg font-bold ${transaction.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                      {transaction.tipo === 'entrada' ? '+' : '-'}R$ {transaction.valor.toLocaleString('pt-BR')}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Badge className={getStatusColor(transaction.status)}>
-                    {transaction.status}
-                  </Badge>
-                  <div className={`text-lg font-bold ${transaction.type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                    {transaction.type === 'entrada' ? '+' : '-'}R$ {transaction.amount.toLocaleString('pt-BR')}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

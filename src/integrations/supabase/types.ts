@@ -1461,6 +1461,7 @@ export type Database = {
           cep: string | null
           cidade: string | null
           clinica_id: string | null
+          comissao_percentual: number | null
           created_at: string
           crm: string | null
           documento: string
@@ -1470,6 +1471,7 @@ export type Database = {
           estado: string | null
           id: string
           nome: string
+          observacoes: string | null
           permite_atendimento_individual: boolean | null
           permite_ia: boolean | null
           permite_relatorios_avancados: boolean | null
@@ -1478,6 +1480,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["user_type"]
           updated_at: string
           user_id: string
+          valor_consulta: number | null
         }
         Insert: {
           ativo?: boolean
@@ -1485,6 +1488,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           clinica_id?: string | null
+          comissao_percentual?: number | null
           created_at?: string
           crm?: string | null
           documento: string
@@ -1494,6 +1498,7 @@ export type Database = {
           estado?: string | null
           id?: string
           nome: string
+          observacoes?: string | null
           permite_atendimento_individual?: boolean | null
           permite_ia?: boolean | null
           permite_relatorios_avancados?: boolean | null
@@ -1502,6 +1507,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["user_type"]
           updated_at?: string
           user_id: string
+          valor_consulta?: number | null
         }
         Update: {
           ativo?: boolean
@@ -1509,6 +1515,7 @@ export type Database = {
           cep?: string | null
           cidade?: string | null
           clinica_id?: string | null
+          comissao_percentual?: number | null
           created_at?: string
           crm?: string | null
           documento?: string
@@ -1518,6 +1525,7 @@ export type Database = {
           estado?: string | null
           id?: string
           nome?: string
+          observacoes?: string | null
           permite_atendimento_individual?: boolean | null
           permite_ia?: boolean | null
           permite_relatorios_avancados?: boolean | null
@@ -1526,6 +1534,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["user_type"]
           updated_at?: string
           user_id?: string
+          valor_consulta?: number | null
         }
         Relationships: [
           {
@@ -1715,6 +1724,76 @@ export type Database = {
           variaveis?: Json | null
         }
         Relationships: []
+      }
+      transacoes_financeiras: {
+        Row: {
+          categoria: string
+          consulta_id: string | null
+          created_at: string
+          data: string
+          descricao: string
+          forma_pagamento: string
+          id: string
+          medico_id: string | null
+          paciente_id: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          consulta_id?: string | null
+          created_at?: string
+          data: string
+          descricao: string
+          forma_pagamento: string
+          id?: string
+          medico_id?: string | null
+          paciente_id?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          consulta_id?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string
+          forma_pagamento?: string
+          id?: string
+          medico_id?: string | null
+          paciente_id?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_financeiras_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_medico_id_fkey"
+            columns: ["medico_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
