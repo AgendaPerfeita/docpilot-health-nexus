@@ -67,6 +67,7 @@ import AcompanhamentoPacientes from "./pages/AcompanhamentoPacientes";
 // Backup
 import BackupGestao from "./pages/BackupGestao";
 import ValidarAssinatura from "./pages/ValidarAssinatura";
+import HistoricoDocumentos from "./pages/HistoricoDocumentos";
 
 // Plantonista
 import PlantonistaIndex from "./pages/plantonista/index";
