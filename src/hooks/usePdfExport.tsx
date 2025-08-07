@@ -4,6 +4,16 @@ import html2canvas from 'html2canvas';
 import { Prontuario } from './useProntuarios';
 import { Paciente } from './usePacientes';
 
+interface PrescriptionData {
+  paciente: any;
+  medicamentos: any[];
+  instrucoes: string;
+  observacoes: string;
+  medico: any;
+  numeroDocumento: string;
+  dataEmissao: string;
+}
+
 export const usePdfExport = () => {
   const [exporting, setExporting] = useState(false);
 
@@ -50,6 +60,183 @@ export const usePdfExport = () => {
     } finally {
       setExporting(false);
     }
+  };
+
+  const generatePrescriptionPdf = (data: PrescriptionData) => {
+    const doc = new jsPDF();
+    
+    // Header principal
+    doc.setFillColor(240, 248, 255);
+    doc.rect(0, 0, 210, 30, 'F');
+    
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECEITA MÉDICA', 105, 15, { align: 'center' });
+    
+    doc.setDrawColor(0, 123, 191);
+    doc.setLineWidth(2);
+    doc.line(20, 25, 190, 25);
+    
+    // Dados do médico
+    let yPos = 45;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS DO MÉDICO', 20, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Dr. ${data.medico.nome}`, 20, yPos);
+    
+    yPos += 5;
+    doc.text(`CRM: ${data.medico.crm} - ${data.medico.especialidade || 'Medicina Geral'}`, 20, yPos);
+    
+    if (data.medico.endereco) {
+      yPos += 5;
+      doc.text(`Endereço: ${data.medico.endereco}`, 20, yPos);
+    }
+    
+    if (data.medico.telefone) {
+      yPos += 5;
+      doc.text(`Telefone: ${data.medico.telefone}`, 20, yPos);
+    }
+    
+    // Linha separadora
+    yPos += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.line(20, yPos, 190, yPos);
+    
+    // Dados do paciente
+    yPos += 15;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DADOS DO PACIENTE', 20, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nome: ${data.paciente.nome}`, 20, yPos);
+    
+    if (data.paciente.data_nascimento) {
+      const idade = new Date().getFullYear() - new Date(data.paciente.data_nascimento).getFullYear();
+      yPos += 5;
+      doc.text(`Idade: ${idade} anos - Data Nascimento: ${new Date(data.paciente.data_nascimento).toLocaleDateString('pt-BR')}`, 20, yPos);
+    }
+    
+    if (data.paciente.cpf) {
+      yPos += 5;
+      doc.text(`CPF: ${data.paciente.cpf}`, 20, yPos);
+    }
+    
+    // Linha separadora
+    yPos += 10;
+    doc.line(20, yPos, 190, yPos);
+    
+    // Prescrição
+    yPos += 15;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRESCRIÇÃO MÉDICA', 20, yPos);
+    
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    data.medicamentos.forEach((med, index) => {
+      if (yPos > 260) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${index + 1}. ${med.name}`, 25, yPos);
+      yPos += 5;
+      
+      doc.setFont('helvetica', 'normal');
+      if (med.dosage) {
+        doc.text(`   Posologia: ${med.dosage}`, 25, yPos);
+        yPos += 5;
+      }
+      
+      if (med.duration) {
+        doc.text(`   Duração: ${med.duration}`, 25, yPos);
+        yPos += 5;
+      }
+      
+      yPos += 3;
+    });
+    
+    // Instruções
+    if (data.instrucoes) {
+      yPos += 10;
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('INSTRUÇÕES GERAIS:', 20, yPos);
+      
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const instrucaoLines = doc.splitTextToSize(data.instrucoes, 170);
+      doc.text(instrucaoLines, 20, yPos);
+      yPos += instrucaoLines.length * 5;
+    }
+    
+    // Observações
+    if (data.observacoes) {
+      yPos += 10;
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('OBSERVAÇÕES:', 20, yPos);
+      
+      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const obsLines = doc.splitTextToSize(data.observacoes, 170);
+      doc.text(obsLines, 20, yPos);
+      yPos += obsLines.length * 5;
+    }
+    
+    // Assinatura
+    if (yPos > 220) {
+      doc.addPage();
+      yPos = 100;
+    } else {
+      yPos = Math.max(yPos + 30, 220);
+    }
+    
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(120, yPos, 190, yPos);
+    
+    yPos += 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Dr. ${data.medico.nome}`, 155, yPos, { align: 'center' });
+    
+    yPos += 5;
+    doc.text(`CRM: ${data.medico.crm}`, 155, yPos, { align: 'center' });
+    
+    // Rodapé
+    yPos += 20;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Data: ${data.dataEmissao}`, 20, yPos);
+    doc.text(`Documento: ${data.numeroDocumento}`, 105, yPos, { align: 'center' });
+    doc.text('Assinado digitalmente', 190, yPos, { align: 'right' });
+    
+    return doc;
   };
 
   const generateProntuarioPdf = (prontuario: Prontuario, paciente: Paciente) => {
@@ -186,6 +373,7 @@ export const usePdfExport = () => {
 
   return {
     exportToPdf,
+    generatePrescriptionPdf,
     generateProntuarioPdf,
     printElement,
     exporting

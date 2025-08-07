@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react"
 import { usePacientes } from "@/hooks/usePacientes"
 import { useMedicamentos } from "@/hooks/useMedicamentos"
+import { useDocumentos, DocumentoMedico } from "@/hooks/useDocumentos"
+import { useAuth } from "@/hooks/useAuth"
+import { usePdfExport } from "@/hooks/usePdfExport"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,6 +24,9 @@ import { useDigitalSignature } from "@/hooks/useDigitalSignature"
 export default function PrescricaoDigital() {
   const { pacientes } = usePacientes()
   const { medicamentos } = useMedicamentos()
+  const { documentos, criarDocumento, atualizarDocumento, loading: loadingDocumentos } = useDocumentos()
+  const { profile } = useAuth()
+  const { generatePrescriptionPdf } = usePdfExport()
   const { toast } = useToast()
   const { hasActiveCertificate } = useDigitalSignature()
   
@@ -28,29 +34,21 @@ export default function PrescricaoDigital() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState("")
   const [medications, setMedications] = useState([{ name: "", dosage: "", duration: "" }])
-  const [prescricoes, setPrescricoes] = useState<any[]>([
-    {
-      id: "1",
-      patient: "Maria Silva",
-      date: "2024-01-15",
-      medications: [{ name: "Dipirona 500mg" }, { name: "Omeprazol 20mg" }],
-      status: "enviada"
-    },
-    {
-      id: "2", 
-      patient: "João Santos",
-      date: "2024-01-14",
-      medications: [{ name: "Amoxicilina 875mg" }],
-      status: "assinada"
-    },
-    {
-      id: "3",
-      patient: "Ana Costa", 
-      date: "2024-01-13",
-      medications: [{ name: "Losartana 50mg" }, { name: "Sinvastatina 20mg" }],
-      status: "pendente"
-    }
-  ])
+  
+  // Filtrar apenas prescrições dos documentos
+  const prescricoes = documentos
+    .filter(doc => doc.tipo === 'receita')
+    .map(doc => {
+      const paciente = pacientes.find(p => p.id === doc.paciente_id)
+      return {
+        id: doc.id,
+        patient: paciente?.nome || "Paciente",
+        date: doc.created_at,
+        status: doc.status,
+        medications: [],
+        document: doc
+      }
+    })
   const [loading, setLoading] = useState(false)
   const [signatureModalOpen, setSignatureModalOpen] = useState(false)
   const [quickSignatureModalOpen, setQuickSignatureModalOpen] = useState(false)
@@ -77,23 +75,53 @@ export default function PrescricaoDigital() {
     setSignatureModalOpen(true)
   }
 
-  const handleSignatureComplete = (result: any) => {
+  const handleSignatureComplete = async (result: any) => {
     console.log('Assinatura concluída:', result)
     setSignatureModalOpen(false)
     setQuickSignatureModalOpen(false)
-    setSelectedPrescriptionForSign(null)
     
-    // Atualizar status da prescrição para assinada
-    if (selectedPrescriptionForSign) {
-      const updatedPrescription = { ...selectedPrescriptionForSign, status: "assinada" }
-      setPrescricoes([updatedPrescription, ...prescricoes])
-      
-      // Reset form
-      setSelectedPatient("")
-      setMedications([{ name: "", dosage: "", duration: "" }])
-      setCurrentPrescription({ instructions: "", observations: "" })
-      setIsDialogOpen(false)
+    try {
+      if (selectedPrescriptionForSign && selectedPrescriptionForSign.document) {
+        // Atualizar status no banco
+        await atualizarDocumento(selectedPrescriptionForSign.document.id, {
+          status: 'assinado',
+          assinado: true,
+          hash_assinatura: result.signatureId || result.hash
+        });
+        
+        // Gerar PDF assinado
+        const pacienteData = pacientes.find(p => p.id === selectedPrescriptionForSign.document.paciente_id);
+        if (pacienteData && profile) {
+          const pdfData = {
+            paciente: pacienteData,
+            medicamentos: medications.filter(med => med.name.trim()),
+            instrucoes: currentPrescription.instructions,
+            observacoes: currentPrescription.observations,
+            medico: profile,
+            numeroDocumento: selectedPrescriptionForSign.document.numero_documento || '',
+            dataEmissao: new Date().toLocaleDateString('pt-BR')
+          };
+          
+          const pdf = generatePrescriptionPdf(pdfData);
+          pdf.save(`receita_${selectedPrescriptionForSign.document.numero_documento}.pdf`);
+        }
+        
+        // Reset form
+        setSelectedPatient("")
+        setMedications([{ name: "", dosage: "", duration: "" }])
+        setCurrentPrescription({ instructions: "", observations: "" })
+        setIsDialogOpen(false)
+      }
+    } catch (error) {
+      console.error('Erro ao finalizar assinatura:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao finalizar a assinatura.",
+        variant: "destructive"
+      })
     }
+    
+    setSelectedPrescriptionForSign(null)
     
     toast({
       title: "Prescrição assinada!",
@@ -101,7 +129,7 @@ export default function PrescricaoDigital() {
     })
   }
 
-  const handleConnectCertificate = () => {
+  const handleConnectCertificate = async () => {
     // Validar se há dados mínimos
     if (!selectedPatient) {
       toast({
@@ -121,32 +149,95 @@ export default function PrescricaoDigital() {
       return
     }
 
-    // Encontrar dados do paciente selecionado
-    const pacienteData = pacientes.find(p => p.id === selectedPatient)
-    
-    // Criar objeto da nova prescrição
-    const newPrescription = {
-      id: Date.now().toString(),
-      patient: pacienteData?.nome || "Paciente",
-      date: new Date().toISOString(),
-      medications: medications.filter(med => med.name.trim()),
-      instructions: currentPrescription.instructions,
-      observations: currentPrescription.observations,
-      status: "pendente"
-    }
+    try {
+      setLoading(true);
+      
+      // Primeiro, criar o documento no banco
+      const numeroDocumento = generateDocumentNumber();
+      const conteudo = createPrescriptionContent();
+      
+      const documentoData = {
+        paciente_id: selectedPatient,
+        tipo: 'receita' as const,
+        titulo: `Receita Médica - ${numeroDocumento}`,
+        conteudo,
+        numero_documento: numeroDocumento,
+        status: 'finalizado' as DocumentoMedico['status'],
+        assinado: false
+      };
 
-    setSelectedPrescriptionForSign(newPrescription)
-    
-    // Se já tem certificado configurado, usar assinatura rápida
-    if (hasActiveCertificate()) {
-      setQuickSignatureModalOpen(true)
-    } else {
-      // Senão, abrir modal de configuração
-      setSignatureModalOpen(true)
+      const documento = await criarDocumento(documentoData);
+      
+      // Encontrar dados do paciente selecionado
+      const pacienteData = pacientes.find(p => p.id === selectedPatient)
+      
+      // Criar objeto da prescrição para assinatura
+      const prescriptionForSign = {
+        id: documento.id,
+        patient: pacienteData?.nome || "Paciente",
+        date: new Date().toISOString(),
+        medications: medications.filter(med => med.name.trim()),
+        instructions: currentPrescription.instructions,
+        observations: currentPrescription.observations,
+        status: "finalizado",
+        document: documento
+      }
+
+      setSelectedPrescriptionForSign(prescriptionForSign)
+      
+      // Se já tem certificado configurado, usar assinatura rápida
+      if (hasActiveCertificate()) {
+        setQuickSignatureModalOpen(true)
+      } else {
+        // Senão, abrir modal de configuração
+        setSignatureModalOpen(true)
+      }
+    } catch (error) {
+      console.error('Erro ao preparar assinatura:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao preparar a prescrição para assinatura.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false);
     }
   }
 
-  const handleSavePrescription = () => {
+  const generateDocumentNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const timestamp = Date.now().toString().slice(-4);
+    return `RX${year}${month}${day}${timestamp}`;
+  };
+
+  const createPrescriptionContent = () => {
+    const pacienteData = pacientes.find(p => p.id === selectedPatient);
+    const medicamentosText = medications
+      .filter(med => med.name.trim())
+      .map((med, index) => 
+        `${index + 1}. ${med.name}${med.dosage ? ` - ${med.dosage}` : ''}${med.duration ? ` - ${med.duration}` : ''}`
+      )
+      .join('\n');
+    
+    return `PRESCRIÇÃO MÉDICA
+
+PACIENTE: ${pacienteData?.nome || 'N/A'}
+DATA: ${new Date().toLocaleDateString('pt-BR')}
+
+MEDICAMENTOS:
+${medicamentosText}
+
+INSTRUÇÕES GERAIS:
+${currentPrescription.instructions || 'N/A'}
+
+OBSERVAÇÕES:
+${currentPrescription.observations || 'N/A'}`;
+  };
+
+  const handleSavePrescription = async (isDraft = false) => {
     if (!selectedPatient) {
       toast({
         title: "Erro",
@@ -165,31 +256,45 @@ export default function PrescricaoDigital() {
       return
     }
 
-    const pacienteData = pacientes.find(p => p.id === selectedPatient)
-    
-    const newPrescription = {
-      id: Date.now().toString(),
-      patient: pacienteData?.nome || "Paciente",
-      date: new Date().toISOString(),
-      medications: medications.filter(med => med.name.trim()),
-      instructions: currentPrescription.instructions,
-      observations: currentPrescription.observations,
-      status: "enviada"
+    try {
+      setLoading(true);
+      
+      const numeroDocumento = generateDocumentNumber();
+      const conteudo = createPrescriptionContent();
+      
+      const documentoData = {
+        paciente_id: selectedPatient,
+        tipo: 'receita' as const,
+        titulo: `Receita Médica - ${numeroDocumento}`,
+        conteudo,
+        numero_documento: numeroDocumento,
+        status: (isDraft ? 'rascunho' : 'finalizado') as DocumentoMedico['status'],
+        assinado: false
+      };
+
+      await criarDocumento(documentoData);
+      
+      // Reset form
+      setSelectedPatient("")
+      setMedications([{ name: "", dosage: "", duration: "" }])
+      setCurrentPrescription({ instructions: "", observations: "" })
+      setIsDialogOpen(false)
+
+      toast({
+        title: isDraft ? "Rascunho salvo!" : "Prescrição salva!",
+        description: isDraft ? "O rascunho foi salvo com sucesso." : "A prescrição foi criada com sucesso."
+      })
+    } catch (error) {
+      console.error('Erro ao salvar prescrição:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar a prescrição. Tente novamente.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false);
     }
-
-    setPrescricoes([newPrescription, ...prescricoes])
-    
-    // Reset form
-    setSelectedPatient("")
-    setMedications([{ name: "", dosage: "", duration: "" }])
-    setCurrentPrescription({ instructions: "", observations: "" })
-    setIsDialogOpen(false)
-
-    toast({
-      title: "Prescrição salva!",
-      description: "A prescrição foi salva com sucesso."
-    })
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -358,13 +463,20 @@ export default function PrescricaoDigital() {
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button variant="outline" onClick={handleSavePrescription}>
+              <Button 
+                variant="outline" 
+                onClick={() => handleSavePrescription(true)}
+                disabled={loading}
+              >
                 <FileText className="h-4 w-4 mr-2" />
                 Salvar Rascunho
               </Button>
-              <Button onClick={handleSavePrescription}>
+              <Button 
+                onClick={() => handleSavePrescription(false)}
+                disabled={loading}
+              >
                 <Send className="h-4 w-4 mr-2" />
-                Enviar Prescrição
+                Finalizar Prescrição
               </Button>
             </div>
           </DialogContent>
@@ -378,8 +490,12 @@ export default function PrescricaoDigital() {
             <CardTitle className="text-sm font-medium">Prescrições Hoje</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">+2 desde ontem</p>
+            <div className="text-2xl font-bold">
+              {prescricoes.filter(p => 
+                new Date(p.date).toDateString() === new Date().toDateString()
+              ).length}
+            </div>
+            <p className="text-xs text-muted-foreground">Hoje</p>
           </CardContent>
         </Card>
         <Card>
@@ -387,26 +503,32 @@ export default function PrescricaoDigital() {
             <CardTitle className="text-sm font-medium">Aguardando Assinatura</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">3</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {prescricoes.filter(p => p.status === 'finalizado').length}
+            </div>
             <p className="text-xs text-muted-foreground">Pendentes</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Enviadas</CardTitle>
+            <CardTitle className="text-sm font-medium">Assinadas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">45</div>
-            <p className="text-xs text-muted-foreground">Este mês</p>
+            <div className="text-2xl font-bold text-green-600">
+              {prescricoes.filter(p => p.status === 'assinado').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Economia Digital</CardTitle>
+            <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">R$ 1.280</div>
-            <p className="text-xs text-muted-foreground">Economizado em papel</p>
+            <div className="text-2xl font-bold text-blue-600">
+              {prescricoes.filter(p => p.status === 'rascunho').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Salvos</p>
           </CardContent>
         </Card>
       </div>
@@ -442,62 +564,79 @@ export default function PrescricaoDigital() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prescricoes.map((prescription) => (
-                <TableRow key={prescription.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      {prescription.patient}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(prescription.date).toLocaleDateString('pt-BR')}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {prescription.medications.map((med, index) => (
-                        <div key={index} className="flex items-center gap-1 text-sm">
-                          <Pill className="h-3 w-3" />
-                          {med.name}
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        prescription.status === 'enviada' ? 'default' : 
-                        prescription.status === 'assinada' ? 'secondary' : 'destructive'
-                      }
-                    >
-                      {prescription.status === 'enviada' && <Send className="h-3 w-3 mr-1" />}
-                      {prescription.status === 'assinada' && <CheckCircle className="h-3 w-3 mr-1" />}
-                      {prescription.status === 'pendente' && <Clock className="h-3 w-3 mr-1" />}
-                      {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm">
-                        Ver Detalhes
-                      </Button>
-                      {prescription.status === 'pendente' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleSignPrescription(prescription)}
-                        >
-                          <Shield className="h-3 w-3 mr-1" />
-                          Assinar
-                        </Button>
-                      )}
-                    </div>
+              {loadingDocumentos ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    Carregando prescrições...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : prescricoes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    Nenhuma prescrição encontrada
+                  </TableCell>
+                </TableRow>
+              ) : (
+                prescricoes.map((prescription) => (
+                  <TableRow key={prescription.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{prescription.patient}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {new Date(prescription.date).toLocaleDateString('pt-BR')}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Pill className="h-3 w-3" />
+                        {prescription.document?.numero_documento || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          prescription.status === "assinado" ? "default" : 
+                          prescription.status === "finalizado" ? "secondary" : 
+                          "outline"
+                        }
+                        className={
+                          prescription.status === "assinado" ? "bg-green-600 text-white" :
+                          prescription.status === "finalizado" ? "bg-blue-600 text-white" :
+                          "bg-yellow-100 text-yellow-800"
+                        }
+                      >
+                        {prescription.status === "assinado" && <CheckCircle className="h-3 w-3 mr-1" />}
+                        {prescription.status === "finalizado" && <Send className="h-3 w-3 mr-1" />}
+                        {prescription.status === "rascunho" && <Clock className="h-3 w-3 mr-1" />}
+                        {prescription.status === "assinado" ? "Assinada" : 
+                         prescription.status === "finalizado" ? "Aguardando Assinatura" : 
+                         "Rascunho"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm">
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        {prescription.status === "finalizado" && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleSignPrescription(prescription)}
+                          >
+                            <Shield className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
