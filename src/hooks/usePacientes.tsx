@@ -100,18 +100,18 @@ export const usePacientes = () => {
     let attempts = 0;
     const maxAttempts = 3; // Reduced from 6 to 3
     let lastPacientesIds: string = pacientes.map(p => p.id).join(',');
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('[Polling] Iniciando polling após evento realtime. Lista atual:', lastPacientesIds, `(length: ${pacientes.length})`);
     }
     const poll = async () => {
       attempts++;
       const newPacientes = await fetchPacientes(true);
       const newIds = (newPacientes || []).map(p => p.id).join(',');
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log(`[Polling] Attempt ${attempts}: ${newIds} (length: ${(newPacientes || []).length})`);
       }
       if (newIds !== lastPacientesIds || (newPacientes || []).length !== pacientes.length) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log('[Polling] Lista mudou! Parando polling.');
         }
         pollingActiveRef.current = false;
@@ -120,7 +120,7 @@ export const usePacientes = () => {
         return;
       }
       if (attempts >= maxAttempts) {
-        if (process.env.NODE_ENV === 'development') {
+        if (import.meta.env.DEV) {
           console.log('[Polling] Atingiu o máximo de tentativas. Parando polling.');
         }
         pollingActiveRef.current = false;
@@ -133,6 +133,10 @@ export const usePacientes = () => {
     // Executa o primeiro imediatamente
     poll();
   }, [fetchPacientes, pacientes]);
+
+  // Keep latest pollingAfterRealtime in a ref to avoid resubscribing
+  const pollingAfterRealtimeRef = useRef(pollingAfterRealtime);
+  useEffect(() => { pollingAfterRealtimeRef.current = pollingAfterRealtime; }, [pollingAfterRealtime]);
 
   const forceRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
@@ -219,14 +223,14 @@ export const usePacientes = () => {
     }
     // Profissional: Forçar refresh do JWT para garantir que o SELECT enxergue o novo vínculo imediatamente
     try {
-      console.log('[Pacientes] Forçando refresh do JWT após criação de paciente e vínculos...');
+      if (import.meta.env.DEV) console.log('[Pacientes] Forçando refresh do JWT após criação de paciente e vínculos...');
       await supabase.auth.refreshSession();
-      console.log('[Pacientes] JWT atualizado com sucesso. Buscando profile atualizado...');
+      if (import.meta.env.DEV) console.log('[Pacientes] JWT atualizado com sucesso. Buscando profile atualizado...');
       if (refreshProfile) {
         await refreshProfile();
-        console.log('[Pacientes] Profile atualizado com sucesso após refresh do JWT.');
+        if (import.meta.env.DEV) console.log('[Pacientes] Profile atualizado com sucesso após refresh do JWT.');
       } else {
-        console.warn('[Pacientes] refreshProfile não está disponível no contexto.');
+        if (import.meta.env.DEV) console.warn('[Pacientes] refreshProfile não está disponível no contexto.');
       }
     } catch (refreshError) {
       console.error('[Pacientes] Erro ao atualizar JWT ou profile:', refreshError);
@@ -295,7 +299,7 @@ export const usePacientes = () => {
   }, [profile?.id, refreshTrigger, fetchPacientes]);
 
   useEffect(() => {
-    console.log('[Realtime] useEffect de assinatura executado para profile:', profile?.id);
+    if (import.meta.env.DEV) console.log('[Realtime] useEffect de assinatura executado para profile:', profile?.id);
     if (!profile?.id) return;
     if (realtimeChannelRef.current) {
       supabase.removeChannel(realtimeChannelRef.current);
@@ -308,7 +312,7 @@ export const usePacientes = () => {
       },
     });
     const tables = ['pacientes', 'paciente_clinica', 'paciente_medico'];
-    console.log('[Realtime] Canal realtime-pacientes criado e assinando tabelas:', tables);
+    if (import.meta.env.DEV) console.log('[Realtime] Canal realtime-pacientes criado e assinando tabelas:', tables);
     tables.forEach((table) => {
       channel.on(
         'postgres_changes',
@@ -318,9 +322,9 @@ export const usePacientes = () => {
           table,
         },
         (payload) => {
-          console.log('[Realtime] Evento recebido:', payload);
+          if (import.meta.env.DEV) console.log('[Realtime] Evento recebido:', payload);
           if (['INSERT', 'UPDATE', 'DELETE'].includes(payload.eventType)) {
-            pollingAfterRealtime();
+            pollingAfterRealtimeRef.current();
           }
         }
       );
@@ -338,7 +342,7 @@ export const usePacientes = () => {
       }
       pollingActiveRef.current = false;
     };
-  }, [profile?.id, pollingAfterRealtime]);
+  }, [profile?.id]);
 
   return {
     pacientes,
