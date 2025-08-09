@@ -26,7 +26,7 @@ const PrescricaoDigital = lazy(() => import("./pages/PrescricaoDigital"));
 const GestaoMedicos = lazy(() => import("./pages/clinica/GestaoMedicos"));
 const WhatsAppAPI = lazy(() => import("./pages/WhatsAppAPI"));
 const GestaoHospitalar = lazy(() => import("./pages/GestaoHospitalar"));
-const Financeiro = lazy(() => import("./pages/plantonista/GestaoFinanceira"));
+const Financeiro = lazy(() => import("./pages/financeiro"));
 const DRE = lazy(() => import("./pages/DRE"));
 const Comissoes = lazy(() => import("./pages/Comissoes"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
