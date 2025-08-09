@@ -93,7 +93,7 @@ export default function PlantonistaDashboard() {
       title: "Financeiro",
       description: "Gestão financeira",
       icon: DollarSign,
-      action: () => navigate('/plantonista/tabs/GestaoFinanceira'),
+      action: () => navigate('/plantonista/financeiro'),
       color: "bg-purple-500 hover:bg-purple-600"
     },
     {

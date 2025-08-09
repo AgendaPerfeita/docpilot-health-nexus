@@ -223,9 +223,11 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
         .from('plantonista_sessoes')
         .select('*')
         .eq('status', 'ativa')
-        .single();
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
-      return data;
+        .order('data_inicio', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data || null;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao buscar sessão ativa');
       return null;

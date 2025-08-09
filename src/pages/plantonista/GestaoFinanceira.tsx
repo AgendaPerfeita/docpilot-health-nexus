@@ -20,6 +20,7 @@ import {
 import { usePlantoesFinanceiro } from '@/hooks/usePlantoesFinanceiro';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const GestaoFinanceira: React.FC = () => {
   const [mesAtual, setMesAtual] = useState(new Date().getMonth() + 1);
@@ -82,6 +83,50 @@ const GestaoFinanceira: React.FC = () => {
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
+
+  // Corrigir datas em formato YYYY-MM-DD para data local (evita -1 dia por fuso)
+  const parseLocalDate = (dateStr: string) => {
+    const [y, m, d] = (dateStr || '').split('-').map(Number);
+    if (!y || !m || !d) return new Date(dateStr);
+    return new Date(y, m - 1, d);
+  };
+
+  // Agrupadores
+  const plantoesFixos = plantoes.filter(p => p.tipo === 'fixo');
+  const plantoesCoringa = plantoes.filter(p => p.tipo === 'coringa');
+
+  // Mapear escalas por id para obter horários/local
+  const escalaById = new Map<string, any>();
+  escalas.forEach(e => {
+    if (e.id) escalaById.set(e.id, e);
+  });
+
+  // Agrupar fixos por escala_fixa_id (quando existir) senão por local
+  const gruposFixos: { key: string; titulo: string; horario?: string; itens: typeof plantoesFixos }[] = [];
+  const tmp: Record<string, typeof plantoesFixos> = {};
+  for (const p of plantoesFixos) {
+    const key = p.escala_fixa_id || `local:${p.local}`;
+    if (!tmp[key]) tmp[key] = [] as any;
+    tmp[key].push(p);
+  }
+  for (const [key, itens] of Object.entries(tmp)) {
+    // Derivar título e horário
+    let titulo = itens[0]?.local || 'Local';
+    let horario: string | undefined;
+    const escalaId = itens[0]?.escala_fixa_id;
+    if (escalaId && escalaById.has(escalaId)) {
+      const esc = escalaById.get(escalaId);
+      titulo = esc?.local_nome || titulo;
+      if (esc?.horario_inicio && esc?.horario_fim) {
+        horario = `${esc.horario_inicio} - ${esc.horario_fim}`;
+      }
+    }
+    gruposFixos.push({ key, titulo, horario, itens: itens.sort((a,b)=>a.data.localeCompare(b.data)) });
+  }
+  gruposFixos.sort((a,b)=> a.titulo.localeCompare(b.titulo));
+
+  // Corrige exibição de data YYYY-MM-DD (que pode ser interpretada em UTC) para data local
+  // parseLocalDate já declarado acima
 
   const meses = [
     { value: '1', label: 'Janeiro' },
@@ -230,59 +275,104 @@ const GestaoFinanceira: React.FC = () => {
             </CardHeader>
             <CardContent>
               {plantoes.length > 0 ? (
-                <div className="space-y-3">
-                  {plantoes.map((plantao) => (
-                    <div 
-                      key={plantao.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {format(new Date(plantao.data), 'dd/MM/yyyy', { locale: ptBR })}
-                          </span>
-                          <span className="text-sm text-gray-600">
-                            {format(new Date(plantao.data), 'EEEE', { locale: ptBR })}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{plantao.local}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-semibold">
-                            R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                        
-                        <Badge className={`flex items-center gap-1 ${getStatusColor(plantao.status)}`}>
-                          {getStatusIcon(plantao.status)}
-                          {plantao.status === 'realizado' && 'Realizado'}
-                          {plantao.status === 'faltou' && 'Faltou'}
-                          {plantao.status === 'passou' && 'Passou'}
-                          {plantao.status === 'pendente' && 'Pendente'}
-                        </Badge>
-                        
-                        <Select 
-                          value={plantao.status} 
-                          onValueChange={(status) => atualizarStatusPlantao(plantao.id, status)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pendente">Pendente</SelectItem>
-                            <SelectItem value="realizado">Realizado</SelectItem>
-                            <SelectItem value="faltou">Faltou</SelectItem>
-                            <SelectItem value="passou">Passou</SelectItem>
-                          </SelectContent>
-                        </Select>
+                <div className="space-y-6">
+                  {/* Fixos (agrupados por escala/local) */}
+                  {gruposFixos.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-600">Plantões Fixos</p>
+                      <Accordion type="multiple" className="w-full">
+                        {gruposFixos.map(grupo => (
+                          <AccordionItem key={grupo.key} value={grupo.key}>
+                            <AccordionTrigger>
+                              <div className="w-full flex items-center justify-between pr-4">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-gray-500" />
+                                  <span className="font-semibold">{grupo.titulo}</span>
+                                  {grupo.horario && (
+                                    <span className="text-xs text-gray-500">{grupo.horario}</span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-500">{grupo.itens.length} dia(s)</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-2">
+                                {grupo.itens.map(plantao => (
+                                  <div key={plantao.id} className="flex items-center justify-between p-3 border rounded-md">
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{format(parseLocalDate(plantao.data), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                        <span className="text-xs text-gray-600">{format(parseLocalDate(plantao.data), 'EEEE', { locale: ptBR })}</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="font-semibold">R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                      <Badge className={`flex items-center gap-1 ${getStatusColor(plantao.status)}`}>
+                                        {getStatusIcon(plantao.status)}
+                                        {plantao.status}
+                                      </Badge>
+                                      <Select value={plantao.status} onValueChange={(status) => atualizarStatusPlantao(plantao.id, status)}>
+                                        <SelectTrigger className="w-32">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="pendente">Pendente</SelectItem>
+                                          <SelectItem value="realizado">Realizado</SelectItem>
+                                          <SelectItem value="faltou">Faltou</SelectItem>
+                                          <SelectItem value="passou">Passou</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    </div>
+                  )}
+
+                  {/* Coringas (avulsos) */}
+                  {plantoesCoringa.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-600">Plantões Coringa</p>
+                      <div className="space-y-2">
+                        {plantoesCoringa.sort((a,b)=> a.data.localeCompare(b.data)).map(plantao => (
+                          <div key={plantao.id} className="flex items-center justify-between p-3 border rounded-md">
+                            <div className="flex items-center gap-4">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{format(parseLocalDate(plantao.data), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                <span className="text-xs text-gray-600">{format(parseLocalDate(plantao.data), 'EEEE', { locale: ptBR })}</span>
+                              </div>
+                              <div className="text-xs text-gray-500">{plantao.horario_inicio} - {plantao.horario_fim}</div>
+                              <div className="text-xs text-gray-600 flex items-center gap-1">
+                                <MapPin className="h-3 w-3 text-gray-400" /> {plantao.local}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold">R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              <Badge className={`flex items-center gap-1 ${getStatusColor(plantao.status)}`}>
+                                {getStatusIcon(plantao.status)}
+                                {plantao.status}
+                              </Badge>
+                              <Select value={plantao.status} onValueChange={(status) => atualizarStatusPlantao(plantao.id, status)}>
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pendente">Pendente</SelectItem>
+                                  <SelectItem value="realizado">Realizado</SelectItem>
+                                  <SelectItem value="faltou">Faltou</SelectItem>
+                                  <SelectItem value="passou">Passou</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
