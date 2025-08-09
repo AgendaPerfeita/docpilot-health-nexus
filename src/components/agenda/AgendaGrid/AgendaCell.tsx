@@ -18,7 +18,9 @@ export function AgendaCell({
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: AGENDAMENTO_TYPE,
     drop: (item: any) => {
-      console.log('DROP:', { itemId: item.id, from: item.dia + '_' + item.hora, to: diaStr + '_' + hora });
+      if (import.meta.env.DEV) {
+        console.log('DROP:', { itemId: item.id, from: item.dia + '_' + item.hora, to: diaStr + '_' + hora });
+      }
       if (onMoveAgendamento && item.id) {
         onMoveAgendamento(item.id, diaStr, hora);
       }

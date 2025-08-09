@@ -234,7 +234,9 @@ export function MedicalLayout({
           // Se for um paciente diferente, resetar o chat
           if (patId !== pacienteId) {
             // Por enquanto só mostra notificação
-            console.log('Nova mensagem de:', patName);
+            if (import.meta.env.DEV) {
+              console.log('Nova mensagem de:', patName);
+            }
           } else {
             setChatOpen(true);
           }
