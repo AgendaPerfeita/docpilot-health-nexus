@@ -149,10 +149,15 @@ All colors MUST be HSL.
   -webkit-overflow-scrolling: touch;
 }
 
-/* Better focus states for accessibility */
-*:focus {
+/* Better focus states for accessibility - only for keyboard navigation */
+*:focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+}
+
+/* Remove focus outline for mouse clicks */
+*:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Improve button spacing on mobile */
