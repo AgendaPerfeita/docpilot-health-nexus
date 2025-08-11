@@ -9,9 +9,11 @@ export interface PlantaoFixo {
   data: string;
   local: string;
   valor: number;
-  status: 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado';
+  status: 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado' | 'pago';
   observacoes?: string;
   substituto?: string;
+  substituto_nome?: string;
+  foi_passado?: boolean;
   // Extras para agrupamento/renderização
   tipo?: 'fixo' | 'coringa';
   escala_fixa_id?: string; // para fixos

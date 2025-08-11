@@ -42,6 +42,9 @@ const GestaoFinanceira: React.FC = () => {
   const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
   const [plantoesResumo, setPlantoesResumo] = useState<any[]>([]);
   const [locais, setLocais] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('resumo');
+  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const [openSubAccordions, setOpenSubAccordions] = useState<string[]>([]);
   const [modalAcao, setModalAcao] = useState<{
     isOpen: boolean;
     plantao: any | null;
@@ -183,26 +186,36 @@ const GestaoFinanceira: React.FC = () => {
     // Filtrar plantões não cancelados
     const plantoesAtivos = plantoes.filter(p => p.status !== 'cancelado');
     
+    // Plantões realizados SEM ter sido passado (ou seja, que geram receita para o plantonista)
     const totalRealizado = plantoesAtivos
-      .filter(p => p.status === 'realizado')
+      .filter(p => p.status === 'realizado' && !p.foi_passado)
+      .reduce((acc, p) => acc + p.valor, 0);
+    
+    // Plantões efetivamente pagos
+    const totalPago = plantoesAtivos
+      .filter(p => p.status === 'pago')
       .reduce((acc, p) => acc + p.valor, 0);
     
     const totalPrevisto = plantoesAtivos.reduce((acc, p) => acc + p.valor, 0);
     
+    // Perdido = faltou + plantões passados para outros
     const totalPerdido = plantoesAtivos
-      .filter(p => p.status === 'faltou')
+      .filter(p => p.status === 'faltou' || (p.status === 'passou' || p.foi_passado))
       .reduce((acc, p) => acc + p.valor, 0);
     
     const plantoesPendentes = plantoesAtivos.filter(p => p.status === 'pendente').length;
+    const plantoesRealizados = plantoesAtivos.filter(p => p.status === 'realizado' && !p.foi_passado).length;
 
     const plantoesFixos = plantoesAtivos.filter(p => p.tipo === 'fixo').length;
     const plantoesCoringa = plantoesAtivos.filter(p => p.tipo === 'coringa').length;
 
     return {
       totalRealizado,
+      totalPago,
       totalPrevisto,
       totalPerdido,
       plantoesPendentes,
+      plantoesRealizados,
       plantoesFixos,
       plantoesCoringa
     };
@@ -213,6 +226,7 @@ const GestaoFinanceira: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'realizado': return 'bg-green-100 text-green-800';
+      case 'pago': return 'bg-emerald-100 text-emerald-800';
       case 'faltou': return 'bg-red-100 text-red-800';
       case 'passou': return 'bg-blue-100 text-blue-800';
       case 'pendente': return 'bg-yellow-100 text-yellow-800';
@@ -224,6 +238,7 @@ const GestaoFinanceira: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'realizado': return <CheckCircle className="h-4 w-4" />;
+      case 'pago': return <DollarSign className="h-4 w-4" />;
       case 'faltou': return <XCircle className="h-4 w-4" />;
       case 'passou': return <RefreshCw className="h-4 w-4" />;
       case 'pendente': return <Clock className="h-4 w-4" />;
@@ -236,6 +251,49 @@ const GestaoFinanceira: React.FC = () => {
     const [y, m, d] = (dateStr || '').split('-').map(Number);
     if (!y || !m || !d) return new Date(dateStr);
     return new Date(y, m - 1, d);
+  };
+
+  const handleMarcarLocalComoPago = async (grupo: any) => {
+    try {
+      // Validar se todos os plantões estão como "realizado"
+      const plantoesPendentes = grupo.plantoes.filter((p: any) => p.status === 'pendente');
+      
+      if (plantoesPendentes.length > 0) {
+        toast.error(`Não é possível marcar como pago. Existem ${plantoesPendentes.length} plantão(ns) pendente(s). Todos os plantões devem estar como "realizado" antes de marcar como pago.`);
+        return;
+      }
+
+      // Verificar se há plantões não elegíveis para pagamento
+      const plantoesNaoElegiveis = grupo.plantoes.filter((p: any) => 
+        p.status === 'cancelado' || p.status === 'faltou' || p.foi_passado
+      );
+
+      // Plantões que serão marcados como pagos
+      const plantoesParaPagar = grupo.plantoes.filter((p: any) => 
+        p.status === 'realizado' && !p.foi_passado
+      );
+
+      if (plantoesParaPagar.length === 0) {
+        toast.error('Não há plantões realizados para marcar como pago neste local.');
+        return;
+      }
+
+      // Confirmar ação
+      const confirmMessage = `Confirmar pagamento de ${plantoesParaPagar.length} plantão(ns) no ${grupo.titulo}?\n\nValor total: R$ ${grupo.valorMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      
+      if (!confirm(confirmMessage)) return;
+
+      // Marcar todos os plantões realizados como pagos
+      for (const plantao of plantoesParaPagar) {
+        await atualizarStatusPlantao(plantao.id, 'pago');
+      }
+
+      toast.success(`${plantoesParaPagar.length} plantão(ns) marcado(s) como pago no ${grupo.titulo}!`);
+      
+    } catch (error) {
+      console.error('Erro ao marcar local como pago:', error);
+      toast.error('Erro ao processar pagamento');
+    }
   };
 
   // Função para formatar horários removendo segundos
@@ -292,6 +350,32 @@ const GestaoFinanceira: React.FC = () => {
     setModalAcao({ isOpen: true, plantao, tipo });
     setJustificativa('');
     setSubstituto('');
+  };
+
+  const handleAlterarStatusPlantao = async (plantao: any, newStatus: string) => {
+    try {
+      // Para status que precisam de informações adicionais, abre modal
+      if (newStatus === 'passou') {
+        setModalAcao({ isOpen: true, plantao, tipo: 'passar' });
+        setJustificativa('');
+        setSubstituto('');
+        return;
+      }
+
+      // Para cancelamento de plantão fixo, abre modal específico
+      if (newStatus === 'cancelado' && plantao.tipo === 'fixo') {
+        setModalAcao({ isOpen: true, plantao, tipo: 'cancelar' });
+        return;
+      }
+
+      // Para outros status, atualiza diretamente
+      await atualizarStatusPlantao(plantao.id, newStatus);
+      toast.success(`Status alterado para "${newStatus}" com sucesso!`);
+      
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast.error('Erro ao alterar status do plantão');
+    }
   };
 
   const confirmarAcao = async () => {
@@ -704,7 +788,7 @@ const GestaoFinanceira: React.FC = () => {
       </div>
 
       {/* Tabs Principal */}
-      <Tabs defaultValue="resumo" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
           <TabsTrigger value="plantoes">Plantões</TabsTrigger>
@@ -718,11 +802,11 @@ const GestaoFinanceira: React.FC = () => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
-                  <DollarSign className="h-8 w-8 text-green-600" />
+                  <DollarSign className="h-8 w-8 text-emerald-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Realizado</p>
+                    <p className="text-sm font-medium text-gray-600">Pago</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      R$ {resumo.totalRealizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {resumo.totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -762,8 +846,17 @@ const GestaoFinanceira: React.FC = () => {
                 <div className="flex items-center">
                   <Clock className="h-8 w-8 text-yellow-600" />
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Pendentes</p>
-                    <p className="text-2xl font-bold text-gray-900">{resumo.plantoesPendentes}</p>
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Pendentes</p>
+                        <p className="text-2xl font-bold text-yellow-600">{resumo.plantoesPendentes}</p>
+                      </div>
+                      <div className="text-gray-300">|</div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Realizados</p>
+                        <p className="text-2xl font-bold text-green-600">{resumo.plantoesRealizados}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -886,7 +979,12 @@ const GestaoFinanceira: React.FC = () => {
                   {gruposFixos.length > 0 && (
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">Plantões Fixos</h3>
-                      <Accordion type="multiple" className="w-full">
+                      <Accordion 
+                        type="multiple" 
+                        value={openAccordions} 
+                        onValueChange={setOpenAccordions}
+                        className="w-full"
+                      >
                         {gruposFixos.map(grupo => (
                           <AccordionItem key={grupo.key} value={grupo.key}>
                             <AccordionTrigger>
@@ -904,8 +1002,7 @@ const GestaoFinanceira: React.FC = () => {
                                     variant="default"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // TODO: Implementar marcar como pago para o local inteiro
-                                      toast.info('Funcionalidade de marcar como pago será implementada');
+                                      handleMarcarLocalComoPago(grupo);
                                     }}
                                   >
                                     Marcar como Pago
@@ -915,7 +1012,12 @@ const GestaoFinanceira: React.FC = () => {
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="space-y-4">
-                                <Accordion type="multiple" className="w-full">
+                                <Accordion 
+                                  type="multiple" 
+                                  value={openSubAccordions} 
+                                  onValueChange={setOpenSubAccordions}
+                                  className="w-full"
+                                >
                                   {grupo.subgrupos.map(subgrupo => (
                                     <AccordionItem key={subgrupo.key} value={subgrupo.key}>
                                       <AccordionTrigger>
@@ -970,6 +1072,37 @@ const GestaoFinanceira: React.FC = () => {
                                                   {getStatusIcon(plantao.status)}
                                                   {plantao.status}
                                                 </Badge>
+                                                {(plantao.status === 'passou' || plantao.foi_passado) && plantao.substituto_nome && (
+                                                  <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
+                                                )}
+                                                <div className="flex gap-2">
+                                                  <Select
+                                                    value={plantao.status}
+                                                    onValueChange={(newStatus) => handleAlterarStatusPlantao(plantao, newStatus)}
+                                                  >
+                                                    <SelectTrigger className="h-8 w-32">
+                                                      <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      <SelectItem value="pendente">Pendente</SelectItem>
+                                                      <SelectItem value="realizado">Realizado</SelectItem>
+                                                      <SelectItem value="passou">Transferido</SelectItem>
+                                                      <SelectItem value="faltou">Faltou</SelectItem>
+                                                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                  {plantao.status === 'cancelado' && plantao.tipo === 'fixo' && (
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => handleAcaoPlantao(plantao, 'cancelar')}
+                                                      className="h-8"
+                                                    >
+                                                      <XCircle className="h-3 w-3 mr-1" />
+                                                      Cancelar Futuros
+                                                    </Button>
+                                                  )}
+                                                </div>
                                               </div>
                                             </div>
                                           ))}
@@ -1013,17 +1146,23 @@ const GestaoFinanceira: React.FC = () => {
                                 {getStatusIcon(plantao.status)}
                                 {plantao.status}
                               </Badge>
-                              {plantao.status === 'pendente' && (
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleAcaoPlantao(plantao, 'passar')}
-                                    className="h-8"
-                                  >
-                                    <ArrowRight className="h-3 w-3 mr-1" />
-                                    Passar
-                                  </Button>
+                              <div className="flex gap-2">
+                                <Select
+                                  value={plantao.status}
+                                  onValueChange={(newStatus) => handleAlterarStatusPlantao(plantao, newStatus)}
+                                >
+                                  <SelectTrigger className="h-8 w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pendente">Pendente</SelectItem>
+                                    <SelectItem value="realizado">Realizado</SelectItem>
+                                    <SelectItem value="passou">Transferido</SelectItem>
+                                    <SelectItem value="faltou">Faltou</SelectItem>
+                                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {plantao.status === 'cancelado' && plantao.tipo === 'fixo' && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1031,10 +1170,10 @@ const GestaoFinanceira: React.FC = () => {
                                     className="h-8"
                                   >
                                     <XCircle className="h-3 w-3 mr-1" />
-                                    Cancelar
+                                    Cancelar Futuros
                                   </Button>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1098,12 +1237,18 @@ const GestaoFinanceira: React.FC = () => {
                         R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(plantao.status)}>
-                          {plantao.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(plantao.status)}
+                          <Badge className={getStatusColor(plantao.status)}>
+                            {plantao.status}
+                          </Badge>
+                          {(plantao.status === 'passou' || plantao.foi_passado) && plantao.substituto_nome && (
+                            <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {plantao.status === 'passou' ? (plantao.substituto || 'N/A') : '-'}
+                        {(plantao.status === 'passou' || plantao.foi_passado) ? (plantao.substituto_nome || 'N/A') : '-'}
                       </TableCell>
                       <TableCell>
                         {plantao.observacoes || '-'}
@@ -1134,7 +1279,7 @@ const GestaoFinanceira: React.FC = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {modalAcao.tipo === 'passar' ? 'Passar Plantão' : 
+              {modalAcao.tipo === 'passar' ? 'Transferir Plantão' : 
                modalAcao.plantao?.tipo === 'fixo' ? 'Cancelar Escala Fixa' : 'Cancelar Plantão'}
             </DialogTitle>
           </DialogHeader>
@@ -1144,10 +1289,13 @@ const GestaoFinanceira: React.FC = () => {
                 {modalAcao.plantao.tipo === 'fixo' ? (
                   <>
                     <p className="font-medium">
-                      Escala Fixa: {modalAcao.plantao.diaSemanaNome} - {modalAcao.plantao.local}
+                      {modalAcao.tipo === 'passar' ? 'Plantão Fixo' : 'Escala Fixa'}: {modalAcao.plantao.data ? format(parseLocalDate(modalAcao.plantao.data), 'dd/MM/yyyy', { locale: ptBR }) : modalAcao.plantao.diaSemanaNome} - {modalAcao.plantao.local}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Serão cancelados todos os plantões futuros desta escala (a partir de hoje)
+                      {modalAcao.tipo === 'passar' 
+                        ? `Apenas este plantão será transferido. Valor: R$ ${modalAcao.plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                        : 'Serão cancelados todos os plantões futuros desta escala (a partir de hoje)'
+                      }
                     </p>
                   </>
                 ) : (
@@ -1182,7 +1330,7 @@ const GestaoFinanceira: React.FC = () => {
                 value={justificativa}
                 onChange={(e) => setJustificativa(e.target.value)}
                 placeholder={
-                  modalAcao.tipo === 'passar' ? "Motivo da passagem do plantão..." : 
+                  modalAcao.tipo === 'passar' ? "Motivo da transferência do plantão..." : 
                   modalAcao.plantao?.tipo === 'fixo' ? "Motivo do cancelamento da escala fixa..." :
                   "Motivo do cancelamento..."
                 }
@@ -1195,7 +1343,7 @@ const GestaoFinanceira: React.FC = () => {
               Cancelar
             </Button>
             <Button onClick={confirmarAcao}>
-              {modalAcao.tipo === 'passar' ? 'Confirmar Passagem' : 
+              {modalAcao.tipo === 'passar' ? 'Confirmar Transferência' : 
                modalAcao.plantao?.tipo === 'fixo' ? 'Cancelar Escala Fixa' : 'Confirmar Cancelamento'}
             </Button>
           </DialogFooter>
