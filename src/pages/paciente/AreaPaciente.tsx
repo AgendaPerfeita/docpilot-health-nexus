@@ -28,7 +28,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { QuickAIAssistant } from '@/components/medical/QuickAIAssistant';
+import ImprovedQuickAI from '@/components/medical/QuickAIAssistant';
 
 interface Consulta {
   id: string;
@@ -246,11 +246,7 @@ const AreaPaciente: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="ai" className="space-y-6">
-            <QuickAIAssistant 
-              context="general"
-              title="Assistente de Saúde"
-              placeholder="Faça uma pergunta sobre saúde ou descreva seus sintomas..."
-            />
+            <ImprovedQuickAI />
           </TabsContent>
         </Tabs>
       </div>

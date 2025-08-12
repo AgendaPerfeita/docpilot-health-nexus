@@ -257,6 +257,90 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
     }
   };
 
+  // Buscar plantões do mês atual do médico logado
+  const buscarPlantoesMes = async (medicoId: string) => {
+    try {
+      setLoading(true);
+      
+      // Data atual (hoje)
+      const hoje = new Date();
+      const ultimoDiaMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      
+      // Formatar datas para o formato do Supabase
+      // Buscar apenas a partir de HOJE, não do início do mês
+      const dataInicio = hoje.toISOString().split('T')[0];
+      const dataFim = ultimoDiaMes.toISOString().split('T')[0];
+      
+             // Buscar plantões fixos do mês
+       const { data: plantoesFixos, error: errorFixos } = await supabase
+         .from('plantonista_plantao_fixo_realizado')
+         .select(`
+           id,
+           data,
+           valor,
+           status_plantao,
+           escala_fixa_id
+         `)
+         .gte('data', dataInicio)
+         .lte('data', dataFim)
+         .order('data', { ascending: true });
+       
+       if (errorFixos) throw errorFixos;
+       
+       // Buscar escalas fixas do médico
+       const { data: escalasFixas, error: errorEscalas } = await supabase
+         .from('plantonista_escala_fixa')
+         .select('*')
+         .eq('medico_id', medicoId);
+       
+              if (errorEscalas) throw errorEscalas;
+      
+      // Buscar plantões coringa do mês
+      const { data: plantoesCoringa, error: errorCoringa } = await supabase
+        .from('plantonista_plantao_coringa')
+        .select('*')
+        .eq('medico_id', medicoId)
+        .gte('data', dataInicio)
+        .lte('data', dataFim)
+        .order('data', { ascending: true });
+      
+      if (errorCoringa) throw errorCoringa;
+      
+             // Combinar e formatar os dados
+       const plantoesCombinados = [
+         ...(plantoesFixos || []).map(plantao => {
+           // Encontrar a escala fixa correspondente
+           const escala = escalasFixas?.find(e => e.id === plantao.escala_fixa_id);
+           return {
+             id: plantao.id,
+             tipo: 'fixo',
+             data: plantao.data,
+             horario: escala ? `${escala.horario_inicio.toString().slice(0, 5)} - ${escala.horario_fim.toString().slice(0, 5)}` : '00:00 - 00:00',
+             valor: plantao.valor,
+             status: plantao.status_plantao || 'agendado'
+           };
+         }),
+                 ...(plantoesCoringa || []).map(plantao => ({
+           id: plantao.id,
+           tipo: 'coringa',
+           data: plantao.data,
+           horario: `${plantao.horario_inicio.toString().slice(0, 5)} - ${plantao.horario_fim.toString().slice(0, 5)}`,
+           valor: plantao.valor,
+           status: plantao.status_plantao || 'agendado'
+         }))
+      ];
+      
+      // Ordenar por data
+      return plantoesCombinados.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao buscar plantões');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PlantonistaContext.Provider value={{
       sessoes,
@@ -271,6 +355,7 @@ export const PlantonistaProvider = ({ children }: { children: React.ReactNode })
       atualizarAtendimento,
       buscarSessaoAtiva,
       buscarReavaliacoesPendentes,
+      buscarPlantoesMes,
       limparErro: () => setError(null)
     }}>
       {children}

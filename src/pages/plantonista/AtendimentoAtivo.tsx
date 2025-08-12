@@ -33,7 +33,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { QuickAIAssistant } from '@/components/medical/QuickAIAssistant';
+import ImprovedQuickAI from '@/components/medical/QuickAIAssistant';
 
 const AtendimentoAtivo: React.FC = () => {
   const { profile } = useAuth();
@@ -47,14 +47,21 @@ const AtendimentoAtivo: React.FC = () => {
     finalizarSessao,
     criarAtendimento,
     atualizarAtendimento,
-    buscarReavaliacoesPendentes
+    buscarReavaliacoesPendentes,
+    buscarPlantoesMes
   } = usePlantonista();
 
   const [sessaoAtiva, setSessaoAtiva] = useState<any>(null);
   const [reavaliacoes, setReavaliacoes] = useState<any[]>([]);
   const [showNovoAtendimento, setShowNovoAtendimento] = useState(false);
   const [showAtendimentoModal, setShowAtendimentoModal] = useState(false);
-  const [atendimentoAtual, setAtendimentoAtual] = useState<any>(null);
+  const [atendimentoAtual, setAtendimentoAtivo] = useState<any>(null);
+  
+  // Estados para nova arquitetura
+  const [showIniciarPlantao, setShowIniciarPlantao] = useState(false);
+  const [plantaoSelecionado, setPlantaoSelecionado] = useState<any>(null);
+  const [modoAtendimento, setModoAtendimento] = useState<'plantao' | 'livre' | null>(null);
+  const [plantoesReais, setPlantoesReais] = useState<any[]>([]);
   
   // Form states
   const [dadosPaciente, setDadosPaciente] = useState({
@@ -91,6 +98,7 @@ const AtendimentoAtivo: React.FC = () => {
 
   useEffect(() => {
     carregarSessaoAtiva();
+    carregarPlantoesMes();
   }, []);
 
   useEffect(() => {
@@ -102,6 +110,13 @@ const AtendimentoAtivo: React.FC = () => {
   const carregarSessaoAtiva = async () => {
     const sessao = await buscarSessaoAtiva();
     setSessaoAtiva(sessao);
+  };
+
+  const carregarPlantoesMes = async () => {
+    if (!profile?.id) return;
+    
+    const plantoes = await buscarPlantoesMes(profile.id);
+    setPlantoesReais(plantoes || []);
   };
 
   const carregarReavaliacoes = async () => {
@@ -137,7 +152,21 @@ const AtendimentoAtivo: React.FC = () => {
   };
 
   const criarNovoAtendimento = async () => {
-    if (!sessaoAtiva?.id || !profile?.id) return;
+    if (!modoAtendimento || !profile?.id) return;
+
+    // Se for modo livre, não salva no banco
+    if (modoAtendimento === 'livre') {
+      toast.success('Atendimento em modo livre - Sem histórico');
+      setShowNovoAtendimento(false);
+      limparFormularios();
+      return;
+    }
+
+    // Se for plantão, precisa de sessão ativa
+    if (!sessaoAtiva?.id) {
+      toast.error('Sessão não encontrada. Inicie um plantão primeiro.');
+      return;
+    }
 
     const novoAtendimento = await criarAtendimento({
       sessao_id: sessaoAtiva.id,
@@ -198,6 +227,81 @@ const AtendimentoAtivo: React.FC = () => {
     });
   };
 
+  // Funções para nova arquitetura
+  const iniciarPlantao = async (plantao: any) => {
+    try {
+      // Criar sessão para o plantão
+      const novaSessao = await criarSessao({
+        medico_id: profile?.id || '',
+        local_trabalho: 'Plantão',
+        turno: 'plantão',
+        data_inicio: new Date().toISOString(),
+        status: 'ativa'
+      });
+
+      if (novaSessao) {
+        setSessaoAtiva(novaSessao);
+        setPlantaoSelecionado(plantao);
+        setModoAtendimento('plantao');
+        setShowIniciarPlantao(false);
+        
+        const dataFormatada = formatarDataExibicao(plantao.data);
+        toast.success(`Plantão iniciado: ${dataFormatada.data} - ${plantao.horario}`);
+      }
+    } catch (error) {
+      toast.error('Erro ao iniciar plantão');
+    }
+  };
+
+  const iniciarModoLivre = () => {
+    setPlantaoSelecionado(null);
+    setModoAtendimento('livre');
+    setShowIniciarPlantao(false);
+    toast.success('Modo livre ativado - Sem histórico');
+  };
+
+  const finalizarModoAtendimento = async () => {
+    try {
+      // Se estiver em plantão, finalizar a sessão
+      if (modoAtendimento === 'plantao' && sessaoAtiva?.id) {
+        await finalizarSessao(sessaoAtiva.id);
+        setSessaoAtiva(null);
+      }
+
+      setPlantaoSelecionado(null);
+      setModoAtendimento(null);
+      
+      const mensagem = modoAtendimento === 'plantao' 
+        ? 'Plantão finalizado com sucesso!' 
+        : 'Modo livre finalizado';
+      
+      toast.success(mensagem);
+    } catch (error) {
+      toast.error('Erro ao finalizar modo de atendimento');
+    }
+  };
+
+  // Função para formatar data para exibição
+  const formatarDataExibicao = (dataString: string) => {
+    const data = new Date(dataString);
+    const dia = data.getDate().toString().padStart(2, '0');
+    const mes = data.toLocaleDateString('pt-BR', { month: 'short' });
+    const diaSemana = data.toLocaleDateString('pt-BR', { weekday: 'long' });
+    
+    return {
+      data: `${dia} ${mes}`,
+      dia: diaSemana
+    };
+  };
+
+  // Função para formatar valor monetário
+  const formatarValor = (valor: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(valor);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -211,36 +315,77 @@ const AtendimentoAtivo: React.FC = () => {
       {/* Controles de Sessão */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Stethoscope className="h-5 w-5" />
-            <span>Controle de Sessão</span>
-          </CardTitle>
+                     <CardTitle className="flex items-center space-x-2">
+             <Stethoscope className="h-5 w-5" />
+             <span>Iniciar Plantão</span>
+             {plantoesReais.length > 0 && (
+               <Badge variant="secondary" className="ml-2">
+                 {plantoesReais.length} plantão{plantoesReais.length > 1 ? 'ões' : ''} futuro{plantoesReais.length > 1 ? 's' : ''}
+               </Badge>
+             )}
+           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!sessaoAtiva ? (
-            <div className="flex items-center space-x-4">
-              <Button onClick={iniciarSessao} className="bg-green-600 hover:bg-green-700">
-                <Play className="h-4 w-4 mr-2" />
-                Iniciar Sessão de Plantão
-              </Button>
-              <p className="text-gray-600">Clique para iniciar uma nova sessão de plantão</p>
+          {!modoAtendimento ? (
+            <div className="space-y-4">
+                             <Button 
+                 onClick={() => setShowIniciarPlantao(true)} 
+                 className="w-full bg-green-600 hover:bg-green-700"
+                 size="lg"
+               >
+                 <Play className="h-4 w-4 mr-2" />
+                 {plantoesReais.length > 0 ? `Iniciar Plantão (${plantoesReais.length} futuro${plantoesReais.length > 1 ? 's' : ''})` : 'Iniciar Plantão'}
+               </Button>
+                                              <p className="text-gray-600 text-center">
+                   {plantoesReais.length > 0 
+                     ? `Clique para selecionar um dos ${plantoesReais.length} plantão${plantoesReais.length > 1 ? 'ões' : ''} futuro${plantoesReais.length > 1 ? 's' : ''} ou iniciar modo livre`
+                     : 'Clique para iniciar modo livre (sem plantões futuros agendados)'
+                   }
+                 </p>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="font-semibold text-green-700">Sessão Ativa</span>
+            <div className="space-y-4">
+                             {modoAtendimento === 'plantao' && plantaoSelecionado && (
+                 <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                   <div className="flex items-center space-x-4">
+                     <div className="flex items-center space-x-2">
+                       <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                       <span className="font-semibold text-green-700">Plantão Ativo</span>
+                     </div>
+                     <Badge variant="secondary">
+                       {formatarDataExibicao(plantaoSelecionado.data).data} - {formatarDataExibicao(plantaoSelecionado.data).dia}
+                     </Badge>
+                     <Badge variant="outline">
+                       {plantaoSelecionado.horario}
+                     </Badge>
+                     <Badge variant="outline" className="text-green-700">
+                       {formatarValor(plantaoSelecionado.valor)}
+                     </Badge>
+                   </div>
+                   <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm">
+                     <Square className="h-4 w-4 mr-2" />
+                     Finalizar Plantão
+                   </Button>
+                 </div>
+               )}
+              
+              {modoAtendimento === 'livre' && (
+                <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="font-semibold text-blue-700">Modo Livre Ativo</span>
+                    </div>
+                    <Badge variant="outline" className="text-blue-700">
+                      Sem histórico - Consultas pessoais
+                    </Badge>
+                  </div>
+                  <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm">
+                    <Square className="h-4 w-4 mr-2" />
+                    Finalizar Modo Livre
+                  </Button>
                 </div>
-                <Badge variant="secondary">{sessaoAtiva.local_trabalho} - {sessaoAtiva.turno}</Badge>
-                <Badge variant="outline">
-                  {format(new Date(sessaoAtiva.data_inicio), 'HH:mm', { locale: ptBR })}
-                </Badge>
-              </div>
-              <Button onClick={finalizarSessaoAtiva} variant="destructive">
-                <Square className="h-4 w-4 mr-2" />
-                Finalizar Sessão
-              </Button>
+              )}
             </div>
           )}
         </CardContent>
@@ -258,16 +403,16 @@ const AtendimentoAtivo: React.FC = () => {
           {!showNovoAtendimento ? (
             <div>
               <Button 
-                disabled={!sessaoAtiva} 
+                disabled={!modoAtendimento} 
                 onClick={() => setShowNovoAtendimento(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Atendimento Rápido
               </Button>
-              {!sessaoAtiva && (
+              {!modoAtendimento && (
                 <p className="text-sm text-gray-500 mt-2">
-                  Inicie uma sessão para começar a atender pacientes
+                  Inicie um plantão ou modo livre para começar a atender pacientes
                 </p>
               )}
             </div>
@@ -577,13 +722,91 @@ const AtendimentoAtivo: React.FC = () => {
       {/* Assistente IA */}
       <Card>
         <CardContent className="pt-6">
-          <QuickAIAssistant 
-            context="emergency"
-            title="Assistente IA - Emergência"
-            placeholder="Descreva o caso clínico ou peça sugestões diagnósticas..."
-          />
+          <ImprovedQuickAI />
         </CardContent>
       </Card>
+
+      {/* Modal para Selecionar Plantão */}
+      {showIniciarPlantao && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Selecionar Plantão ou Modo Livre</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowIniciarPlantao(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+                             {/* Plantões Agendados */}
+               <div>
+                 <h4 className="font-medium text-gray-800 mb-3">🏥 Plantões Agendados (a partir de hoje)</h4>
+                 {plantoesReais.length > 0 ? (
+                   <div className="space-y-2">
+                     {plantoesReais.map((plantao) => {
+                       const dataFormatada = formatarDataExibicao(plantao.data);
+                       return (
+                         <div
+                           key={plantao.id}
+                           className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                           onClick={() => iniciarPlantao(plantao)}
+                         >
+                           <div className="flex items-center space-x-3">
+                             <div className="text-center">
+                               <div className="text-lg font-bold text-blue-600">{dataFormatada.data}</div>
+                               <div className="text-xs text-gray-500">{dataFormatada.dia}</div>
+                             </div>
+                             <div>
+                               <div className="font-medium">{profile?.nome || 'Médico'}</div>
+                               <div className="text-sm text-gray-600">{plantao.horario}</div>
+                             </div>
+                           </div>
+                           <div className="text-right">
+                             <div className="font-semibold text-green-600">{formatarValor(plantao.valor)}</div>
+                             <Badge variant="outline" className="text-xs">
+                               {plantao.status}
+                             </Badge>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                 ) : (
+                   <div className="text-center py-4 text-gray-500">
+                     <p>Nenhum plantão agendado a partir de hoje</p>
+                     <p className="text-sm">Os plantões futuros aparecerão aqui quando agendados</p>
+                   </div>
+                 )}
+               </div>
+
+              {/* Separador */}
+              <div className="border-t pt-4">
+                <div className="text-center text-gray-500 mb-3">OU</div>
+              </div>
+
+              {/* Modo Livre */}
+              <div>
+                <h4 className="font-medium text-gray-800 mb-3">🆓 Modo Livre</h4>
+                <div className="p-4 border-2 border-dashed border-blue-300 rounded-lg text-center hover:bg-blue-50 cursor-pointer"
+                     onClick={iniciarModoLivre}>
+                  <div className="text-2xl mb-2">🆓</div>
+                  <div className="font-medium text-blue-800">Atendimento Livre</div>
+                  <div className="text-sm text-blue-600 mt-1">
+                    Para consultas pessoais, testes ou uso sem vínculo a plantão
+                  </div>
+                  <div className="text-xs text-blue-500 mt-2">
+                    ⚠️ Não salva no histórico • Sem reavaliação
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Atendimentos em Andamento */}
       <Card>

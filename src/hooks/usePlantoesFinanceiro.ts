@@ -9,7 +9,11 @@ export interface PlantaoFixo {
   data: string;
   local: string;
   valor: number;
-  status: 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado' | 'pago';
+  // Novo sistema: dois campos separados
+  status_plantao: 'agendado' | 'realizado' | 'transferido' | 'faltou' | 'cancelado';
+  status_pagamento: 'pendente' | 'pago';
+  // Campo antigo (para compatibilidade durante migração)
+  status?: 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado' | 'pago';
   observacoes?: string;
   substituto?: string;
   substituto_nome?: string;
@@ -33,6 +37,35 @@ export interface EscalaFixa {
   data_pagamento: number;
   ativo: boolean;
 }
+
+// Função helper para compatibilidade durante migração
+const getPlantaoStatus = (plantao: any) => {
+  // Se tem os novos campos, usa eles
+  if (plantao.status_plantao) {
+    return {
+      status_plantao: plantao.status_plantao,
+      status_pagamento: plantao.status_pagamento || 'pendente'
+    };
+  }
+  
+  // Senão, converte do sistema antigo
+  const statusAntigo = plantao.status || plantao.status_pagamento;
+  if (statusAntigo === 'pago') {
+    return { status_plantao: 'realizado', status_pagamento: 'pago' };
+  } else if (statusAntigo === 'passou') {
+    return { status_plantao: 'transferido', status_pagamento: 'pendente' };
+  } else if (statusAntigo === 'pendente') {
+    return { status_plantao: 'agendado', status_pagamento: 'pendente' };
+  } else if (statusAntigo === 'realizado') {
+    return { status_plantao: 'realizado', status_pagamento: 'pendente' };
+  } else if (statusAntigo === 'faltou') {
+    return { status_plantao: 'faltou', status_pagamento: 'pendente' };
+  } else if (statusAntigo === 'cancelado') {
+    return { status_plantao: 'cancelado', status_pagamento: 'pendente' };
+  }
+  
+  return { status_plantao: 'agendado', status_pagamento: 'pendente' };
+};
 
 export const usePlantoesFinanceiro = () => {
   const [plantoes, setPlantoes] = useState<PlantaoFixo[]>([]);
@@ -110,6 +143,17 @@ export const usePlantoesFinanceiro = () => {
           data: item.data,
           local: (item.plantonista_locais_trabalho as any)?.nome || 'Local não encontrado',
           valor: item.valor || 0,
+          // Novos campos obrigatórios
+          status_plantao: (() => {
+            if (item.status_plantao) return item.status_plantao;
+            if (item.cancelado === true || item.status_pagamento === 'cancelado') return 'cancelado';
+            if (item.foi_passado === true) return 'transferido';
+            if (item.status_pagamento === 'faltou') return 'faltou';
+            if (item.status_pagamento === 'realizado' || item.status_pagamento === 'pago') return 'realizado';
+            return 'agendado';
+          })() as any,
+          status_pagamento: (item.status_pagamento === 'pago' ? 'pago' : 'pendente') as any,
+          // Campo antigo para compatibilidade
           status: (() => {
             // Verificar primeiro se está cancelado
             if (item.cancelado === true || item.status_pagamento === 'cancelado') {
@@ -126,6 +170,8 @@ export const usePlantoesFinanceiro = () => {
           })() as 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado',
           observacoes: item.justificativa_passagem || '',
           substituto: item.substituto_nome || '',
+          substituto_nome: item.substituto_nome,
+          foi_passado: item.foi_passado,
           tipo: 'fixo' as const,
           escala_fixa_id: item.escala_fixa_id as string | undefined,
           local_id: (item.plantonista_locais_trabalho as any)?.id as string | undefined,
@@ -164,6 +210,17 @@ export const usePlantoesFinanceiro = () => {
           data: item.data,
           local: (item.plantonista_locais_trabalho as any)?.nome || 'Local não encontrado',
           valor: Number(item.valor) || 0,
+          // Novos campos obrigatórios
+          status_plantao: (() => {
+            if (item.status_plantao) return item.status_plantao;
+            if (item.cancelado === true || item.status_pagamento === 'cancelado') return 'cancelado';
+            if (item.foi_passado === true) return 'transferido';
+            if (item.status_pagamento === 'faltou') return 'faltou';
+            if (item.status_pagamento === 'realizado' || item.status_pagamento === 'pago') return 'realizado';
+            return 'agendado';
+          })() as any,
+          status_pagamento: (item.status_pagamento === 'pago' ? 'pago' : 'pendente') as any,
+          // Campo antigo para compatibilidade
           status: (() => {
             // Verificar primeiro se está cancelado
             if (item.cancelado === true || item.status_pagamento === 'cancelado') {
@@ -180,6 +237,8 @@ export const usePlantoesFinanceiro = () => {
           })() as 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado',
           observacoes: item.observacoes || '',
           substituto: item.substituto || '',
+          substituto_nome: item.substituto_nome,
+          foi_passado: item.foi_passado,
           tipo: 'coringa' as const,
           horario_inicio: item.horario_inicio || undefined,
           horario_fim: item.horario_fim || undefined,
@@ -352,19 +411,28 @@ export const usePlantoesFinanceiro = () => {
         substituto_nome: substituto || ''
       };
 
-      if (status === 'passou') {
+      // Novo sistema: atualizar status_plantao
+      if (status === 'transferido' || status === 'passou') {
+        updateData.status_plantao = 'transferido';
         updateData.foi_passado = true;
-        updateData.status_pagamento = 'pendente'; // Pode ser ajustado conforme necessário
+        updateData.status_pagamento = 'pendente';
         updateData.cancelado = false;
+        // Manter compatibilidade com sistema antigo
+        updateData.status_pagamento = 'passou';
       } else if (status === 'cancelado') {
+        updateData.status_plantao = 'cancelado';
         updateData.cancelado = true;
+        updateData.status_pagamento = 'pendente';
+        // Manter compatibilidade com sistema antigo
         updateData.status_pagamento = 'cancelado';
       } else {
-        updateData.status_pagamento = status;
+        // Para: agendado, realizado, faltou
+        updateData.status_plantao = status;
         updateData.cancelado = false;
-        if (status !== 'passou') {
-          updateData.foi_passado = false;
-        }
+        updateData.foi_passado = false;
+        updateData.status_pagamento = 'pendente';
+        // Manter compatibilidade com sistema antigo
+        updateData.status_pagamento = status;
       }
 
       const tableName = isFixo ? 'plantonista_plantao_fixo_realizado' : 'plantonista_plantao_coringa';
@@ -376,18 +444,19 @@ export const usePlantoesFinanceiro = () => {
 
       if (error) throw error;
 
-      setPlantoes(prev => prev.map(p => 
-        p.id === plantaoId 
-          ? { 
-              ...p, 
-              status: status as any, 
-              observacoes: observacoes || p.observacoes,
-              substituto: substituto || p.substituto
-            }
-          : p
-      ));
+      // Nota: O estado local será atualizado pelo re-fetch no componente
+      // Isso evita inconsistências entre o estado local e o banco de dados
 
       toast.success('Status do plantão atualizado!');
+      
+      // Debug para verificar se o estado foi atualizado
+      if (import.meta.env.DEV) {
+        console.log('Status atualizado:', {
+          plantaoId,
+          novoStatus: updateData.status_plantao,
+          statusPagamento: updateData.status_pagamento
+        });
+      }
     } catch (error) {
       console.error('Erro ao atualizar plantão:', error);
       toast.error('Erro ao atualizar status do plantão');
@@ -595,6 +664,17 @@ export const usePlantoesFinanceiro = () => {
           data: item.data,
           local: (item.plantonista_locais_trabalho as any)?.nome || 'Local não encontrado',
           valor: Number(item.valor) || 0,
+          // Novos campos obrigatórios
+          status_plantao: (() => {
+            if (item.status_plantao) return item.status_plantao;
+            if (item.cancelado === true || item.status_pagamento === 'cancelado') return 'cancelado';
+            if (item.foi_passado === true) return 'transferido';
+            if (item.status_pagamento === 'faltou') return 'faltou';
+            if (item.status_pagamento === 'realizado' || item.status_pagamento === 'pago') return 'realizado';
+            return 'agendado';
+          })() as any,
+          status_pagamento: (item.status_pagamento === 'pago' ? 'pago' : 'pendente') as any,
+          // Campo antigo para compatibilidade
           status: (() => {
             if (item.cancelado === true || item.status_pagamento === 'cancelado') {
               return 'cancelado';
@@ -608,6 +688,8 @@ export const usePlantoesFinanceiro = () => {
           })() as 'realizado' | 'faltou' | 'passou' | 'pendente' | 'cancelado',
           observacoes: item.observacoes || '',
           substituto: item.substituto || '',
+          substituto_nome: item.substituto_nome,
+          foi_passado: item.foi_passado,
           tipo: 'coringa' as const,
           horario_inicio: item.horario_inicio || undefined,
           horario_fim: item.horario_fim || undefined,
@@ -739,6 +821,37 @@ export const usePlantoesFinanceiro = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Função específica para marcar como pago (apenas altera status_pagamento)
+  const marcarComoPago = async (plantaoId: string) => {
+    try {
+      setLoading(true);
+      
+      const plantao = plantoes.find(p => p.id === plantaoId);
+      const isFixo = plantao?.tipo === 'fixo';
+      const tableName = isFixo ? 'plantonista_plantao_fixo_realizado' : 'plantonista_plantao_coringa';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .update({ 
+          status_pagamento: 'pago',
+          data_pagamento_efetiva: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', plantaoId);
+
+      if (error) throw error;
+
+      // Nota: O estado local será atualizado pelo re-fetch no componente
+
+      toast.success('Plantão marcado como pago!');
+    } catch (error) {
+      console.error('Erro ao marcar como pago:', error);
+      toast.error('Erro ao marcar plantão como pago');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     plantoes,
     escalas,
@@ -749,6 +862,7 @@ export const usePlantoesFinanceiro = () => {
     gerarPlantoesMultiplosMeses,
     gerarPlantoesParaEscalasExistentes,
     atualizarStatusPlantao,
+    marcarComoPago,
     cancelarPlantaoFixoFuturo,
     carregarPlantoesPeriodo,
     criarNovoPlantao

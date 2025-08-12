@@ -43,7 +43,8 @@ const GestaoFinanceira: React.FC = () => {
   const [plantoesResumo, setPlantoesResumo] = useState<any[]>([]);
   const [locais, setLocais] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('resumo');
-  const [openAccordions, setOpenAccordions] = useState<string[]>([]);
+  const [openAccordionsFixos, setOpenAccordionsFixos] = useState<string[]>([]);
+  const [openAccordionsCoringas, setOpenAccordionsCoringas] = useState<string[]>([]);
   const [openSubAccordions, setOpenSubAccordions] = useState<string[]>([]);
   const [modalAcao, setModalAcao] = useState<{
     isOpen: boolean;
@@ -103,6 +104,7 @@ const GestaoFinanceira: React.FC = () => {
     gerarPlantoesMultiplosMeses,
     gerarPlantoesParaEscalasExistentes,
     atualizarStatusPlantao,
+    marcarComoPago,
     cancelarPlantaoFixoFuturo,
     carregarPlantoesPeriodo,
     criarNovoPlantao
@@ -148,6 +150,67 @@ const GestaoFinanceira: React.FC = () => {
     carregarLocais();
   }, []);
 
+  // Função helper para obter status do plantão (compatibilidade)
+  const getPlantaoStatus = (plantao: any) => {
+    // Debug para acompanhar o que está acontecendo
+    if (import.meta.env.DEV) {
+      console.log('getPlantaoStatus input:', {
+        id: plantao.id,
+        status_plantao: plantao.status_plantao,
+        status_pagamento: plantao.status_pagamento,
+        status: plantao.status,
+        foi_passado: plantao.foi_passado,
+        cancelado: plantao.cancelado
+      });
+    }
+
+    // Prioridade 1: Se tem os novos campos, usa eles
+    if (plantao.status_plantao && plantao.status_pagamento) {
+      return {
+        status_plantao: plantao.status_plantao,
+        status_pagamento: plantao.status_pagamento
+      };
+    }
+    
+    // Prioridade 2: Se tem só status_plantao, assume status_pagamento como pendente
+    if (plantao.status_plantao) {
+      return {
+        status_plantao: plantao.status_plantao,
+        status_pagamento: plantao.status_pagamento || 'pendente'
+      };
+    }
+    
+    // Prioridade 3: Conversão do sistema antigo usando lógica completa
+    let statusPlantao: string;
+    let statusPagamento: string;
+    
+    const statusAntigo = plantao.status || plantao.status_pagamento;
+    
+    // Determinar status_plantao
+    if (plantao.cancelado === true || statusAntigo === 'cancelado') {
+      statusPlantao = 'cancelado';
+    } else if (plantao.foi_passado === true || statusAntigo === 'passou') {
+      statusPlantao = 'transferido';
+    } else if (statusAntigo === 'faltou') {
+      statusPlantao = 'faltou';
+    } else if (statusAntigo === 'realizado' || statusAntigo === 'pago') {
+      statusPlantao = 'realizado';
+    } else {
+      statusPlantao = 'agendado';
+    }
+    
+    // Determinar status_pagamento
+    statusPagamento = statusAntigo === 'pago' ? 'pago' : 'pendente';
+    
+    const resultado = { status_plantao: statusPlantao, status_pagamento: statusPagamento };
+    
+    if (import.meta.env.DEV) {
+      console.log('getPlantaoStatus output:', resultado);
+    }
+    
+    return resultado;
+  };
+
   // Calcular resumo dos últimos 6 meses usando useMemo
   const resumoMensal = useMemo(() => {
     const resumoMensal = [];
@@ -158,19 +221,27 @@ const GestaoFinanceira: React.FC = () => {
       const mes = data.getMonth() + 1;
       const ano = data.getFullYear();
       
-      // Filtrar plantões do mês, excluindo cancelados
+      // Filtrar plantões do mês
       const plantoesMes = plantoesResumo.filter(p => {
         const [pAno, pMes] = p.data.split('-').map(Number);
-        return pAno === ano && pMes === mes && p.status !== 'cancelado';
+        return pAno === ano && pMes === mes;
       });
       
-      // Somar apenas plantões realizados
+      // Somar apenas plantões pagos (receita efetiva)
       const realizado = plantoesMes
-        .filter(p => p.status === 'realizado')
+        .filter(p => {
+          const statusInfo = getPlantaoStatus(p);
+          return statusInfo.status_pagamento === 'pago';
+        })
         .reduce((acc, p) => acc + p.valor, 0);
       
-      // Somar todos os plantões do mês (exceto cancelados) para o previsto
-      const previsto = plantoesMes.reduce((acc, p) => acc + p.valor, 0);
+      // Somar plantões que podem gerar receita (agendados + realizados + pagos)
+      const previsto = plantoesMes
+        .filter(p => {
+          const statusInfo = getPlantaoStatus(p);
+          return ['agendado', 'realizado'].includes(statusInfo.status_plantao) || statusInfo.status_pagamento === 'pago';
+        })
+        .reduce((acc, p) => acc + p.valor, 0);
       
       resumoMensal.push({
         mes: format(data, 'MMM/yyyy', { locale: ptBR }),
@@ -184,37 +255,54 @@ const GestaoFinanceira: React.FC = () => {
 
   const calcularResumoFinanceiro = () => {
     // Filtrar plantões não cancelados
-    const plantoesAtivos = plantoes.filter(p => p.status !== 'cancelado');
-    
-    // Plantões realizados SEM ter sido passado (ou seja, que geram receita para o plantonista)
-    const totalRealizado = plantoesAtivos
-      .filter(p => p.status === 'realizado' && !p.foi_passado)
-      .reduce((acc, p) => acc + p.valor, 0);
+    const plantoesAtivos = plantoes.filter(p => {
+      const status = getPlantaoStatus(p);
+      return status.status_plantao !== 'cancelado';
+    });
     
     // Plantões efetivamente pagos
     const totalPago = plantoesAtivos
-      .filter(p => p.status === 'pago')
+      .filter(p => {
+        const status = getPlantaoStatus(p);
+        return status.status_pagamento === 'pago';
+      })
       .reduce((acc, p) => acc + p.valor, 0);
     
-    const totalPrevisto = plantoesAtivos.reduce((acc, p) => acc + p.valor, 0);
+    // Total previsto = apenas plantões que podem gerar receita (agendados + realizados + pagos)
+    const totalPrevisto = plantoesAtivos
+      .filter(p => {
+        const status = getPlantaoStatus(p);
+        return ['agendado', 'realizado'].includes(status.status_plantao) || status.status_pagamento === 'pago';
+      })
+      .reduce((acc, p) => acc + p.valor, 0);
     
-    // Perdido = faltou + plantões passados para outros
+    // Perdido = faltou + transferido
     const totalPerdido = plantoesAtivos
-      .filter(p => p.status === 'faltou' || (p.status === 'passou' || p.foi_passado))
+      .filter(p => {
+        const status = getPlantaoStatus(p);
+        return ['faltou', 'transferido'].includes(status.status_plantao);
+      })
       .reduce((acc, p) => acc + p.valor, 0);
     
-    const plantoesPendentes = plantoesAtivos.filter(p => p.status === 'pendente').length;
-    const plantoesRealizados = plantoesAtivos.filter(p => p.status === 'realizado' && !p.foi_passado).length;
+    // Contadores
+    const plantoesAgendados = plantoesAtivos.filter(p => {
+      const status = getPlantaoStatus(p);
+      return status.status_plantao === 'agendado';
+    }).length;
+    
+    const plantoesRealizados = plantoesAtivos.filter(p => {
+      const status = getPlantaoStatus(p);
+      return status.status_plantao === 'realizado';
+    }).length;
 
     const plantoesFixos = plantoesAtivos.filter(p => p.tipo === 'fixo').length;
     const plantoesCoringa = plantoesAtivos.filter(p => p.tipo === 'coringa').length;
 
     return {
-      totalRealizado,
       totalPago,
       totalPrevisto,
       totalPerdido,
-      plantoesPendentes,
+      plantoesAgendados,
       plantoesRealizados,
       plantoesFixos,
       plantoesCoringa
@@ -223,26 +311,40 @@ const GestaoFinanceira: React.FC = () => {
 
   const resumo = calcularResumoFinanceiro();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (statusPlantao: string, statusPagamento?: string) => {
+    // Se é pago, mostra como pago
+    if (statusPagamento === 'pago') return 'bg-emerald-100 text-emerald-800';
+    
+    // Senão, usa status do plantão
+    switch (statusPlantao) {
       case 'realizado': return 'bg-green-100 text-green-800';
-      case 'pago': return 'bg-emerald-100 text-emerald-800';
       case 'faltou': return 'bg-red-100 text-red-800';
+      case 'transferido': return 'bg-blue-100 text-blue-800';
+      case 'agendado': return 'bg-yellow-100 text-yellow-800';
+      case 'cancelado': return 'bg-gray-100 text-gray-800';
+      // Compatibilidade com sistema antigo
       case 'passou': return 'bg-blue-100 text-blue-800';
       case 'pendente': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelado': return 'bg-gray-100 text-gray-800';
+      case 'pago': return 'bg-emerald-100 text-emerald-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (statusPlantao: string, statusPagamento?: string) => {
+    // Se é pago, mostra ícone de dinheiro
+    if (statusPagamento === 'pago') return <DollarSign className="h-4 w-4" />;
+    
+    // Senão, usa status do plantão
+    switch (statusPlantao) {
       case 'realizado': return <CheckCircle className="h-4 w-4" />;
-      case 'pago': return <DollarSign className="h-4 w-4" />;
       case 'faltou': return <XCircle className="h-4 w-4" />;
+      case 'transferido': return <RefreshCw className="h-4 w-4" />;
+      case 'agendado': return <Clock className="h-4 w-4" />;
+      case 'cancelado': return <XCircle className="h-4 w-4" />;
+      // Compatibilidade com sistema antigo
       case 'passou': return <RefreshCw className="h-4 w-4" />;
       case 'pendente': return <Clock className="h-4 w-4" />;
-      case 'cancelado': return <XCircle className="h-4 w-4" />;
+      case 'pago': return <DollarSign className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
@@ -255,26 +357,26 @@ const GestaoFinanceira: React.FC = () => {
 
   const handleMarcarLocalComoPago = async (grupo: any) => {
     try {
-      // Validar se todos os plantões estão como "realizado"
-      const plantoesPendentes = grupo.plantoes.filter((p: any) => p.status === 'pendente');
+      // Validar usando nova lógica de status
+      const plantoesAgendados = grupo.plantoes.filter((p: any) => {
+        const statusInfo = getPlantaoStatus(p);
+        return statusInfo.status_plantao === 'agendado';
+      });
       
-      if (plantoesPendentes.length > 0) {
-        toast.error(`Não é possível marcar como pago. Existem ${plantoesPendentes.length} plantão(ns) pendente(s). Todos os plantões devem estar como "realizado" antes de marcar como pago.`);
+      if (plantoesAgendados.length > 0) {
+        toast.error(`Não é possível marcar como pago. Existem ${plantoesAgendados.length} plantão(ns) agendado(s). Todos os plantões devem estar como "realizado" antes de marcar como pago.`);
         return;
       }
 
-      // Verificar se há plantões não elegíveis para pagamento
-      const plantoesNaoElegiveis = grupo.plantoes.filter((p: any) => 
-        p.status === 'cancelado' || p.status === 'faltou' || p.foi_passado
-      );
-
-      // Plantões que serão marcados como pagos
-      const plantoesParaPagar = grupo.plantoes.filter((p: any) => 
-        p.status === 'realizado' && !p.foi_passado
-      );
+      // Plantões que serão marcados como pagos (somente os realizados e não transferidos)
+      const plantoesParaPagar = grupo.plantoes.filter((p: any) => {
+        const statusInfo = getPlantaoStatus(p);
+        return statusInfo.status_plantao === 'realizado' && 
+               statusInfo.status_pagamento === 'pendente';
+      });
 
       if (plantoesParaPagar.length === 0) {
-        toast.error('Não há plantões realizados para marcar como pago neste local.');
+        toast.error('Não há plantões realizados pendentes de pagamento neste local.');
         return;
       }
 
@@ -285,14 +387,64 @@ const GestaoFinanceira: React.FC = () => {
 
       // Marcar todos os plantões realizados como pagos
       for (const plantao of plantoesParaPagar) {
-        await atualizarStatusPlantao(plantao.id, 'pago');
+        await marcarComoPago(plantao.id);
       }
+
+      // Forçar recarregamento dos dados
+      await carregarPlantoes(mesAtual, anoAtual);
 
       toast.success(`${plantoesParaPagar.length} plantão(ns) marcado(s) como pago no ${grupo.titulo}!`);
       
     } catch (error) {
       console.error('Erro ao marcar local como pago:', error);
       toast.error('Erro ao processar pagamento');
+    }
+  };
+
+  // Função para marcar grupo de plantões coringa como pago
+  const handleMarcarCoringaComoPago = async (grupo: GrupoCoringaLocal) => {
+    try {
+      // Validar usando nova lógica de status
+      const plantoesAgendados = grupo.plantoes.filter((p: any) => {
+        const statusInfo = getPlantaoStatus(p);
+        return statusInfo.status_plantao === 'agendado';
+      });
+      
+      if (plantoesAgendados.length > 0) {
+        toast.error(`Não é possível marcar como pago. Existem ${plantoesAgendados.length} plantão(ns) agendado(s). Todos os plantões devem estar como "realizado" antes de marcar como pago.`);
+        return;
+      }
+
+      // Plantões que serão marcados como pagos (somente os realizados e não transferidos)
+      const plantoesParaPagar = grupo.plantoes.filter((p: any) => {
+        const statusInfo = getPlantaoStatus(p);
+        return statusInfo.status_plantao === 'realizado' && 
+               statusInfo.status_pagamento === 'pendente';
+      });
+
+      if (plantoesParaPagar.length === 0) {
+        toast.error('Não há plantões realizados pendentes de pagamento neste local.');
+        return;
+      }
+
+      // Confirmar ação
+      const confirmMessage = `Confirmar pagamento de ${plantoesParaPagar.length} plantão(ns) coringa no ${grupo.titulo}?\n\nValor total: R$ ${grupo.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+      
+      if (!confirm(confirmMessage)) return;
+
+      // Marcar todos os plantões realizados como pagos
+      for (const plantao of plantoesParaPagar) {
+        await marcarComoPago(plantao.id);
+      }
+
+      // Forçar recarregamento dos dados
+      await carregarPlantoes(mesAtual, anoAtual);
+
+      toast.success(`${plantoesParaPagar.length} plantão(ns) coringa marcado(s) como pago no ${grupo.titulo}!`);
+      
+    } catch (error) {
+      console.error('Erro ao marcar coringas como pago:', error);
+      toast.error('Erro ao processar pagamento dos coringas');
     }
   };
 
@@ -355,7 +507,7 @@ const GestaoFinanceira: React.FC = () => {
   const handleAlterarStatusPlantao = async (plantao: any, newStatus: string) => {
     try {
       // Para status que precisam de informações adicionais, abre modal
-      if (newStatus === 'passou') {
+      if (newStatus === 'transferido') {
         setModalAcao({ isOpen: true, plantao, tipo: 'passar' });
         setJustificativa('');
         setSubstituto('');
@@ -368,9 +520,21 @@ const GestaoFinanceira: React.FC = () => {
         return;
       }
 
-      // Para outros status, atualiza diretamente
+      // Para outros status, atualiza diretamente o status_plantao
       await atualizarStatusPlantao(plantao.id, newStatus);
-      toast.success(`Status alterado para "${newStatus}" com sucesso!`);
+      
+      // Forçar recarregamento dos dados para garantir sincronização
+      await carregarPlantoes(mesAtual, anoAtual);
+      
+      // Converter para mensagem amigável
+      const statusMessages = {
+        'agendado': 'Agendado',
+        'realizado': 'Realizado',
+        'faltou': 'Faltou',
+        'cancelado': 'Cancelado'
+      };
+      
+      toast.success(`Status alterado para "${statusMessages[newStatus] || newStatus}" com sucesso!`);
       
     } catch (error) {
       console.error('Erro ao alterar status:', error);
@@ -388,13 +552,16 @@ const GestaoFinanceira: React.FC = () => {
     }
 
     // Para plantões coringa ou passar plantão fixo individual
-    const status = modalAcao.tipo === 'passar' ? 'passou' : 'cancelado';
+    const status = modalAcao.tipo === 'passar' ? 'transferido' : 'cancelado';
     await atualizarStatusPlantao(
       modalAcao.plantao.id, 
       status, 
       justificativa,
       substituto
     );
+
+    // Forçar recarregamento dos dados
+    await carregarPlantoes(mesAtual, anoAtual);
 
     setModalAcao({ isOpen: false, plantao: null, tipo: null });
     setJustificativa('');
@@ -684,7 +851,14 @@ const GestaoFinanceira: React.FC = () => {
       const [diaSemana, horarioInicio, horarioFim] = subgrupoKey.split('_');
       const titulo = `${getDiaSemanaNome(parseInt(diaSemana))}: ${formatHorario(horarioInicio)} - ${formatHorario(horarioFim)}`;
       
-      const valorSubgrupo = itens.reduce((acc, item) => acc + (item.valor || 0), 0);
+      // Só somar valores de plantões que geram receita (não cancelados, não transferidos, não faltou)
+      const valorSubgrupo = itens.reduce((acc, item) => {
+        const statusInfo = getPlantaoStatus(item);
+        if (['agendado', 'realizado'].includes(statusInfo.status_plantao)) {
+          return acc + (item.valor || 0);
+        }
+        return acc;
+      }, 0);
       totalValorLocal += valorSubgrupo;
       
       subgrupos.push({
@@ -713,6 +887,60 @@ const GestaoFinanceira: React.FC = () => {
 
   // Ordenar grupos por título do local
   gruposFixos.sort((a, b) => a.titulo.localeCompare(b.titulo));
+
+  // Agrupar plantões coringa por local (semelhante aos fixos)
+  interface GrupoCoringaLocal {
+    key: string;
+    titulo: string;
+    localId: string;
+    valorTotal: number;
+    plantoes: typeof plantoesCoringa;
+  }
+
+  const gruposCoringa: GrupoCoringaLocal[] = [];
+  const tmpLocaisCoringa: Record<string, { titulo: string; valorTotal: number; plantoes: typeof plantoesCoringa }> = {};
+
+  // Agrupar coringas por local
+  for (const p of plantoesCoringa) {
+    const localKey = `coringa:${p.local_id || p.local}`;
+    const localTitulo = p.local;
+
+    if (!tmpLocaisCoringa[localKey]) {
+      tmpLocaisCoringa[localKey] = {
+        titulo: localTitulo,
+        valorTotal: 0,
+        plantoes: []
+      };
+    }
+
+    tmpLocaisCoringa[localKey].plantoes.push(p);
+    
+    // Só somar valores de plantões que geram receita (não cancelados, não transferidos, não faltou)
+    const statusInfo = getPlantaoStatus(p);
+    if (['agendado', 'realizado'].includes(statusInfo.status_plantao)) {
+      tmpLocaisCoringa[localKey].valorTotal += p.valor;
+    }
+  }
+
+  // Converter para array e ordenar plantões por data
+  for (const [localKey, localData] of Object.entries(tmpLocaisCoringa)) {
+    // Ordenar plantões por data
+    const plantoesOrdenados = localData.plantoes.sort((a, b) => a.data.localeCompare(b.data));
+    
+    // Extrair o local_id da chave
+    const localId = localKey.replace('coringa:', '');
+    
+    gruposCoringa.push({
+      key: localKey,
+      titulo: localData.titulo,
+      localId: localId,
+      valorTotal: localData.valorTotal,
+      plantoes: plantoesOrdenados
+    });
+  }
+
+  // Ordenar grupos por título do local
+  gruposCoringa.sort((a, b) => a.titulo.localeCompare(b.titulo));
 
   const meses = [
     { value: '1', label: 'Janeiro' },
@@ -848,8 +1076,8 @@ const GestaoFinanceira: React.FC = () => {
                   <div className="ml-4">
                     <div className="flex items-center gap-4">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Pendentes</p>
-                        <p className="text-2xl font-bold text-yellow-600">{resumo.plantoesPendentes}</p>
+                        <p className="text-sm font-medium text-gray-600">Agendados</p>
+                        <p className="text-2xl font-bold text-yellow-600">{resumo.plantoesAgendados}</p>
                       </div>
                       <div className="text-gray-300">|</div>
                       <div>
@@ -954,7 +1182,7 @@ const GestaoFinanceira: React.FC = () => {
               <CardContent>
                 <div className="text-center">
                   <p className="text-3xl font-bold text-green-600">
-                    {resumo.totalPrevisto > 0 ? Math.round((resumo.totalRealizado / resumo.totalPrevisto) * 100) : 0}%
+                    {resumo.totalPrevisto > 0 ? Math.round((resumo.plantoesRealizados * 100) / (resumo.plantoesAgendados + resumo.plantoesRealizados)) : 0}%
                   </p>
                   <p className="text-sm text-gray-600">Plantões realizados</p>
                 </div>
@@ -981,8 +1209,8 @@ const GestaoFinanceira: React.FC = () => {
                       <h3 className="text-lg font-semibold">Plantões Fixos</h3>
                       <Accordion 
                         type="multiple" 
-                        value={openAccordions} 
-                        onValueChange={setOpenAccordions}
+                        value={openAccordionsFixos} 
+                        onValueChange={setOpenAccordionsFixos}
                         className="w-full"
                       >
                         {gruposFixos.map(grupo => (
@@ -1068,25 +1296,43 @@ const GestaoFinanceira: React.FC = () => {
                                               </div>
                                               <div className="flex items-center gap-3">
                                                 <span className="font-semibold">R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                <Badge className={`flex items-center gap-1 ${getStatusColor(plantao.status)}`}>
-                                                  {getStatusIcon(plantao.status)}
-                                                  {plantao.status}
+                                                <Badge className={`flex items-center gap-1 ${(() => {
+                                                  const statusInfo = getPlantaoStatus(plantao);
+                                                  return getStatusColor(statusInfo.status_plantao, statusInfo.status_pagamento);
+                                                })()}`}>
+                                                  {(() => {
+                                                    const statusInfo = getPlantaoStatus(plantao);
+                                                    return getStatusIcon(statusInfo.status_plantao, statusInfo.status_pagamento);
+                                                  })()}
+                                                  {(() => {
+                                                    const statusInfo = getPlantaoStatus(plantao);
+                                                    if (statusInfo.status_pagamento === 'pago') return 'Pago';
+                                                    
+                                                    switch (statusInfo.status_plantao) {
+                                                      case 'agendado': return 'Agendado';
+                                                      case 'realizado': return 'Realizado';
+                                                      case 'transferido': return 'Transferido';
+                                                      case 'faltou': return 'Faltou';
+                                                      case 'cancelado': return 'Cancelado';
+                                                      default: return statusInfo.status_plantao;
+                                                    }
+                                                  })()}
                                                 </Badge>
                                                 {(plantao.status === 'passou' || plantao.foi_passado) && plantao.substituto_nome && (
                                                   <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
                                                 )}
                                                 <div className="flex gap-2">
                                                   <Select
-                                                    value={plantao.status}
+                                                    value={getPlantaoStatus(plantao).status_plantao}
                                                     onValueChange={(newStatus) => handleAlterarStatusPlantao(plantao, newStatus)}
                                                   >
                                                     <SelectTrigger className="h-8 w-32">
                                                       <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                      <SelectItem value="pendente">Pendente</SelectItem>
+                                                      <SelectItem value="agendado">Agendado</SelectItem>
                                                       <SelectItem value="realizado">Realizado</SelectItem>
-                                                      <SelectItem value="passou">Transferido</SelectItem>
+                                                      <SelectItem value="transferido">Transferido</SelectItem>
                                                       <SelectItem value="faltou">Faltou</SelectItem>
                                                       <SelectItem value="cancelado">Cancelado</SelectItem>
                                                     </SelectContent>
@@ -1119,65 +1365,115 @@ const GestaoFinanceira: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Coringas */}
-                  {plantoesCoringa.length > 0 && (
+                  {/* Plantões Coringa Agrupados por Local */}
+                  {gruposCoringa.length > 0 && (
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">Plantões Coringa</h3>
-                      <div className="space-y-2">
-                        {plantoesCoringa.sort((a,b)=> a.data.localeCompare(b.data)).map(plantao => (
-                          <div key={plantao.id} className="flex items-center justify-between p-3 border rounded-md">
-                            <div className="flex items-center gap-4">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{format(parseLocalDate(plantao.data), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                                <span className="text-xs text-gray-600">{format(parseLocalDate(plantao.data), 'EEEE', { locale: ptBR })}</span>
-                              </div>
-                              {plantao.horario_inicio && plantao.horario_fim && (
-                                <div className="text-xs text-gray-500">
-                                  {formatHorario(plantao.horario_inicio)} - {formatHorario(plantao.horario_fim)}
+                      <Accordion 
+                        type="multiple" 
+                        value={openAccordionsCoringas} 
+                        onValueChange={setOpenAccordionsCoringas}
+                        className="w-full"
+                      >
+                        {gruposCoringa.map(grupo => (
+                          <AccordionItem key={grupo.key} value={grupo.key}>
+                            <AccordionTrigger>
+                              <div className="w-full flex items-center justify-between pr-4">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-gray-500" />
+                                  <span className="font-semibold">{grupo.titulo}</span>
                                 </div>
-                              )}
-                              <div className="text-xs text-gray-600 flex items-center gap-1">
-                                <MapPin className="h-3 w-3 text-gray-400" /> {plantao.local}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-semibold">R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                              <Badge className={`flex items-center gap-1 ${getStatusColor(plantao.status)}`}>
-                                {getStatusIcon(plantao.status)}
-                                {plantao.status}
-                              </Badge>
-                              <div className="flex gap-2">
-                                <Select
-                                  value={plantao.status}
-                                  onValueChange={(newStatus) => handleAlterarStatusPlantao(plantao, newStatus)}
-                                >
-                                  <SelectTrigger className="h-8 w-32">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pendente">Pendente</SelectItem>
-                                    <SelectItem value="realizado">Realizado</SelectItem>
-                                    <SelectItem value="passou">Transferido</SelectItem>
-                                    <SelectItem value="faltou">Faltou</SelectItem>
-                                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                {plantao.status === 'cancelado' && plantao.tipo === 'fixo' && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleAcaoPlantao(plantao, 'cancelar')}
-                                    className="h-8"
+                                <div className="flex items-center gap-4">
+                                  <span className="text-sm font-medium text-green-700">
+                                    Valor Total: R$ {grupo.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                  <Button 
+                                    size="sm" 
+                                    variant="default"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMarcarCoringaComoPago(grupo);
+                                    }}
                                   >
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Cancelar Futuros
+                                    Marcar como Pago
                                   </Button>
-                                )}
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-2">
+                                {grupo.plantoes.map(plantao => (
+                                  <div key={plantao.id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{format(parseLocalDate(plantao.data), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                                        <span className="text-xs text-gray-600">{format(parseLocalDate(plantao.data), 'EEEE', { locale: ptBR })}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {formatHorario(plantao.horario_inicio || '')} - {formatHorario(plantao.horario_fim || '')}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="font-semibold">R$ {plantao.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                      <Badge className={`flex items-center gap-1 ${(() => {
+                                        const statusInfo = getPlantaoStatus(plantao);
+                                        return getStatusColor(statusInfo.status_plantao, statusInfo.status_pagamento);
+                                      })()}`}>
+                                        {(() => {
+                                          const statusInfo = getPlantaoStatus(plantao);
+                                          return getStatusIcon(statusInfo.status_plantao, statusInfo.status_pagamento);
+                                        })()}
+                                        {(() => {
+                                          const statusInfo = getPlantaoStatus(plantao);
+                                          if (statusInfo.status_pagamento === 'pago') return 'Pago';
+                                          
+                                          switch (statusInfo.status_plantao) {
+                                            case 'agendado': return 'Agendado';
+                                            case 'realizado': return 'Realizado';
+                                            case 'transferido': return 'Transferido';
+                                            case 'faltou': return 'Faltou';
+                                            case 'cancelado': return 'Cancelado';
+                                            default: return statusInfo.status_plantao;
+                                          }
+                                        })()}
+                                      </Badge>
+                                      {(plantao.status === 'passou' || plantao.foi_passado) && plantao.substituto_nome && (
+                                        <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
+                                      )}
+                                      <div className="flex gap-2">
+                                        <Select
+                                          value={getPlantaoStatus(plantao).status_plantao}
+                                          onValueChange={(newStatus) => handleAlterarStatusPlantao(plantao, newStatus)}
+                                        >
+                                          <SelectTrigger className="h-8 w-32">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="agendado">Agendado</SelectItem>
+                                            <SelectItem value="realizado">Realizado</SelectItem>
+                                            <SelectItem value="transferido">Transferido</SelectItem>
+                                            <SelectItem value="faltou">Faltou</SelectItem>
+                                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleAcaoPlantao(plantao, 'passar')}
+                                          className="h-8"
+                                        >
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Transferir
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
                         ))}
-                      </div>
+                      </Accordion>
                     </div>
                   )}
                 </div>
@@ -1201,9 +1497,31 @@ const GestaoFinanceira: React.FC = () => {
         <TabsContent value="relatorios" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Relatório Detalhado - {meses.find(m => m.value === mesAtual.toString())?.label} {anoAtual}
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Relatório Detalhado - {meses.find(m => m.value === mesAtual.toString())?.label} {anoAtual}
+                </div>
+                <div className="flex items-center gap-4 text-lg font-semibold">
+                  <span className="text-blue-600">
+                    Previsto: R$ {(() => {
+                      const plantoesAtivos = plantoes.filter(p => {
+                        const statusInfo = getPlantaoStatus(p);
+                        return ['agendado', 'realizado'].includes(statusInfo.status_plantao) || statusInfo.status_pagamento === 'pago';
+                      });
+                      return plantoesAtivos.reduce((acc, p) => acc + p.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                    })()}
+                  </span>
+                  <span className="text-green-600">
+                    Pago: R$ {(() => {
+                      const plantoesPagos = plantoes.filter(p => {
+                        const statusInfo = getPlantaoStatus(p);
+                        return statusInfo.status_pagamento === 'pago';
+                      });
+                      return plantoesPagos.reduce((acc, p) => acc + p.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                    })()}
+                  </span>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1213,7 +1531,8 @@ const GestaoFinanceira: React.FC = () => {
                     <TableHead>Data</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Status Plantão</TableHead>
+                    <TableHead>Status Pagamento</TableHead>
                     <TableHead>Substituto</TableHead>
                     <TableHead>Justificativa</TableHead>
                     <TableHead>Local</TableHead>
@@ -1238,14 +1557,44 @@ const GestaoFinanceira: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(plantao.status)}
-                          <Badge className={getStatusColor(plantao.status)}>
-                            {plantao.status}
+                          {(() => {
+                            const statusInfo = getPlantaoStatus(plantao);
+                            return getStatusIcon(statusInfo.status_plantao, statusInfo.status_pagamento);
+                          })()}
+                          <Badge className={(() => {
+                            const statusInfo = getPlantaoStatus(plantao);
+                            return getStatusColor(statusInfo.status_plantao, statusInfo.status_pagamento);
+                          })()}>
+                            {(() => {
+                              const statusInfo = getPlantaoStatus(plantao);
+                              switch (statusInfo.status_plantao) {
+                                case 'agendado': return 'Agendado';
+                                case 'realizado': return 'Realizado';
+                                case 'transferido': return 'Transferido';
+                                case 'faltou': return 'Faltou';
+                                case 'cancelado': return 'Cancelado';
+                                default: return statusInfo.status_plantao;
+                              }
+                            })()}
                           </Badge>
-                          {(plantao.status === 'passou' || plantao.foi_passado) && plantao.substituto_nome && (
-                            <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
-                          )}
+                          {(() => {
+                            const statusInfo = getPlantaoStatus(plantao);
+                            return (statusInfo.status_plantao === 'transferido' || plantao.foi_passado) && plantao.substituto_nome && (
+                              <span className="text-xs text-gray-600">→ {plantao.substituto_nome}</span>
+                            );
+                          })()}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={(() => {
+                          const statusInfo = getPlantaoStatus(plantao);
+                          return statusInfo.status_pagamento === 'pago' ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800';
+                        })()}>
+                          {(() => {
+                            const statusInfo = getPlantaoStatus(plantao);
+                            return statusInfo.status_pagamento === 'pago' ? 'Pago' : 'Pendente';
+                          })()}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {(plantao.status === 'passou' || plantao.foi_passado) ? (plantao.substituto_nome || 'N/A') : '-'}
