@@ -17,8 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Componentes das abas (serão implementados depois)
 import AtendimentoAtivo from './tabs/AtendimentoAtivo';
-import GestaoFinanceira from './tabs/GestaoFinanceira';
-import Historico from './tabs/Historico';
+import GestaoFinanceira from './GestaoFinanceira';
+import Historico from './Historico';
 import Configuracoes from './tabs/Configuracoes';
 
 const PlantonistaDashboard: React.FC = () => {

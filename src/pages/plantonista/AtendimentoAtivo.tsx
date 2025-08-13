@@ -129,10 +129,13 @@ const AtendimentoAtivo: React.FC = () => {
   const iniciarSessao = async () => {
     if (!profile?.id) return;
     
+    // Usar local baseado no plantão selecionado ou padrão
+    const localTrabalho = plantaoSelecionado?.local || 'Plantão Livre';
+    
     const novaSessao = await criarSessao({
       medico_id: profile.id,
-      local_trabalho: 'Hospital ABC',
-      turno: 'noite',
+      local_trabalho: localTrabalho,
+      turno: new Date().getHours() >= 18 ? 'noite' : 'dia',
       data_inicio: new Date().toISOString(),
       status: 'ativa'
     });
@@ -153,6 +156,11 @@ const AtendimentoAtivo: React.FC = () => {
 
   const criarNovoAtendimento = async () => {
     if (!modoAtendimento || !profile?.id) return;
+
+    // Validar formulário
+    if (!validarFormulario()) {
+      return;
+    }
 
     // Se for modo livre, não salva no banco
     if (modoAtendimento === 'livre') {
@@ -195,6 +203,48 @@ const AtendimentoAtivo: React.FC = () => {
     }
   };
 
+  const validarFormulario = () => {
+    // Validações obrigatórias
+    if (!dadosPaciente.nome.trim()) {
+      toast.error('Nome do paciente é obrigatório');
+      return false;
+    }
+    
+    if (!dadosAtendimento.queixa_principal.trim()) {
+      toast.error('Queixa principal é obrigatória');
+      return false;
+    }
+
+    // Validações de idade se preenchida
+    if (dadosPaciente.idade && (parseInt(dadosPaciente.idade) < 0 || parseInt(dadosPaciente.idade) > 120)) {
+      toast.error('Idade deve estar entre 0 e 120 anos');
+      return false;
+    }
+
+    // Validações de sinais vitais se preenchidos
+    if (sinaisVitais.frequencia_cardiaca && (parseInt(sinaisVitais.frequencia_cardiaca) < 30 || parseInt(sinaisVitais.frequencia_cardiaca) > 300)) {
+      toast.error('Frequência cardíaca deve estar entre 30 e 300 bpm');
+      return false;
+    }
+
+    if (sinaisVitais.frequencia_respiratoria && (parseInt(sinaisVitais.frequencia_respiratoria) < 5 || parseInt(sinaisVitais.frequencia_respiratoria) > 60)) {
+      toast.error('Frequência respiratória deve estar entre 5 e 60 irpm');
+      return false;
+    }
+
+    if (sinaisVitais.temperatura && (parseFloat(sinaisVitais.temperatura) < 30 || parseFloat(sinaisVitais.temperatura) > 45)) {
+      toast.error('Temperatura deve estar entre 30°C e 45°C');
+      return false;
+    }
+
+    if (sinaisVitais.saturacao_o2 && (parseInt(sinaisVitais.saturacao_o2) < 50 || parseInt(sinaisVitais.saturacao_o2) > 100)) {
+      toast.error('Saturação O2 deve estar entre 50% e 100%');
+      return false;
+    }
+
+    return true;
+  };
+
   const limparFormularios = () => {
     setDadosPaciente({
       nome: '',
@@ -233,7 +283,7 @@ const AtendimentoAtivo: React.FC = () => {
       // Criar sessão para o plantão
       const novaSessao = await criarSessao({
         medico_id: profile?.id || '',
-        local_trabalho: 'Plantão',
+        local_trabalho: `Plantão - ${plantao.tipo === 'fixo' ? 'Fixo' : 'Coringa'}`,
         turno: 'plantão',
         data_inicio: new Date().toISOString(),
         status: 'ativa'
@@ -302,10 +352,13 @@ const AtendimentoAtivo: React.FC = () => {
     }).format(valor);
   };
 
-  if (loading) {
+  if (loading && !sessaoAtiva && !modoAtendimento) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-gray-600">Carregando dados do plantonista...</p>
+        </div>
       </div>
     );
   }
@@ -359,12 +412,12 @@ const AtendimentoAtivo: React.FC = () => {
                        {plantaoSelecionado.horario}
                      </Badge>
                      <Badge variant="outline" className="text-green-700">
-                       {formatarValor(plantaoSelecionado.valor)}
+                       {formatarValor(Number(plantaoSelecionado.valor) || 0)}
                      </Badge>
                    </div>
-                   <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm">
+                   <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm" disabled={loading}>
                      <Square className="h-4 w-4 mr-2" />
-                     Finalizar Plantão
+                     {loading ? 'Finalizando...' : 'Finalizar Plantão'}
                    </Button>
                  </div>
                )}
@@ -380,9 +433,9 @@ const AtendimentoAtivo: React.FC = () => {
                       Sem histórico - Consultas pessoais
                     </Badge>
                   </div>
-                  <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm">
+                  <Button onClick={finalizarModoAtendimento} variant="destructive" size="sm" disabled={loading}>
                     <Square className="h-4 w-4 mr-2" />
-                    Finalizar Modo Livre
+                    {loading ? 'Finalizando...' : 'Finalizar Modo Livre'}
                   </Button>
                 </div>
               )}
@@ -403,7 +456,7 @@ const AtendimentoAtivo: React.FC = () => {
           {!showNovoAtendimento ? (
             <div>
               <Button 
-                disabled={!modoAtendimento} 
+                disabled={!modoAtendimento || loading} 
                 onClick={() => setShowNovoAtendimento(true)}
                 className="w-full bg-blue-600 hover:bg-blue-700"
               >
@@ -442,10 +495,25 @@ const AtendimentoAtivo: React.FC = () => {
                       <Input
                         id="idade"
                         type="number"
+                        min="0"
+                        max="120"
                         value={dadosPaciente.idade}
                         onChange={(e) => setDadosPaciente(prev => ({ ...prev, idade: e.target.value }))}
                         placeholder="Idade"
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="sexo">Sexo</Label>
+                      <select 
+                        id="sexo"
+                        value={dadosPaciente.sexo}
+                        onChange={(e) => setDadosPaciente(prev => ({ ...prev, sexo: e.target.value }))}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="masculino">Masculino</option>
+                        <option value="feminino">Feminino</option>
+                        <option value="outro">Outro</option>
+                      </select>
                     </div>
                     <div>
                       <Label htmlFor="documento">CPF/RG</Label>
@@ -543,6 +611,9 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="fc">FC (bpm)</Label>
                           <Input
                             id="fc"
+                            type="number"
+                            min="30"
+                            max="300"
                             value={sinaisVitais.frequencia_cardiaca}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, frequencia_cardiaca: e.target.value }))}
                             placeholder="80"
@@ -552,6 +623,9 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="fr">FR (irpm)</Label>
                           <Input
                             id="fr"
+                            type="number"
+                            min="5"
+                            max="60"
                             value={sinaisVitais.frequencia_respiratoria}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, frequencia_respiratoria: e.target.value }))}
                             placeholder="16"
@@ -561,6 +635,10 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="temp">Temperatura (°C)</Label>
                           <Input
                             id="temp"
+                            type="number"
+                            min="30"
+                            max="45"
+                            step="0.1"
                             value={sinaisVitais.temperatura}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, temperatura: e.target.value }))}
                             placeholder="36.5"
@@ -570,6 +648,9 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="sat">SatO2 (%)</Label>
                           <Input
                             id="sat"
+                            type="number"
+                            min="50"
+                            max="100"
                             value={sinaisVitais.saturacao_o2}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, saturacao_o2: e.target.value }))}
                             placeholder="98"
@@ -579,6 +660,9 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="glicemia">Glicemia (mg/dL)</Label>
                           <Input
                             id="glicemia"
+                            type="number"
+                            min="10"
+                            max="800"
                             value={sinaisVitais.glicemia}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, glicemia: e.target.value }))}
                             placeholder="90"
@@ -588,6 +672,10 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="peso">Peso (kg)</Label>
                           <Input
                             id="peso"
+                            type="number"
+                            min="0.5"
+                            max="300"
+                            step="0.1"
                             value={sinaisVitais.peso}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, peso: e.target.value }))}
                             placeholder="70"
@@ -597,6 +685,9 @@ const AtendimentoAtivo: React.FC = () => {
                           <Label htmlFor="altura">Altura (cm)</Label>
                           <Input
                             id="altura"
+                            type="number"
+                            min="30"
+                            max="250"
                             value={sinaisVitais.altura}
                             onChange={(e) => setSinaisVitais(prev => ({ ...prev, altura: e.target.value }))}
                             placeholder="170"
@@ -663,10 +754,10 @@ const AtendimentoAtivo: React.FC = () => {
                 </Button>
                 <Button 
                   onClick={criarNovoAtendimento}
-                  disabled={!dadosPaciente.nome || !dadosAtendimento.queixa_principal}
+                  disabled={!dadosPaciente.nome.trim() || !dadosAtendimento.queixa_principal.trim() || loading}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Salvar Atendimento
+                  {loading ? 'Salvando...' : 'Salvar Atendimento'}
                 </Button>
               </div>
             </div>
@@ -766,7 +857,7 @@ const AtendimentoAtivo: React.FC = () => {
                              </div>
                            </div>
                            <div className="text-right">
-                             <div className="font-semibold text-green-600">{formatarValor(plantao.valor)}</div>
+                             <div className="font-semibold text-green-600">{formatarValor(Number(plantao.valor) || 0)}</div>
                              <Badge variant="outline" className="text-xs">
                                {plantao.status}
                              </Badge>

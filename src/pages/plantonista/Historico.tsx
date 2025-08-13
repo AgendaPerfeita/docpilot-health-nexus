@@ -56,22 +56,26 @@ const Historico: React.FC = () => {
   useEffect(() => {
     async function fetchAtends() {
       if (!sessoes || sessoes.length === 0) return;
-      // Buscar todos os atendimentos de todas as sessões em paralelo
-      const results = await Promise.all(
-        sessoes.map(async (sessao) => {
-          await buscarAtendimentos(sessao.id);
-          // Retorna os atendimentos do hook, mas precisamos garantir que são os da sessão correta
-          // Então, buscar diretamente do banco seria melhor, mas vamos usar o hook por enquanto
-          return atendimentos.map(a => ({ ...a, sessao }));
-        })
-      );
-      // Achatar o array de arrays
-      const all = results.flat();
-      setTodosAtendimentos(all);
+      
+      const allAtendimentos: any[] = [];
+      
+      // Buscar atendimentos de cada sessão sequencialmente para evitar conflitos
+      for (const sessao of sessoes) {
+        await buscarAtendimentos(sessao.id);
+        // Adicionar os atendimentos carregados com referência da sessão
+        const atendimentosDaSessao = atendimentos.map(a => ({ 
+          ...a, 
+          sessao,
+          sessao_local: sessao.local_trabalho 
+        }));
+        allAtendimentos.push(...atendimentosDaSessao);
+      }
+      
+      setTodosAtendimentos(allAtendimentos);
     }
     fetchAtends();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessoes]);
+  }, [sessoes.length]);
 
   // Filtros
   let atendimentosFiltrados = todosAtendimentos.filter(a => {
@@ -91,9 +95,10 @@ const Historico: React.FC = () => {
     data: (a.created_at || a.data_atendimento || a.data || '').slice(0, 10),
     horario: (a.created_at || a.data_atendimento || a.data || '').slice(11, 16),
     queixa: a.queixa_principal || a.queixa || '-',
-    diagnostico: a.hipotese_diagnostica || a.diagnostico || '-',
+    diagnostico: a.diagnostico_final || a.hipotese_diagnostica || a.diagnostico || '-',
     status: a.status || '-',
-    local: a.sessao?.local || a.local || '-'
+    local: a.sessao_local || a.sessao?.local_trabalho || a.local || '-',
+    raw: a // Manter dados originais para modal
   }));
 
   // Estatísticas reais

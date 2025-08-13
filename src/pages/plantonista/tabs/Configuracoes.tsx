@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   User, 
   Building, 
@@ -16,18 +20,20 @@ import {
 } from 'lucide-react';
 
 const Configuracoes: React.FC = () => {
+  const { profile, refreshProfile } = useAuth();
   const [perfil, setPerfil] = useState({
-    nome: 'Dr. João Silva',
-    crm: '12345-SP',
-    especialidade: 'Clínico Geral',
-    email: 'joao.silva@email.com',
-    telefone: '(11) 9999999'
+    nome: '',
+    crm: '',
+    especialidade: '',
+    email: '',
+    telefone: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    cep: ''
   });
 
-  const [locaisTrabalho, setLocaisTrabalho] = useState([
-    { id: 1, nome: 'Hospital ABC', valor: 20 },
-    { id: 2, nome: 'Clínica XYZ', valor: 150 }
-  ]);
+  const [locaisTrabalho, setLocaisTrabalho] = useState<any[]>([]);
 
   const [preferencias, setPreferencias] = useState({
     notificacoesReavaliacao: true,
@@ -36,22 +42,77 @@ const Configuracoes: React.FC = () => {
     notificacoesEmail: false
   });
 
-  const adicionarLocal = () => {
-    const novoLocal = {
-      id: Date.now(),
-      nome: '',
-      valor: 0
+  const [salvando, setSalvando] = useState(false);
+
+  // Carregar dados do perfil
+  useEffect(() => {
+    if (profile) {
+      setPerfil({
+        nome: profile.nome || '',
+        crm: profile.crm || '',
+        especialidade: profile.especialidade || '',
+        email: profile.email || '',
+        telefone: profile.telefone || '',
+        endereco: profile.endereco || '',
+        cidade: profile.cidade || '',
+        estado: profile.estado || '',
+        cep: profile.cep || ''
+      });
+    }
+  }, [profile]);
+
+  // Carregar locais de trabalho
+  useEffect(() => {
+    const carregarLocais = async () => {
+      if (!profile?.id) return;
+      
+      const { data, error } = await supabase
+        .from('plantonista_locais_trabalho')
+        .select('*')
+        .eq('medico_id', profile.id)
+        .order('nome');
+      
+      if (!error && data) {
+        setLocaisTrabalho(data);
+      }
     };
-    setLocaisTrabalho([...locaisTrabalho, novoLocal]);
+    
+    carregarLocais();
+  }, [profile?.id]);
+
+  const salvarPerfil = async () => {
+    if (!profile?.id) return;
+    
+    setSalvando(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          nome: perfil.nome,
+          crm: perfil.crm,
+          especialidade: perfil.especialidade,
+          telefone: perfil.telefone,
+          endereco: perfil.endereco,
+          cidade: perfil.cidade,
+          estado: perfil.estado,
+          cep: perfil.cep
+        })
+        .eq('id', profile.id);
+
+      if (error) throw error;
+      
+      toast.success('Perfil atualizado com sucesso!');
+      await refreshProfile();
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      toast.error('Erro ao salvar perfil');
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  const removerLocal = (id: number) => {
-    setLocaisTrabalho(locaisTrabalho.filter(local => local.id !== id));
-  };
-
-  const salvarConfiguracoes = () => {
-    // Implementar salvamento
-    console.log('Configurações salvas');
+  const salvarConfiguracoes = async () => {
+    await salvarPerfil();
   };
 
   return (
@@ -102,8 +163,9 @@ const Configuracoes: React.FC = () => {
                 id="email"
                 type="email"
                 value={perfil.email}
-                onChange={(e) => setPerfil({...perfil, email: e.target.value})}
-                placeholder="E-mail"
+                disabled
+                placeholder="E-mail (não pode ser alterado)"
+                className="bg-gray-100"
               />
             </div>
             
@@ -116,6 +178,47 @@ const Configuracoes: React.FC = () => {
                 placeholder="Telefone"
               />
             </div>
+
+            <div>
+              <Label htmlFor="endereco">Endereço</Label>
+              <Input
+                id="endereco"
+                value={perfil.endereco}
+                onChange={(e) => setPerfil({...perfil, endereco: e.target.value})}
+                placeholder="Endereço completo"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="cidade">Cidade</Label>
+              <Input
+                id="cidade"
+                value={perfil.cidade}
+                onChange={(e) => setPerfil({...perfil, cidade: e.target.value})}
+                placeholder="Cidade"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="estado">Estado</Label>
+              <Input
+                id="estado"
+                value={perfil.estado}
+                onChange={(e) => setPerfil({...perfil, estado: e.target.value})}
+                placeholder="Estado"
+                maxLength={2}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="cep">CEP</Label>
+              <Input
+                id="cep"
+                value={perfil.cep}
+                onChange={(e) => setPerfil({...perfil, cep: e.target.value})}
+                placeholder="CEP"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -123,54 +226,56 @@ const Configuracoes: React.FC = () => {
       {/* Locais de Trabalho */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Building className="h-5 w-5" />
-            <span>Locais de Trabalho</span>
-            <Button size="sm" onClick={adicionarLocal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Building className="h-5 w-5" />
+              <span>Locais de Trabalho</span>
+              <Badge variant="secondary">{locaisTrabalho.length}</Badge>
+            </div>
+            <Button size="sm" onClick={() => window.open('/plantonista/locais', '_blank')}>
+              <Building className="h-4 w-4 mr-2" />
+              Gerenciar Locais
             </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {locaisTrabalho.map((local) => (
-              <div key={local.id} className="flex items-center space-x-4 p-4 border rounded-lg">
-                <div className="flex-1">
-                  <Input
-                    value={local.nome}
-                    onChange={(e) => {
-                      const novosLocais = locaisTrabalho.map(l => 
-                        l.id === local.id ? {...l, nome: e.target.value} : l
-                      );
-                      setLocaisTrabalho(novosLocais);
-                    }}
-                    placeholder="Nome do local"
-                  />
+          {locaisTrabalho.length > 0 ? (
+            <div className="space-y-3">
+              {locaisTrabalho.slice(0, 5).map((local) => (
+                <div key={local.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                  <div className="flex items-center space-x-3">
+                    <Building className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="font-medium">{local.nome}</p>
+                      <p className="text-sm text-gray-600">{local.tipo}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">
+                      {local.regra === 'fixo' ? 'Valor Fixo' : 'Por Faixa'}
+                    </p>
+                    <Badge variant={local.status === 'ativo' ? 'default' : 'secondary'}>
+                      {local.status}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="w-32">
-                  <Input
-                    type="number"
-                    value={local.valor}
-                    onChange={(e) => {
-                      const novosLocais = locaisTrabalho.map(l => 
-                        l.id === local.id ? {...l, valor: Number(e.target.value)} : l
-                      );
-                      setLocaisTrabalho(novosLocais);
-                    }}
-                    placeholder="Valor"
-                  />
+              ))}
+              {locaisTrabalho.length > 5 && (
+                <div className="text-center text-sm text-gray-500">
+                  ... e mais {locaisTrabalho.length - 5} local(is)
                 </div>
-                <Button 
-                  size="sm"
-                  variant="destructive" 
-                  onClick={() => removerLocal(local.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Building className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+              <p className="text-gray-600 mb-2">Nenhum local de trabalho cadastrado</p>
+              <Button size="sm" onClick={() => window.open('/plantonista/locais', '_blank')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar Primeiro Local
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -270,9 +375,13 @@ const Configuracoes: React.FC = () => {
 
       {/* Botão Salvar */}
       <div className="flex justify-end">
-        <Button onClick={salvarConfiguracoes} className="bg-blue-600 hover:bg-blue-700">
+        <Button 
+          onClick={salvarConfiguracoes} 
+          disabled={salvando}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
           <Save className="h-4 w-4 mr-2" />
-          Salvar Configurações
+          {salvando ? 'Salvando...' : 'Salvar Perfil'}
         </Button>
       </div>
     </div>
